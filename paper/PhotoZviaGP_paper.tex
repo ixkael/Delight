@@ -187,7 +187,7 @@ This can be elegantly solved by introducing an inducing space and seeing the fit
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Prediction and photometric redshifts}
+\subsection{Prediction of photometric redshifts}
 
 \eqn{
 	p(z^*,t^*,l^* | \{ b_i^*, y_i^* \}, \vec{y}, \vec{z}, \vec{b}, \hat{\mat{X}}) = \int \d\hat{\vec{y}}\int\d\bm{\alpha}\int\d\bm{\theta} \ p(z^*,t^*,l^* | \{ b_i^*, y_i^* \}, \vec{y}, \vec{z}, \vec{b}, \hat{\vec{Y}}, \hat{\mat{X}}, \bm{\alpha}, \bm{\theta}) \ p( \hat{\vec{Y}}, \bm{\alpha}, \bm{\theta} |  \vec{y}, \vec{z}, \vec{b}, \hat{\mat{X}})
@@ -202,6 +202,14 @@ This can be elegantly solved by introducing an inducing space and seeing the fit
 	&\propto& p(z^*,t^*,l^*| \bm{\theta}) \ \prod_i p( y_i^* | b_i^*, z^*,t^*,l^*,\hat{\vec{y}}, \hat{\mat{X}}, \bm{\alpha}) 
 }
 Can be done quickly on redshift-type-magnitude grid thanks to GP operations.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Prediction of other photometric bands}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Fast simulations of realistic galaxies}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Demonstration on simulations}

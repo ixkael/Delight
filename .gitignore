@@ -1,5 +1,7 @@
 # Project specific
-Notebooks/pics
+notebooks/pics
+code/*.pyx
+code/*.c
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
