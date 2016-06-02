@@ -1,0 +1,345 @@
+
+%\documentclass[useAMS, usenatbib, fleqn]{mn2e}
+
+% PRD specific
+\documentclass[aps,prd,showpacs,superscriptaddress,groupedaddress]{revtex4}  % twocolumn submission
+%\documentclass[aps,preprint,showpacs,superscriptaddress,groupedaddress]{revtex4}  % for double-spaced preprint
+\usepackage{dcolumn}   % needed for some tables
+\usepackage{bm}        % for math
+% avoids incorrect hyphenation, added Nov/08 by SSR
+\hyphenation{ALPGEN}
+\hyphenation{EVTGEN}
+\hyphenation{PYTHIA}
+
+
+\usepackage{aas_macros}
+\usepackage{times}
+%\usepackage{txfonts}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amsbsy}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{xspace}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{multirow}
+\usepackage{color}
+\usepackage[breaklinks, colorlinks, citecolor=blue, linkcolor=black, urlcolor=black]{hyperref}%with colours
+%\usepackage{hyperref}%without colours
+
+
+\input{macros.tex}
+
+
+
+\newcommand{\bl}[1]{\textcolor{blue}{[BL: #1]}}
+\newcommand{\dwh}[1]{\textcolor{red}{[DWH: #1]}}
+
+%\setlength{\skip\footins}{0.6cm}
+%\interfootnotelinepenalty=10000
+%\pagerange{\pageref{firstpage}--\pageref{lastpage}} \pubyear{2015}
+%\def\LaTeX{L\kern-.36em\raise.3ex\hbox{a}\kern-.15em
+%    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}
+%\newtheorem{theorem}{Theorem}[section]
+
+
+\begin{document}
+
+ 
+\title{Accurate \& physical photometric redshifts from heterogeneous, incomplete spectroscopic training}
+
+\author{Boris~Leistedt}
+  \email{boris.leistedt@nyu.edu}
+  \affiliation{Center for Cosmology and Particle Physics, Department of Physics, New York University, New York, NY 10003, USA}
+  
+\author{David~W.~Hogg}
+  \email{david.hogg@nyu.edu}
+  \affiliation{Center for Cosmology and Particle Physics, Department of Physics, New York University, New York, NY 10003, USA}
+  
+  
+\begin{abstract}
+	The exploitation of modern galaxy surveys requires accurate redshifts of millions of objects spanning extended redshift ranges. 
+	However, typical redshift estimation methods require calibration or training on spectroscopic data and do not provide reliable estimates at high redshift or faint magnitudes, where few or no data are available.
+	Because significant cosmological information lie in these regimes, photometric redshifts hinder the exploitation of current and upcoming surveys. 
+	We present a novel approach to address these issues and obtain accurate photometric redshifts even with shallow, inhomogeneous spectroscopic training data. 
+	This method is both physical and data-driven, and relies on a Gaussian process constrained to encode physical flux-redshift relations, which correspond to realistic galaxy spectral energy distributions.
+	The resulting photometric redshift estimates are fully probabilistic, and are very robust thanks to a Bayesian marginalisation of a latent space of galaxy types and spectral energy distributions that are compatible with the training data.
+	Thus, this method combines the advantages of physical template fitting and machine learning.
+	We show that our implementation matches the performances of the best existing methods in regions with good training data, and delivers robust redshift estimates in regions with poor or no training data. 
+	This unique approach will unlock the high redshift, faint galaxies observed by deep imaging surveys such as DES and LSST, providing accurate probabilistic redshift estimates that fully capture the uncertainties about galaxy types and spectra.
+\end{abstract}
+
+\pacs{TODO}
+
+\maketitle
+
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+
+\bl{I made a `DWH' latex macro for you.}
+
+Three main methods exist for obtaining redshifts from photometric fluxes, and all require external data.
+
+In machine learning methods, the flux-redshift relation is fitted using a very flexible model.
+This depends on the algorithm under consideration, which has to be trained on the available training data, where spectroscopic redshifts are available.
+This approach is very powerful for learning relationships in the data and also learn its imperfections.
+For this reason it usually provides excellent redshift estimates in the regions with good training data, even in the presence of imperfect fluxes (\ie biased or with underestimated errors).
+In other words, in the interpolation regime, machine learning methods excel.
+However, they perform poorly in regions with fewer or no training data, mostly because the constructed model is very flexible and gives more weight to dense training regions.
+In addition, it does not know about the physics of redshift or fluxes. 
+It will, of course, learn it from the training data, but because is not at all constrained to satisfy the physics of the problem, the flux-redshift model performs poorly when extrapolating outside of the training data.
+
+A second method, template-fitting, directly addresses this problem. If a library of galaxy spectra (\ie templates for the spectral energy distributions of various galaxy types) is available, then one can solve for the redshift and type of a galaxy given the observed photometric fluxes.
+A significant advantage over machine learning methods is the ability to perform the fit in a fully probabilistic fashion, with explicit priors over the types and redshifts of galaxies\footnote{While the outputs of some machine learning methods can be interpreted in probabilistic terms, most implicitly construct complicated priors from the training data and algorithm under consideration, making any probabilistic interpretation difficult.}.
+While template fitting approaches provide an elegant solution to estimate photometric redshifts and also other galaxy properties (\eg star formation history), they are very restrictive compared to machine learning methods.
+One the one hand, one has to assume that all the observed galaxies live in the space of spectral templates. 
+While methods have been developed to relax this constrain (\eg by introducing correction terms to existing template libraries or adopting very flexible spectral template with numerous physical parameters) it is known to be insufficient.
+On the other hand, the complexity and imperfections of observed fluxes cannot easily be captured (\bl{Say more about types of fluxes}).
+As a consequence of these two limitations, template fitting methods fail to provide reliable redshift estimates for deep photometric surveys.
+The method presented here will solve both of those problems, while also harnessing the flexibility of machine learning.
+
+The third class of methods for estimating photometric redshifts is referred to as ``clustering redshifts". 
+One can use spatial information to constrain the redshifts of galaxies.
+It comes in several incarnations and can also complement other redshift estimates, for example provided by the methods described above and also the method presented in this paper.
+Given its different nature (using spatial information, not fluxes) and its complementarity with other methods, we will not discuss this in further detail.
+
+The only solution is to marginalise over the templates compatible with the training data, so that the photometric redshifts of much fainter galaxies only use that information in a physically meaningful way. 
+This is a typical extrapolation 
+
+The scope of this paper is as follows: we define a generic approach to use gaussian processes to fit fluxes and redshifts using kernels capturing the known physics of cosmological redshift.
+We adopt specific kernels making this construction fast and flexible.
+
+\begin{table}
+\begin{tabular}{lll}
+Symbol 	 & Description\\\hline
+$y$ & Noisy photometric flux $f(b,z,t,l)$\\
+$z$ & Redshift \\
+$t$ & Redshift \\
+$l$ & Redshift \\
+$b$ & Redshift \\\hline
+$\vec{y}$		&	\\
+$\vec{z}$ & Redshift \\
+$\vec{t}$ & Redshift \\
+$\vec{l}$ & Redshift \\
+$\vec{b}$ & Redshift \\
+$\mat{X}$\\\hline
+$\hat{\vec{y}}$		&	\\
+$\hat{\mat{X}}$\\
+$\bm{\alpha}$\\
+$\bm{\theta}$\\\hline
+$m(z,l)$ \\
+$k(b,b',z,z',t,t')$
+\end{tabular}
+\caption{Vectors are denoted by $\vec{a}$ and matrices by $\mat{A}$}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Gaussian Process model}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Continuous SEDs}
+
+\equ{
+	\mathrm{SED}(\lambda_o, z, t, l) = \frac{1+z}{4\pi D^2(z)} \left(l + L_\nu\Bigl(\frac{\lambda_o}{1+z},t\Bigr) \right)
+}
+
+\eqn{
+	f(b, z, t, l) &=&\frac{ \int \mathrm{SED}(\lambda_o, z, t, l) \ W_b(\lambda_o) \frac{\d\lambda_o}{\lambda_o} }{ \int g^\mathrm{AB}\ W_b(\lambda_o) \frac{\d\lambda_o}{\lambda_o}  } \\ 
+	&=& \frac{1+z}{4\pi D^2(z)} \frac{1}{g^\mathrm{AB}}  \left( \ l  \ + \ \frac{1}{C_b} \int L_\nu\Bigl(\frac{\lambda_o}{1+z},t\Bigr) \ W_b(\lambda_o) \frac{\d\lambda_o}{\lambda_o} \ \right) \\ 
+	&=& \frac{1+z}{4\pi D^2(z)} \frac{1}{g^\mathrm{AB}}  \left( \ l  \ + \ \frac{1+z}{C_b} \int L_\nu(\lambda_e,t) \ V_b\Bigl((1+z)\lambda_e\Bigr) \ \d\lambda_e \ \right)
+}
+
+with $V_b(\lambda) = W_b(\lambda)/\lambda$ and $C_b = \int W_b(\lambda) \d\lambda / \lambda$.
+
+$L_\nu \sim \mathcal{GP}\Bigl(0, k^\lambda(t,t',\lambda,\lambda') \Bigr)$
+
+$f  \sim \mathcal{GP}\Bigl( m(z,l), \ k(b,b',z,z',t,t') \Bigr)$
+
+\eqn{
+	m(z,l) = \frac{1+z}{4\pi D^2(z)} \frac{l}{g^\mathrm{AB}}
+}
+
+\eqn{
+	k(b,b',z,z',t,t') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2  \frac{1}{C_bC_{b'}} \int \ k^\lambda\Bigl(t,t',\lambda,\lambda'\Bigr) \ V_b\Bigl((1+z)\lambda\Bigr) \ V_{b'}\Bigl((1+z')\lambda'\Bigr) \ \d\lambda\d\lambda' 
+}
+
+This is the generic kernel for fluxes given a kernel in SED space.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Inference}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Fitting training data}
+
+
+Two complications: size of the training data, and unknown types and luminosity. 
+This can be elegantly solved by introducing an inducing space and seeing the fit of training data as finding this inducing space given that the full training data has unobserved variables.
+
+\eqn{
+	p(\hat{\vec{y}}, \bm{\theta}, \bm{\alpha}, \vec{t}, \vec{l} | \vec{z}, \vec{b}, \vec{y}, \hat{\mat{x}})	= \frac{p(\hat{\vec{y}}|\vec{y},\mat{X},\hat{\mat{X}},\bm{\alpha}) \ p(\vec{y}|\mat{X},\bm{\alpha}) \ p(\vec{l},\vec{t}|\vec{z},\bm{\theta}) \ p(\bm{\theta})\ p(\bm{\alpha})}{p(\vec{y}|\vec{z},\vec{b})}
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Prediction and photometric redshifts}
+
+\eqn{
+	p(z^*,t^*,l^* | \{ b_i^*, y_i^* \}, \vec{y}, \vec{z}, \vec{b}, \hat{\mat{X}}) = \int \d\hat{\vec{y}}\int\d\bm{\alpha}\int\d\bm{\theta} \ p(z^*,t^*,l^* | \{ b_i^*, y_i^* \}, \vec{y}, \vec{z}, \vec{b}, \hat{\vec{Y}}, \hat{\mat{X}}, \bm{\alpha}, \bm{\theta}) \ p( \hat{\vec{Y}}, \bm{\alpha}, \bm{\theta} |  \vec{y}, \vec{z}, \vec{b}, \hat{\mat{X}})
+}
+
+\eqn{
+	p(z^*,t^*,l^* | \{ b_i^*, y_i^* \}, \vec{y}, \vec{z}, \vec{b}, \hat{\vec{y}}, \hat{\mat{X}}, \bm{\alpha}, \bm{\theta}) &\approx& p(z^*,t^*,l^* | \{ b_i^*, y_i^* \},\hat{\vec{y}}, \hat{\mat{X}}, \bm{\alpha}, \bm{\theta})
+}
+
+\eqn{
+	p(z^*,t^*,l^* | \{ b_i^*, y_i^* \},\hat{\vec{y}}, \hat{\mat{X}}, \bm{\alpha}, \bm{\theta}) &=& \frac{p( \{y_i^*\} | \{ b_i^*\}, z^*,t^*,l^*,\hat{\vec{y}}, \hat{\mat{X}}, \bm{\alpha}) \ p(z^*,t^*,l^* | \bm{\theta}) }{p( \{y_i^*\} | \{ b_i^*\}, \hat{\vec{y}}, \hat{\mat{X}}, \bm{\alpha}, \bm{\theta}) } \\
+	&\propto& p(z^*,t^*,l^*| \bm{\theta}) \ \prod_i p( y_i^* | b_i^*, z^*,t^*,l^*,\hat{\vec{y}}, \hat{\mat{X}}, \bm{\alpha}) 
+}
+Can be done quickly on redshift-type-magnitude grid thanks to GP operations.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Demonstration on simulations}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Setup}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Machine learning or template fitting with shallow training data}
+
+Start with a demonstration of the problem: using a simple but realistic setting with deep photometry and shallow spectroscopic training, show that typical techniques fail to produce reliable redshifts. I could easily run ANNz and BPZ.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Basic settings}
+
+Show that the SEDs and LumFcts can be inferred simultaneously. This will be demonstrated on a simulation with realistic settings such as deep photometry and shallow spectroscopic data. Maybe also include an extra run with photometric data only. 
+
+Show that the new method matches the best existing methods for good data, but also provides reliable redshifts elsewhere, even in regime with no training data. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Robustness to errors}
+
+Show that the method is robust to photometric biases such as offsets and underestimated photometric errors. 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+Extensions: stellar model for SEDs. Use actual spectra from spectroscopic data. Model outliers. Interface with other probabilistic models.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\footnotesize{
+  \bibliographystyle{mn2e_eprint}
+\providecommand{\eprint}[1]{\href{http://arxiv.org/abs/#1}{arXiv:#1}}	
+  \bibliography{bib}
+}
+\normalsize
+
+
+\appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Our GP implementation and SED prior}
+
+We model the spectral energy distribution (SED) of a galaxy of type $L$ as  a function of wavelength $\lambda$ as
+\equ{
+	L_\nu(\lambda,t) = C(\lambda,t) + \sum_{\ell} A(\lambda,t) \gaussian(\lambda, \lambda_\ell, \sigma_\ell)
+}
+where $C$ represent the continuum and $A$ the amplitude of Gaussian emission or absorption lines of fixed location and size $ \lambda_\ell, \sigma_\ell$ with $\ell = 1, \ldots, {\rm N}_{\rm lines}$. Both $C$ and $A$ are modeled as Gaussian Processes with factorized kernels
+\eqn{
+	C(\lambda,t) \sim \GP\left(0, k^C(\lambda, \lambda')k^t(t,t')\right)\\
+	A(\lambda,t) \sim \GP\left(0, k^A(\lambda, \lambda')k^t(t,t')\right)
+}
+If one further assumes that $C$ and $A$ are uncorrelated, then 
+\eqn{
+	f(\lambda,t) \sim \GP\left(0, k^L(\lambda, \lambda')k^t(t,t')\right)
+}
+with 
+\eqn{
+	k^f(\lambda, \lambda') = k^C(\lambda, \lambda') + k^A(\lambda, \lambda')\sum_{\ell} \gaussian(\lambda, \lambda_\ell, \sigma_\ell) \gaussian(\lambda', \lambda_\ell, \sigma_\ell)
+	}
+assuming that the various lines $\gaussian(\lambda, \lambda_\ell, \sigma_\ell)$ don't overlap significantly so that cross terms can be neglected.
+
+
+\eqn{
+	V_b(\lambda) = \sum_{i} a_{i}\mathcal{N}(\lambda,\mu_i,\sigma_i) \quad\quad  V_{b'}(\lambda) = \sum_{i'} a_{i'}\mathcal{N}(\lambda,\mu_{i'},\sigma_{i'})
+}
+
+\eqn{
+	k(b,b',z,z',t,t') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2  \nonumber \\
+	  \times \ \sum_{i}\sum_{i'} \frac{a_{i} a_{i'}}{C_bC_{b'}}&&\hspace*{-5mm} \left( 2\pi\sigma_{i}\sigma_{i'} K^C(z,z',b,b',i,i') + \sum_{\ell}\sum_{\ell'} K^L(z,z',b,b',i,i',\ell,\ell')\right)
+}
+
+\eqn{
+	K^C(z,z',b,b',i,i') = \frac{{\alpha}_C}{\sigma_{ii'}} \mathcal{N}\left( \mu_{i}(1+z'), \mu_{i'}(1+z), \sigma_{ii'}\right)
+}	
+\equ{
+	\sigma_{ii'}^2 \ =\ \sigma_{i}^2(1+z')^2 + \sigma_{i'}^2(1+z)^2 + {\alpha}_C^2(1+z)^2(1+z')^2
+}
+
+\eqn{
+	K^L(z,z',b,b',i,i',\ell,\ell') \ = \  \mathcal{N}\left( \mu_{i}, \mu_{\ell}(1+z), \sigma_{i}\right) \ \mathcal{N}\left( \mu_{i'}, \mu_{\ell'}(1+z'), \sigma_{i}\right) \ \mathcal{N}\left( \mu_{\ell}, \mu_{\ell'}, {\alpha_L}\right)
+}	
+
+\eqn{
+	k^t(t,t') = \mathcal{N}\left(t, t', {\alpha}_t\right)
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Our luminosity/redshift/type priors}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Hamiltonian sampling of the training}
+
+\eqn{
+	\mathcal{U}(\hat{\vec{y}}, \bm{\theta}, \bm{\alpha}, \vec{t}, \vec{l}) &=& -\ \ln p(\hat{\vec{y}}, \bm{\theta}, \bm{\alpha}, \vec{t}, \vec{l} | \vec{z}, \vec{b}, \vec{y}, \hat{\mat{x}}) \\
+		&=& - \ \ln p(\hat{\vec{y}}|\vec{y},\mat{X},\hat{\mat{X}},\bm{\alpha}) \ -\ \ln p(\vec{y}|\mat{X},\bm{\alpha}) \ -\ \ln p(\vec{l},\vec{t}|\vec{z},\bm{\theta}) \\ && -\ \ln p(\bm{\theta},\bm{\alpha}) \ + \ \ln p(\vec{y}|\vec{z},\vec{b}) 
+}
+	
+	
+\eqn{
+	-\ln p(\vec{y}|\mat{X},\bm{\alpha}) &=& \frac{1}{2} (\vec{y}-m({\mat{X}})) ^T \mat{K}_y^{-1} (\vec{y}-m({\mat{X}})) + \frac{1}{2} \ln |\mat{K}_y| + \frac{n}{2}\ln 2\pi \\
+	\mat{K}_y &=& \mathrm{cov}(\vec{y},\vec{y}) = K(\mat{X},{\mat{X}}) +  \mat{\Sigma}_n \\
+	\frac{\partial (-\ln p(\vec{y}|\mat{X},\bm{\alpha}))}{\partial \alpha_k} &=& - \frac{1}{2} \tr\left( (\vec{v}\vec{v}^T - \mat{K}_y^{-1} ) \ \frac{\partial \mat{K}_y}{\partial \alpha_k} \right) \quad \mathrm{with} \ \vec{v} = \mat{K}_y^{-1} (\vec{y}-m({\mat{X}}))
+}
+
+\eqn{
+	-\ln p(\hat{\vec{y}}|\vec{y},\mat{X},\hat{\mat{X}},\bm{\alpha}) &=& \frac{1}{2} (\hat{\vec{y}}-\hat{\vec{m}})^T \hat{\mat{K}}^{-1}(\hat{\vec{y}}-\hat{\vec{m}}) + \frac{1}{2} \ln |\hat{\mat{K}}| + \frac{n'}{2}\ln 2\pi	\\
+	\hat{\vec{m}} &=& m(\hat{\mat{X}}) +  K(\hat{\mat{X}},\mat{X}) ( K(\mat{X},{\mat{X}}) + \Sigma)^{-1} (\vec{y}-m(\mat{X})) \\
+	\hat{\mat{K}} &=&	 K(\hat{\mat{X}},\hat{\mat{X}})  -  K(\hat{\mat{X}},\mat{X})  ( K(\hat{\mat{X}},\mat{X})  + \Sigma)^{-1}  K(\mat{X},\hat{\mat{X}}) \\
+	\frac{\partial (-\ln p(\hat{\vec{y}}|\vec{y},\mat{X},\hat{\mat{X}},\bm{\alpha}) )}{\partial \alpha_k} &=& - \frac{1}{2} \tr\left( (\hat{\vec{v}}\hat{\vec{v}}^T - \hat{\mat{K}}^{-1} ) \ \frac{\partial \hat{\mat{K}}}{\partial \alpha_k} \right) \quad \mathrm{with} \ \hat{\vec{v}} = \hat{\mat{K}}^{-1} (\hat{\vec{y}}-\hat{\vec{m}})
+}
+
+
+
+
+\eqn{
+	\frac{\partial \mathcal{U}}{\partial y_k} &=&
+}
+
+\eqn{
+	\frac{\partial \mathcal{U}}{\partial t_k} &=&
+}
+
+\eqn{
+	\frac{\partial \mathcal{U}}{\partial l_k} &=&
+}
+
+\eqn{
+	\frac{\partial \mathcal{U}}{\partial \alpha_k} &=&
+}
+
+\eqn{
+	\frac{\partial \mathcal{U}}{\partial \theta_k} &=&
+}
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
