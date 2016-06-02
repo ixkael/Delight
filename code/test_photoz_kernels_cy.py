@@ -1,7 +1,7 @@
 
 import numpy as np
-from photoz_kernels_cy import kernelparts
-from photoz_kernels_cy import kernelparts_diag
+from .photoz_kernels_cy import kernelparts
+from .photoz_kernels_cy import kernelparts_diag
 
 def test_diagonalOfKernels():
     X = np.zeros
