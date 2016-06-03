@@ -38,17 +38,22 @@ class Schechter(Prior):
         return "Schechter({:.2g}, {:.2g}, {:.2g})".format(self.ellStar, self.alpha0, self.alpha1)
 
     def lnpdf(self, ell, t):
+        """Lnprob"""
         alpha = self.alpha0 + self.alpha1 * t
         return - gammaln(1+alpha) - (alpha+1) * self.lnEllStar + alpha * np.log(ell) + ell/self.ellStar
 
     def lnpdf_grad_ell(self, ell, t):
+        """Derivative of lnprob with respect to ell"""
         return 1/self.ellStar + (self.alpha0 + self.alpha1 * t) / ell
 
     def lnpdf_grad_t(self, ell, t):
+        """Derivative of lnprob with respect to t"""
         return self.alpha1 * (np.log(ell) - self.lnEllStar - polygamma(0, 1 + self.alpha0 + self.alpha1 * t))
 
     def lnpdf_grad_alpha0(self, ell, t):
+        """Derivative of lnprob with respect to alpha0"""
         return np.log(ell) - self.lnEllStar - polygamma(0, 1 + self.alpha0 + self.alpha1 * t)
 
     def lnpdf_grad_alpha1(self, ell, t):
+        """Derivative of lnprob with respect to alpha1"""
         return t * (np.log(ell) - self.lnEllStar - polygamma(0, 1 + self.alpha0 + self.alpha1 * t))
