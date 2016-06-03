@@ -395,10 +395,11 @@ Finally, we note that the distribution of interest $p(l,t|z,\bm{\theta})$ in the
 	p(l,t|z,\bm{\theta}) =  p(l|t,\bm{\theta}) p(t|\bm{\theta}) .
 }
  
+The derivatives of these distributions with respect to the parameters $\bm{\theta}$ and also the inputs $z,t,l$ are straighforward so we don't include them here.
 
 \todo{describe typical values for the hyperparameters to yield reasonable priors}
 
-\todo{compute gradients}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Hamiltonian sampling of the training}
@@ -433,26 +434,10 @@ where we have defined
 	\frac{\partial (-\ln p(\hat{\vec{y}}|\vec{y},\mat{X},\hat{\mat{X}},\bm{\alpha}) )}{\partial \alpha_k} &=& - \frac{1}{2} \tr\left( (\hat{\vec{v}}\hat{\vec{v}}^T - \hat{\mat{K}}^{-1} ) \ \frac{\partial \hat{\mat{K}}}{\partial \alpha_k} \right) \quad \mathrm{with} \ \hat{\vec{v}} = \hat{\mat{K}}^{-1} (\hat{\vec{y}}-\hat{\vec{m}}) \\ 
 	\frac{\partial (-\ln p(\vec{y}|\mat{X},\bm{\alpha}))}{\partial \alpha_k} &=& - \frac{1}{2} \tr\left( (\vec{v}\vec{v}^T - \mat{K}_y^{-1} ) \ \frac{\partial \mat{K}_y}{\partial \alpha_k} \right) \quad \mathrm{with} \ \vec{v} = \mat{K}_y^{-1} (\vec{y}-m({\mat{X}}))
 }
-\eqn{
-	\frac{\partial \mathcal{U}}{\partial y_k} &=&
-}
 
-\eqn{
-	\frac{\partial \mathcal{U}}{\partial t_k} &=&
-}
+\todo{Add derivatives of GP with respect to inputs $t,z,l$}
 
-\eqn{
-	\frac{\partial \mathcal{U}}{\partial l_k} &=&
-}
-
-\eqn{
-	\frac{\partial \mathcal{U}}{\partial \alpha_k} &=&
-}
-
-\eqn{
-	\frac{\partial \mathcal{U}}{\partial \theta_k} &=&
-}
-
+The total derivatives of $\mathcal{U}$ can be obtained by adding the various components.
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \end{document}
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
