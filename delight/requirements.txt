@@ -1,0 +1,7 @@
+numpy 
+cython 
+pytest
+GPy
+astropy
+scipy
+matplotlib
