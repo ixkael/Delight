@@ -8,7 +8,7 @@ ext_modules=[ Extension("delight.photoz_kernels_cy",
               libraries=["m"],
               include_dirs=[numpy.get_include()],
               extra_link_args=['-fopenmp'],
-              extra_compile_args = ["-ffast-math", "-march=native", "-fopenmp"])]
+              extra_compile_args = ["-ffast-math", "-fopenmp"])] #"-march=native", 
 
 setup(
   name = "photoz_kernels_cy",
