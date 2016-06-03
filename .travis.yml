@@ -26,5 +26,5 @@ install:
   - source activate test-environment
   - pip install -r requirements.txt
 script:
-  - python setup.py build_ext
+  - python setup.py build_ext --inplace
   - py.test
