@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[    107098,       3460]
-NotebookOptionsPosition[    102738,       3304]
-NotebookOutlinePosition[    103099,       3320]
-CellTagsIndexPosition[    103056,       3317]
+NotebookDataLength[    102604,       3390]
+NotebookOptionsPosition[     97025,       3191]
+NotebookOutlinePosition[     97382,       3207]
+CellTagsIndexPosition[     97339,       3204]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -2282,307 +2282,20 @@ Cell["Derivatives of Rayleigh distribution", "Subsection",
 Cell[CellGroupData[{
 
 Cell[BoxData[
- RowBox[{"D", "[", 
+ RowBox[{"PDF", "[", 
   RowBox[{
-   RowBox[{"PDF", "[", 
-    RowBox[{
-     RowBox[{"RayleighDistribution", "[", 
-      RowBox[{"c", "+", 
-       RowBox[{"d", "*", "t"}]}], "]"}], ",", "z"}], "]"}], ",", "c"}], 
-  "]"}]], "Input",
- CellChangeTimes->{{3.673951760572628*^9, 3.673951804019927*^9}}],
+   RowBox[{"RayleighDistribution", "[", 
+    RowBox[{"a", "+", 
+     RowBox[{"b", "*", "t"}]}], "]"}], ",", "z"}], "]"}]], "Input",
+ CellChangeTimes->{{3.673951760572628*^9, 3.673951804019927*^9}, {
+  3.673982045499086*^9, 3.673982072823729*^9}}],
 
 Cell[BoxData[
  TagBox[GridBox[{
     {"\[Piecewise]", GridBox[{
        {
-        RowBox[{
-         RowBox[{"-", 
-          FractionBox[
-           RowBox[{"2", " ", 
-            SuperscriptBox["\[ExponentialE]", 
-             RowBox[{"-", 
-              FractionBox[
-               SuperscriptBox["z", "2"], 
-               RowBox[{"2", " ", 
-                SuperscriptBox[
-                 RowBox[{"(", 
-                  RowBox[{"c", "+", 
-                   RowBox[{"d", " ", "t"}]}], ")"}], "2"]}]]}]], " ", "z"}], 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"c", "+", 
-              RowBox[{"d", " ", "t"}]}], ")"}], "3"]]}], "+", 
-         FractionBox[
-          RowBox[{
-           SuperscriptBox["\[ExponentialE]", 
-            RowBox[{"-", 
-             FractionBox[
-              SuperscriptBox["z", "2"], 
-              RowBox[{"2", " ", 
-               SuperscriptBox[
-                RowBox[{"(", 
-                 RowBox[{"c", "+", 
-                  RowBox[{"d", " ", "t"}]}], ")"}], "2"]}]]}]], " ", 
-           SuperscriptBox["z", "3"]}], 
-          SuperscriptBox[
-           RowBox[{"(", 
-            RowBox[{"c", "+", 
-             RowBox[{"d", " ", "t"}]}], ")"}], "5"]]}], 
-        RowBox[{"z", ">", "0"}]},
-       {"0", 
-        TagBox["True",
-         "PiecewiseDefault",
-         AutoDelete->True]}
-      },
-      AllowedDimensions->{2, Automatic},
-      Editable->True,
-      GridBoxAlignment->{
-       "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-        "RowsIndexed" -> {}},
-      GridBoxItemSize->{
-       "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-        "RowsIndexed" -> {}},
-      GridBoxSpacings->{"Columns" -> {
-          Offset[0.27999999999999997`], {
-           Offset[0.84]}, 
-          Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-          Offset[0.2], {
-           Offset[0.4]}, 
-          Offset[0.2]}, "RowsIndexed" -> {}},
-      Selectable->True]}
-   },
-   GridBoxAlignment->{
-    "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-     "RowsIndexed" -> {}},
-   GridBoxItemSize->{
-    "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-     "RowsIndexed" -> {}},
-   GridBoxSpacings->{"Columns" -> {
-       Offset[0.27999999999999997`], {
-        Offset[0.35]}, 
-       Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-       Offset[0.2], {
-        Offset[0.4]}, 
-       Offset[0.2]}, "RowsIndexed" -> {}}],
-  "Piecewise",
-  DeleteWithContents->True,
-  Editable->False,
-  SelectWithContents->True,
-  Selectable->False]], "Output",
- CellChangeTimes->{3.673951804576022*^9}]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell[BoxData[
- RowBox[{"D", "[", 
-  RowBox[{
-   RowBox[{"PDF", "[", 
-    RowBox[{
-     RowBox[{"RayleighDistribution", "[", 
-      RowBox[{"c", "+", 
-       RowBox[{"d", "*", "t"}]}], "]"}], ",", "z"}], "]"}], ",", "d"}], 
-  "]"}]], "Input",
- CellChangeTimes->{{3.673951807747838*^9, 3.673951810983477*^9}}],
-
-Cell[BoxData[
- TagBox[GridBox[{
-    {"\[Piecewise]", GridBox[{
-       {
-        RowBox[{
-         RowBox[{"-", 
-          FractionBox[
-           RowBox[{"2", " ", 
-            SuperscriptBox["\[ExponentialE]", 
-             RowBox[{"-", 
-              FractionBox[
-               SuperscriptBox["z", "2"], 
-               RowBox[{"2", " ", 
-                SuperscriptBox[
-                 RowBox[{"(", 
-                  RowBox[{"c", "+", 
-                   RowBox[{"d", " ", "t"}]}], ")"}], "2"]}]]}]], " ", "t", 
-            " ", "z"}], 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"c", "+", 
-              RowBox[{"d", " ", "t"}]}], ")"}], "3"]]}], "+", 
-         FractionBox[
-          RowBox[{
-           SuperscriptBox["\[ExponentialE]", 
-            RowBox[{"-", 
-             FractionBox[
-              SuperscriptBox["z", "2"], 
-              RowBox[{"2", " ", 
-               SuperscriptBox[
-                RowBox[{"(", 
-                 RowBox[{"c", "+", 
-                  RowBox[{"d", " ", "t"}]}], ")"}], "2"]}]]}]], " ", "t", " ", 
-           SuperscriptBox["z", "3"]}], 
-          SuperscriptBox[
-           RowBox[{"(", 
-            RowBox[{"c", "+", 
-             RowBox[{"d", " ", "t"}]}], ")"}], "5"]]}], 
-        RowBox[{"z", ">", "0"}]},
-       {"0", 
-        TagBox["True",
-         "PiecewiseDefault",
-         AutoDelete->True]}
-      },
-      AllowedDimensions->{2, Automatic},
-      Editable->True,
-      GridBoxAlignment->{
-       "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-        "RowsIndexed" -> {}},
-      GridBoxItemSize->{
-       "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-        "RowsIndexed" -> {}},
-      GridBoxSpacings->{"Columns" -> {
-          Offset[0.27999999999999997`], {
-           Offset[0.84]}, 
-          Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-          Offset[0.2], {
-           Offset[0.4]}, 
-          Offset[0.2]}, "RowsIndexed" -> {}},
-      Selectable->True]}
-   },
-   GridBoxAlignment->{
-    "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-     "RowsIndexed" -> {}},
-   GridBoxItemSize->{
-    "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-     "RowsIndexed" -> {}},
-   GridBoxSpacings->{"Columns" -> {
-       Offset[0.27999999999999997`], {
-        Offset[0.35]}, 
-       Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-       Offset[0.2], {
-        Offset[0.4]}, 
-       Offset[0.2]}, "RowsIndexed" -> {}}],
-  "Piecewise",
-  DeleteWithContents->True,
-  Editable->False,
-  SelectWithContents->True,
-  Selectable->False]], "Output",
- CellChangeTimes->{3.67395181135742*^9}]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell[BoxData[
- RowBox[{"D", "[", 
-  RowBox[{
-   RowBox[{"PDF", "[", 
-    RowBox[{
-     RowBox[{"RayleighDistribution", "[", 
-      RowBox[{"c", "+", 
-       RowBox[{"d", "*", "t"}]}], "]"}], ",", "z"}], "]"}], ",", "t"}], 
-  "]"}]], "Input",
- CellChangeTimes->{{3.6739518148989563`*^9, 3.673951816999496*^9}}],
-
-Cell[BoxData[
- TagBox[GridBox[{
-    {"\[Piecewise]", GridBox[{
-       {
-        RowBox[{
-         RowBox[{"-", 
-          FractionBox[
-           RowBox[{"2", " ", "d", " ", 
-            SuperscriptBox["\[ExponentialE]", 
-             RowBox[{"-", 
-              FractionBox[
-               SuperscriptBox["z", "2"], 
-               RowBox[{"2", " ", 
-                SuperscriptBox[
-                 RowBox[{"(", 
-                  RowBox[{"c", "+", 
-                   RowBox[{"d", " ", "t"}]}], ")"}], "2"]}]]}]], " ", "z"}], 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"c", "+", 
-              RowBox[{"d", " ", "t"}]}], ")"}], "3"]]}], "+", 
-         FractionBox[
-          RowBox[{"d", " ", 
-           SuperscriptBox["\[ExponentialE]", 
-            RowBox[{"-", 
-             FractionBox[
-              SuperscriptBox["z", "2"], 
-              RowBox[{"2", " ", 
-               SuperscriptBox[
-                RowBox[{"(", 
-                 RowBox[{"c", "+", 
-                  RowBox[{"d", " ", "t"}]}], ")"}], "2"]}]]}]], " ", 
-           SuperscriptBox["z", "3"]}], 
-          SuperscriptBox[
-           RowBox[{"(", 
-            RowBox[{"c", "+", 
-             RowBox[{"d", " ", "t"}]}], ")"}], "5"]]}], 
-        RowBox[{"z", ">", "0"}]},
-       {"0", 
-        TagBox["True",
-         "PiecewiseDefault",
-         AutoDelete->True]}
-      },
-      AllowedDimensions->{2, Automatic},
-      Editable->True,
-      GridBoxAlignment->{
-       "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-        "RowsIndexed" -> {}},
-      GridBoxItemSize->{
-       "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-        "RowsIndexed" -> {}},
-      GridBoxSpacings->{"Columns" -> {
-          Offset[0.27999999999999997`], {
-           Offset[0.84]}, 
-          Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-          Offset[0.2], {
-           Offset[0.4]}, 
-          Offset[0.2]}, "RowsIndexed" -> {}},
-      Selectable->True]}
-   },
-   GridBoxAlignment->{
-    "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-     "RowsIndexed" -> {}},
-   GridBoxItemSize->{
-    "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-     "RowsIndexed" -> {}},
-   GridBoxSpacings->{"Columns" -> {
-       Offset[0.27999999999999997`], {
-        Offset[0.35]}, 
-       Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-       Offset[0.2], {
-        Offset[0.4]}, 
-       Offset[0.2]}, "RowsIndexed" -> {}}],
-  "Piecewise",
-  DeleteWithContents->True,
-  Editable->False,
-  SelectWithContents->True,
-  Selectable->False]], "Output",
- CellChangeTimes->{3.673951817470089*^9}]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell[BoxData[
- RowBox[{"D", "[", 
-  RowBox[{
-   RowBox[{"PDF", "[", 
-    RowBox[{
-     RowBox[{"RayleighDistribution", "[", 
-      RowBox[{"c", "+", 
-       RowBox[{"d", "*", "t"}]}], "]"}], ",", "z"}], "]"}], ",", "z"}], 
-  "]"}]], "Input",
- CellChangeTimes->{{3.673951820768433*^9, 3.673951820911405*^9}}],
-
-Cell[BoxData[
- TagBox[GridBox[{
-    {"\[Piecewise]", GridBox[{
-       {"0", 
-        RowBox[{"z", "<", "0"}]},
-       {
-        RowBox[{
-         FractionBox[
+        FractionBox[
+         RowBox[{
           SuperscriptBox["\[ExponentialE]", 
            RowBox[{"-", 
             FractionBox[
@@ -2590,30 +2303,14 @@ Cell[BoxData[
              RowBox[{"2", " ", 
               SuperscriptBox[
                RowBox[{"(", 
-                RowBox[{"c", "+", 
-                 RowBox[{"d", " ", "t"}]}], ")"}], "2"]}]]}]], 
-          SuperscriptBox[
-           RowBox[{"(", 
-            RowBox[{"c", "+", 
-             RowBox[{"d", " ", "t"}]}], ")"}], "2"]], "-", 
-         FractionBox[
-          RowBox[{
-           SuperscriptBox["\[ExponentialE]", 
-            RowBox[{"-", 
-             FractionBox[
-              SuperscriptBox["z", "2"], 
-              RowBox[{"2", " ", 
-               SuperscriptBox[
-                RowBox[{"(", 
-                 RowBox[{"c", "+", 
-                  RowBox[{"d", " ", "t"}]}], ")"}], "2"]}]]}]], " ", 
-           SuperscriptBox["z", "2"]}], 
-          SuperscriptBox[
-           RowBox[{"(", 
-            RowBox[{"c", "+", 
-             RowBox[{"d", " ", "t"}]}], ")"}], "4"]]}], 
+                RowBox[{"a", "+", 
+                 RowBox[{"b", " ", "t"}]}], ")"}], "2"]}]]}]], " ", "z"}], 
+         SuperscriptBox[
+          RowBox[{"(", 
+           RowBox[{"a", "+", 
+            RowBox[{"b", " ", "t"}]}], ")"}], "2"]], 
         RowBox[{"z", ">", "0"}]},
-       {"Indeterminate", 
+       {"0", 
         TagBox["True",
          "PiecewiseDefault",
          AutoDelete->True]}
@@ -2653,7 +2350,153 @@ Cell[BoxData[
   Editable->False,
   SelectWithContents->True,
   Selectable->False]], "Output",
- CellChangeTimes->{3.673951821178961*^9}]
+ CellChangeTimes->{3.6739820732926292`*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LogRayleighDistribution", "[", 
+   RowBox[{"a_", ",", "b_", ",", "t_", ",", "z_"}], "]"}], "=", 
+  RowBox[{
+   RowBox[{"-", 
+    FractionBox[
+     SuperscriptBox["z", "2"], 
+     RowBox[{"2", " ", 
+      SuperscriptBox[
+       RowBox[{"(", 
+        RowBox[{"a", "+", 
+         RowBox[{"b", " ", "t"}]}], ")"}], "2"]}]]}], "+", 
+   RowBox[{"Log", "[", "z", "]"}], "-", 
+   SuperscriptBox[
+    RowBox[{"(", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", " ", "t"}]}], ")"}], "2"]}]}]], "Input",
+ CellChangeTimes->{{3.673982055632915*^9, 3.673982119033278*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"-", 
+   SuperscriptBox[
+    RowBox[{"(", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", " ", "t"}]}], ")"}], "2"]}], "-", 
+  FractionBox[
+   SuperscriptBox["z", "2"], 
+   RowBox[{"2", " ", 
+    SuperscriptBox[
+     RowBox[{"(", 
+      RowBox[{"a", "+", 
+       RowBox[{"b", " ", "t"}]}], ")"}], "2"]}]], "+", 
+  RowBox[{"Log", "[", "z", "]"}]}]], "Output",
+ CellChangeTimes->{3.673951804576022*^9, 3.673982089222165*^9, 
+  3.673982120063221*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"LogRayleighDistribution", "[", 
+    RowBox[{"a", ",", "b", ",", "t", ",", "z"}], "]"}], ",", "a"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.673951807747838*^9, 3.673951810983477*^9}, {
+  3.673982128495659*^9, 3.673982133221816*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"-", "2"}], " ", 
+   RowBox[{"(", 
+    RowBox[{"a", "+", 
+     RowBox[{"b", " ", "t"}]}], ")"}]}], "+", 
+  FractionBox[
+   SuperscriptBox["z", "2"], 
+   SuperscriptBox[
+    RowBox[{"(", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", " ", "t"}]}], ")"}], "3"]]}]], "Output",
+ CellChangeTimes->{3.67395181135742*^9, 3.673982133473633*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"LogRayleighDistribution", "[", 
+    RowBox[{"a", ",", "b", ",", "t", ",", "z"}], "]"}], ",", "b"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.6739518148989563`*^9, 3.673951816999496*^9}, {
+  3.67398213739116*^9, 3.673982138125654*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"-", "2"}], " ", "t", " ", 
+   RowBox[{"(", 
+    RowBox[{"a", "+", 
+     RowBox[{"b", " ", "t"}]}], ")"}]}], "+", 
+  FractionBox[
+   RowBox[{"t", " ", 
+    SuperscriptBox["z", "2"]}], 
+   SuperscriptBox[
+    RowBox[{"(", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", " ", "t"}]}], ")"}], "3"]]}]], "Output",
+ CellChangeTimes->{3.673951817470089*^9, 3.67398213860918*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"LogRayleighDistribution", "[", 
+    RowBox[{"a", ",", "b", ",", "t", ",", "z"}], "]"}], ",", "t"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.673951820768433*^9, 3.673951820911405*^9}, {
+  3.673982140600025*^9, 3.673982141965622*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"-", "2"}], " ", "b", " ", 
+   RowBox[{"(", 
+    RowBox[{"a", "+", 
+     RowBox[{"b", " ", "t"}]}], ")"}]}], "+", 
+  FractionBox[
+   RowBox[{"b", " ", 
+    SuperscriptBox["z", "2"]}], 
+   SuperscriptBox[
+    RowBox[{"(", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", " ", "t"}]}], ")"}], "3"]]}]], "Output",
+ CellChangeTimes->{3.673982150374545*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"LogRayleighDistribution", "[", 
+    RowBox[{"a", ",", "b", ",", "t", ",", "z"}], "]"}], ",", "z"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.6739821477662363`*^9, 3.6739821529652777`*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  FractionBox["1", "z"], "-", 
+  FractionBox["z", 
+   SuperscriptBox[
+    RowBox[{"(", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", " ", "t"}]}], ")"}], "2"]]}]], "Output",
+ CellChangeTimes->{
+  3.673951821178961*^9, {3.67398214220224*^9, 3.6739821533027*^9}}]
 }, Open  ]]
 }, Open  ]],
 
@@ -2976,85 +2819,34 @@ Cell[BoxData[
 
 Cell[CellGroupData[{
 
-Cell["Derivatives of Kumaraswamy distributiom", "Subsection",
- CellChangeTimes->{{3.673952215608829*^9, 3.673952225322907*^9}}],
+Cell["Derivatives of Kumaraswamy distribution", "Subsection",
+ CellChangeTimes->{{3.673952215608829*^9, 3.673952225322907*^9}, {
+  3.673977793130975*^9, 3.673977793314784*^9}}],
 
 Cell[CellGroupData[{
 
 Cell[BoxData[
- RowBox[{"D", "[", 
+ RowBox[{"PDF", "[", 
   RowBox[{
-   RowBox[{"PDF", "[", 
-    RowBox[{
-     RowBox[{"KumaraswamyDistribution", "[", 
-      RowBox[{"a", ",", "b"}], "]"}], ",", "t"}], "]"}], ",", "a"}], 
-  "]"}]], "Input",
- CellChangeTimes->{{3.673952231095378*^9, 3.6739522313558207`*^9}}],
+   RowBox[{"KumaraswamyDistribution", "[", 
+    RowBox[{"a", ",", "b"}], "]"}], ",", "t"}], "]"}]], "Input",
+ CellChangeTimes->{{3.673952231095378*^9, 3.6739522313558207`*^9}, {
+  3.673980971171527*^9, 3.673981033447172*^9}}],
 
 Cell[BoxData[
  TagBox[GridBox[{
     {"\[Piecewise]", GridBox[{
        {
-        RowBox[{
-         RowBox[{"-", 
-          FractionBox[
-           RowBox[{"b", " ", 
-            SuperscriptBox["t", 
-             RowBox[{
-              RowBox[{"-", "1"}], "+", "a"}]], " ", 
-            SuperscriptBox[
-             RowBox[{"(", 
-              RowBox[{"1", "-", 
-               SuperscriptBox["t", "a"]}], ")"}], "b"]}], 
-           RowBox[{
-            RowBox[{"-", "1"}], "+", 
-            SuperscriptBox["t", "a"]}]]}], "+", 
-         FractionBox[
-          RowBox[{"a", " ", "b", " ", 
-           SuperscriptBox["t", 
-            RowBox[{
-             RowBox[{"-", "1"}], "+", 
-             RowBox[{"2", " ", "a"}]}]], " ", 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"1", "-", 
-              SuperscriptBox["t", "a"]}], ")"}], "b"], " ", 
-           RowBox[{"Log", "[", "t", "]"}]}], 
-          SuperscriptBox[
-           RowBox[{"(", 
-            RowBox[{
-             RowBox[{"-", "1"}], "+", 
-             SuperscriptBox["t", "a"]}], ")"}], "2"]], "+", 
-         FractionBox[
-          RowBox[{"a", " ", 
-           SuperscriptBox["b", "2"], " ", 
-           SuperscriptBox["t", 
-            RowBox[{
-             RowBox[{"-", "1"}], "+", 
-             RowBox[{"2", " ", "a"}]}]], " ", 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"1", "-", 
-              SuperscriptBox["t", "a"]}], ")"}], 
-            RowBox[{
-             RowBox[{"-", "1"}], "+", "b"}]], " ", 
-           RowBox[{"Log", "[", "t", "]"}]}], 
+        RowBox[{"a", " ", "b", " ", 
+         SuperscriptBox["t", 
           RowBox[{
-           RowBox[{"-", "1"}], "+", 
-           SuperscriptBox["t", "a"]}]], "-", 
-         FractionBox[
-          RowBox[{"a", " ", "b", " ", 
-           SuperscriptBox["t", 
-            RowBox[{
-             RowBox[{"-", "1"}], "+", "a"}]], " ", 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"1", "-", 
-              SuperscriptBox["t", "a"]}], ")"}], "b"], " ", 
-           RowBox[{"Log", "[", "t", "]"}]}], 
+           RowBox[{"-", "1"}], "+", "a"}]], " ", 
+         SuperscriptBox[
+          RowBox[{"(", 
+           RowBox[{"1", "-", 
+            SuperscriptBox["t", "a"]}], ")"}], 
           RowBox[{
-           RowBox[{"-", "1"}], "+", 
-           SuperscriptBox["t", "a"]}]]}], 
+           RowBox[{"-", "1"}], "+", "b"}]]}], 
         RowBox[{"0", "<", "t", "<", "1"}]},
        {"0", 
         TagBox["True",
@@ -3096,7 +2888,48 @@ Cell[BoxData[
   Editable->False,
   SelectWithContents->True,
   Selectable->False]], "Output",
- CellChangeTimes->{3.673952235495084*^9}]
+ CellChangeTimes->{3.673981045589005*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LogKumaraswamyDistribution", "[", 
+   RowBox[{"a_", ",", "b_", ",", "t_"}], "]"}], "=", 
+  RowBox[{
+   RowBox[{"Log", "[", "a", "]"}], "+", 
+   RowBox[{"Log", "[", " ", "b", "]"}], "+", 
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{"a", "-", "1"}], ")"}], "*", 
+    RowBox[{"Log", "[", " ", "t", "]"}]}], "+", 
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{"b", "-", "1"}], ")"}], "*", 
+    RowBox[{"Log", " ", "[", 
+     RowBox[{"1", "-", 
+      SuperscriptBox["t", "a"]}], "]"}]}]}]}]], "Input",
+ CellChangeTimes->{{3.673981044784381*^9, 3.673981113917173*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"Log", "[", "a", "]"}], "+", 
+  RowBox[{"Log", "[", "b", "]"}], "+", 
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{
+     RowBox[{"-", "1"}], "+", "a"}], ")"}], " ", 
+   RowBox[{"Log", "[", "t", "]"}]}], "+", 
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{
+     RowBox[{"-", "1"}], "+", "b"}], ")"}], " ", 
+   RowBox[{"Log", "[", 
+    RowBox[{"1", "-", 
+     SuperscriptBox["t", "a"]}], "]"}]}]}]], "Output",
+ CellChangeTimes->{{3.673980978229782*^9, 3.673981034085392*^9}, 
+   3.6739811143882732`*^9}]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -3104,88 +2937,27 @@ Cell[CellGroupData[{
 Cell[BoxData[
  RowBox[{"D", "[", 
   RowBox[{
-   RowBox[{"PDF", "[", 
-    RowBox[{
-     RowBox[{"KumaraswamyDistribution", "[", 
-      RowBox[{"a", ",", "b"}], "]"}], ",", "t"}], "]"}], ",", "b"}], 
-  "]"}]], "Input",
- CellChangeTimes->{{3.673952238266016*^9, 3.6739522383623247`*^9}}],
+   RowBox[{"LogKumaraswamyDistribution", "[", 
+    RowBox[{"a", ",", "b", ",", "t"}], "]"}], ",", "a"}], "]"}]], "Input",
+ CellChangeTimes->{{3.673980963972497*^9, 3.673980976401539*^9}, {
+  3.673981118304083*^9, 3.673981129460486*^9}}],
 
 Cell[BoxData[
- TagBox[GridBox[{
-    {"\[Piecewise]", GridBox[{
-       {
-        RowBox[{
-         RowBox[{"-", 
-          FractionBox[
-           RowBox[{"a", " ", 
-            SuperscriptBox["t", 
-             RowBox[{
-              RowBox[{"-", "1"}], "+", "a"}]], " ", 
-            SuperscriptBox[
-             RowBox[{"(", 
-              RowBox[{"1", "-", 
-               SuperscriptBox["t", "a"]}], ")"}], "b"]}], 
-           RowBox[{
-            RowBox[{"-", "1"}], "+", 
-            SuperscriptBox["t", "a"]}]]}], "-", 
-         FractionBox[
-          RowBox[{"a", " ", "b", " ", 
-           SuperscriptBox["t", 
-            RowBox[{
-             RowBox[{"-", "1"}], "+", "a"}]], " ", 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"1", "-", 
-              SuperscriptBox["t", "a"]}], ")"}], "b"], " ", 
-           RowBox[{"Log", "[", 
-            RowBox[{"1", "-", 
-             SuperscriptBox["t", "a"]}], "]"}]}], 
-          RowBox[{
-           RowBox[{"-", "1"}], "+", 
-           SuperscriptBox["t", "a"]}]]}], 
-        RowBox[{"0", "<", "t", "<", "1"}]},
-       {"0", 
-        TagBox["True",
-         "PiecewiseDefault",
-         AutoDelete->True]}
-      },
-      AllowedDimensions->{2, Automatic},
-      Editable->True,
-      GridBoxAlignment->{
-       "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-        "RowsIndexed" -> {}},
-      GridBoxItemSize->{
-       "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-        "RowsIndexed" -> {}},
-      GridBoxSpacings->{"Columns" -> {
-          Offset[0.27999999999999997`], {
-           Offset[0.84]}, 
-          Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-          Offset[0.2], {
-           Offset[0.4]}, 
-          Offset[0.2]}, "RowsIndexed" -> {}},
-      Selectable->True]}
-   },
-   GridBoxAlignment->{
-    "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-     "RowsIndexed" -> {}},
-   GridBoxItemSize->{
-    "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-     "RowsIndexed" -> {}},
-   GridBoxSpacings->{"Columns" -> {
-       Offset[0.27999999999999997`], {
-        Offset[0.35]}, 
-       Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-       Offset[0.2], {
-        Offset[0.4]}, 
-       Offset[0.2]}, "RowsIndexed" -> {}}],
-  "Piecewise",
-  DeleteWithContents->True,
-  Editable->False,
-  SelectWithContents->True,
-  Selectable->False]], "Output",
- CellChangeTimes->{3.673952238656061*^9}]
+ RowBox[{
+  FractionBox["1", "a"], "+", 
+  RowBox[{"Log", "[", "t", "]"}], "-", 
+  FractionBox[
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"-", "1"}], "+", "b"}], ")"}], " ", 
+    SuperscriptBox["t", "a"], " ", 
+    RowBox[{"Log", "[", "t", "]"}]}], 
+   RowBox[{"1", "-", 
+    SuperscriptBox["t", "a"]}]]}]], "Output",
+ CellChangeTimes->{
+  3.673952235495084*^9, 3.673980980369501*^9, {3.673981118666274*^9, 
+   3.673981130712743*^9}}]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -3193,117 +2965,232 @@ Cell[CellGroupData[{
 Cell[BoxData[
  RowBox[{"D", "[", 
   RowBox[{
-   RowBox[{"PDF", "[", 
-    RowBox[{
-     RowBox[{"KumaraswamyDistribution", "[", 
-      RowBox[{"a", ",", "b"}], "]"}], ",", "t"}], "]"}], ",", "t"}], 
-  "]"}]], "Input",
- CellChangeTimes->{{3.673952240602498*^9, 3.673952240754023*^9}}],
+   RowBox[{"LogKumaraswamyDistribution", "[", 
+    RowBox[{"a", ",", "b", ",", "t"}], "]"}], ",", "b"}], "]"}]], "Input",
+ CellChangeTimes->{{3.673952238266016*^9, 3.6739522383623247`*^9}, {
+  3.673981135511179*^9, 3.6739811378684072`*^9}}],
 
 Cell[BoxData[
- TagBox[GridBox[{
-    {"\[Piecewise]", GridBox[{
-       {"0", 
-        RowBox[{"t", "<", "0"}]},
-       {
-        RowBox[{
-         FractionBox[
-          RowBox[{
-           SuperscriptBox["a", "2"], " ", "b", " ", 
-           SuperscriptBox["t", 
-            RowBox[{
-             RowBox[{"-", "2"}], "+", 
-             RowBox[{"2", " ", "a"}]}]], " ", 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"1", "-", 
-              SuperscriptBox["t", "a"]}], ")"}], "b"]}], 
-          SuperscriptBox[
-           RowBox[{"(", 
-            RowBox[{
-             RowBox[{"-", "1"}], "+", 
-             SuperscriptBox["t", "a"]}], ")"}], "2"]], "+", 
-         FractionBox[
-          RowBox[{
-           SuperscriptBox["a", "2"], " ", 
-           SuperscriptBox["b", "2"], " ", 
-           SuperscriptBox["t", 
-            RowBox[{
-             RowBox[{"-", "2"}], "+", 
-             RowBox[{"2", " ", "a"}]}]], " ", 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"1", "-", 
-              SuperscriptBox["t", "a"]}], ")"}], 
-            RowBox[{
-             RowBox[{"-", "1"}], "+", "b"}]]}], 
-          RowBox[{
-           RowBox[{"-", "1"}], "+", 
-           SuperscriptBox["t", "a"]}]], "-", 
-         FractionBox[
-          RowBox[{
-           RowBox[{"(", 
-            RowBox[{
-             RowBox[{"-", "1"}], "+", "a"}], ")"}], " ", "a", " ", "b", " ", 
-           SuperscriptBox["t", 
-            RowBox[{
-             RowBox[{"-", "2"}], "+", "a"}]], " ", 
-           SuperscriptBox[
-            RowBox[{"(", 
-             RowBox[{"1", "-", 
-              SuperscriptBox["t", "a"]}], ")"}], "b"]}], 
-          RowBox[{
-           RowBox[{"-", "1"}], "+", 
-           SuperscriptBox["t", "a"]}]]}], 
-        RowBox[{"0", "<", "t", "<", "1"}]},
-       {"0", 
-        RowBox[{"t", ">", "1"}]},
-       {"Indeterminate", 
-        TagBox["True",
-         "PiecewiseDefault",
-         AutoDelete->True]}
-      },
-      AllowedDimensions->{2, Automatic},
-      Editable->True,
-      GridBoxAlignment->{
-       "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-        "RowsIndexed" -> {}},
-      GridBoxItemSize->{
-       "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-        "RowsIndexed" -> {}},
-      GridBoxSpacings->{"Columns" -> {
-          Offset[0.27999999999999997`], {
-           Offset[0.84]}, 
-          Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-          Offset[0.2], {
-           Offset[0.4]}, 
-          Offset[0.2]}, "RowsIndexed" -> {}},
-      Selectable->True]}
-   },
-   GridBoxAlignment->{
-    "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
-     "RowsIndexed" -> {}},
-   GridBoxItemSize->{
-    "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-     "RowsIndexed" -> {}},
-   GridBoxSpacings->{"Columns" -> {
-       Offset[0.27999999999999997`], {
-        Offset[0.35]}, 
-       Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
-       Offset[0.2], {
-        Offset[0.4]}, 
-       Offset[0.2]}, "RowsIndexed" -> {}}],
-  "Piecewise",
-  DeleteWithContents->True,
-  Editable->False,
-  SelectWithContents->True,
-  Selectable->False]], "Output",
- CellChangeTimes->{3.673952250060316*^9}]
+ RowBox[{
+  FractionBox["1", "b"], "+", 
+  RowBox[{"Log", "[", 
+   RowBox[{"1", "-", 
+    SuperscriptBox["t", "a"]}], "]"}]}]], "Output",
+ CellChangeTimes->{3.673952238656061*^9, 3.673981138697093*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"LogKumaraswamyDistribution", "[", 
+    RowBox[{"a", ",", "b", ",", "t"}], "]"}], ",", "t"}], "]"}]], "Input",
+ CellChangeTimes->{{3.673952240602498*^9, 3.673952240754023*^9}, {
+  3.6739811412461987`*^9, 3.6739811424439583`*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  FractionBox[
+   RowBox[{
+    RowBox[{"-", "1"}], "+", "a"}], "t"], "-", 
+  FractionBox[
+   RowBox[{"a", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"-", "1"}], "+", "b"}], ")"}], " ", 
+    SuperscriptBox["t", 
+     RowBox[{
+      RowBox[{"-", "1"}], "+", "a"}]]}], 
+   RowBox[{"1", "-", 
+    SuperscriptBox["t", "a"]}]]}]], "Output",
+ CellChangeTimes->{3.673952250060316*^9, 3.67398114268001*^9}]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Derivatives of Schechter distribution", "Subsection",
+ CellChangeTimes->{{3.673977783095641*^9, 3.673977790555081*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"f", "[", 
+   RowBox[{"a_", ",", "b_", ",", "t_", ",", "lStar_", ",", "l_"}], "]"}], "=", 
+  RowBox[{
+   RowBox[{"1", "/", 
+    RowBox[{"Gamma", "[", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", "*", "t"}]}], "]"}]}], "*", 
+   RowBox[{"1", "/", "lStar"}], "*", 
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{"l", "/", "lStar"}], ")"}], "^", 
+    RowBox[{"(", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", "*", "t"}]}], ")"}]}], "*", 
+   RowBox[{"Exp", "[", 
+    RowBox[{"l", "/", "lStar"}], "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.673977796672975*^9, 3.673977828578835*^9}, {
+  3.6739779773490667`*^9, 3.673978010530231*^9}}],
+
+Cell[BoxData[
+ FractionBox[
+  RowBox[{
+   SuperscriptBox["\[ExponentialE]", 
+    RowBox[{"l", "/", "lStar"}]], " ", 
+   SuperscriptBox[
+    RowBox[{"(", 
+     FractionBox["l", "lStar"], ")"}], 
+    RowBox[{"a", "+", 
+     RowBox[{"b", " ", "t"}]}]]}], 
+  RowBox[{"lStar", " ", 
+   RowBox[{"Gamma", "[", 
+    RowBox[{"a", "+", 
+     RowBox[{"b", " ", "t"}]}], "]"}]}]]], "Output",
+ CellChangeTimes->{3.673978011781247*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"logF", "[", 
+   RowBox[{"a_", ",", "b_", ",", "t_", ",", "lStar_", ",", "l_"}], "]"}], "=", 
+  RowBox[{
+   RowBox[{"-", 
+    RowBox[{"LogGamma", "[", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", "*", "t"}], "+", "1"}], "]"}]}], "-", 
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", "*", "t"}], "+", "1"}], ")"}], "*", 
+    RowBox[{"Log", "[", "lStar", "]"}]}], "+", 
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{"a", "+", 
+      RowBox[{"b", "*", "t"}]}], ")"}], "*", 
+    RowBox[{"Log", "[", "l", "]"}]}], "+", 
+   RowBox[{"l", "/", "lStar"}]}]}]], "Input",
+ CellChangeTimes->{{3.6739780138792343`*^9, 3.6739780420412397`*^9}, {
+  3.673978102594895*^9, 3.673978190110785*^9}, {3.673979679064209*^9, 
+  3.6739796793182*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  FractionBox["l", "lStar"], "+", 
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{"a", "+", 
+     RowBox[{"b", " ", "t"}]}], ")"}], " ", 
+   RowBox[{"Log", "[", "l", "]"}]}], "-", 
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{"1", "+", "a", "+", 
+     RowBox[{"b", " ", "t"}]}], ")"}], " ", 
+   RowBox[{"Log", "[", "lStar", "]"}]}], "-", 
+  RowBox[{"LogGamma", "[", 
+   RowBox[{"1", "+", "a", "+", 
+    RowBox[{"b", " ", "t"}]}], "]"}]}]], "Output",
+ CellChangeTimes->{{3.673978022664383*^9, 3.673978042567193*^9}, {
+   3.673978105824203*^9, 3.673978129696651*^9}, 3.673978192220612*^9, 
+   3.673979680588707*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"logF", "[", 
+    RowBox[{"a", ",", "b", ",", "t", ",", "lStar", ",", "l"}], "]"}], ",", 
+   "l"}], "]"}]], "Input",
+ CellChangeTimes->{{3.6739781985824738`*^9, 3.673978200766382*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  FractionBox["1", "lStar"], "+", 
+  FractionBox[
+   RowBox[{"a", "+", 
+    RowBox[{"b", " ", "t"}]}], "l"]}]], "Output",
+ CellChangeTimes->{3.673978201046444*^9, 3.6739796827587013`*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"logF", "[", 
+    RowBox[{"a", ",", "b", ",", "t", ",", "lStar", ",", "l"}], "]"}], ",", 
+   "t"}], "]"}]], "Input",
+ CellChangeTimes->{{3.67397827999749*^9, 3.673978280123781*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"b", " ", 
+   RowBox[{"Log", "[", "l", "]"}]}], "-", 
+  RowBox[{"b", " ", 
+   RowBox[{"Log", "[", "lStar", "]"}]}], "-", 
+  RowBox[{"b", " ", 
+   RowBox[{"PolyGamma", "[", 
+    RowBox[{"0", ",", 
+     RowBox[{"1", "+", "a", "+", 
+      RowBox[{"b", " ", "t"}]}]}], "]"}]}]}]], "Output",
+ CellChangeTimes->{3.673978280415326*^9, 3.673979684179123*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"logF", "[", 
+    RowBox[{"a", ",", "b", ",", "t", ",", "lStar", ",", "l"}], "]"}], ",", 
+   "a"}], "]"}]], "Input",
+ CellChangeTimes->{{3.673978395035433*^9, 3.673978395139989*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"Log", "[", "l", "]"}], "-", 
+  RowBox[{"Log", "[", "lStar", "]"}], "-", 
+  RowBox[{"PolyGamma", "[", 
+   RowBox[{"0", ",", 
+    RowBox[{"1", "+", "a", "+", 
+     RowBox[{"b", " ", "t"}]}]}], "]"}]}]], "Output",
+ CellChangeTimes->{3.6739783954085073`*^9, 3.673979686762053*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"logF", "[", 
+    RowBox[{"a", ",", "b", ",", "t", ",", "lStar", ",", "l"}], "]"}], ",", 
+   "b"}], "]"}]], "Input",
+ CellChangeTimes->{{3.6739784211947308`*^9, 3.673978421355142*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"t", " ", 
+   RowBox[{"Log", "[", "l", "]"}]}], "-", 
+  RowBox[{"t", " ", 
+   RowBox[{"Log", "[", "lStar", "]"}]}], "-", 
+  RowBox[{"t", " ", 
+   RowBox[{"PolyGamma", "[", 
+    RowBox[{"0", ",", 
+     RowBox[{"1", "+", "a", "+", 
+      RowBox[{"b", " ", "t"}]}]}], "]"}]}]}]], "Output",
+ CellChangeTimes->{3.673978421841076*^9, 3.673979688375201*^9}]
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{935, 921},
-WindowMargins->{{-149, Automatic}, {962, Automatic}},
+WindowSize->{806, 851},
+WindowMargins->{{Automatic, 0}, {Automatic, -1}},
 FrontEndVersion->"10.3 for Mac OS X x86 (32-bit, 64-bit Kernel) (December 10, \
 2015)",
 StyleDefinitions->"Default.nb"
@@ -3320,16 +3207,16 @@ CellTagsIndex->{}
 (*NotebookFileOutline
 Notebook[{
 Cell[CellGroupData[{
-Cell[580, 22, 743, 20, 28, "Input"],
-Cell[1326, 44, 2495, 83, 119, "Output"]
+Cell[580, 22, 743, 20, 46, "Input"],
+Cell[1326, 44, 2495, 83, 306, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[3858, 132, 568, 17, 28, "Input"],
-Cell[4429, 151, 1303, 43, 63, "Output"]
+Cell[3858, 132, 568, 17, 46, "Input"],
+Cell[4429, 151, 1303, 43, 119, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5769, 199, 819, 22, 28, "Input"],
-Cell[6591, 223, 7701, 229, 390, "Output"]
+Cell[5769, 199, 819, 22, 63, "Input"],
+Cell[6591, 223, 7701, 229, 889, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[14329, 457, 518, 17, 28, "Input"],
@@ -3340,11 +3227,11 @@ Cell[16495, 535, 909, 28, 28, "Input"],
 Cell[17407, 565, 1007, 34, 99, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[18451, 604, 1277, 42, 28, "Input"],
+Cell[18451, 604, 1277, 42, 46, "Input"],
 Cell[19731, 648, 1271, 42, 99, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[21039, 695, 1348, 41, 28, "Input"],
+Cell[21039, 695, 1348, 41, 46, "Input"],
 Cell[22390, 738, 672, 21, 83, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
@@ -3356,17 +3243,17 @@ Cell[23880, 790, 603, 16, 28, "Input"],
 Cell[24486, 808, 456, 13, 52, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[24979, 826, 1553, 47, 28, "Input"],
+Cell[24979, 826, 1553, 47, 63, "Input"],
 Cell[26535, 875, 1753, 57, 83, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[28325, 937, 1680, 49, 28, "Input"],
+Cell[28325, 937, 1680, 49, 63, "Input"],
 Cell[30008, 988, 862, 27, 83, "Output"]
 }, Open  ]],
 Cell[30885, 1018, 860, 26, 28, "Input"],
 Cell[CellGroupData[{
 Cell[31770, 1048, 2266, 63, 148, "Input"],
-Cell[34039, 1113, 7512, 214, 206, "Output"]
+Cell[34039, 1113, 7512, 214, 243, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[41588, 1332, 976, 30, 85, "Input"],
@@ -3374,7 +3261,7 @@ Cell[42567, 1364, 860, 27, 83, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[43464, 1396, 208, 5, 28, "Input"],
-Cell[43675, 1403, 3024, 97, 83, "Output"]
+Cell[43675, 1403, 3024, 97, 161, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[46736, 1505, 422, 14, 42, "Input"],
@@ -3403,7 +3290,7 @@ Cell[57079, 1857, 1753, 57, 83, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[58869, 1919, 232, 6, 28, "Input"],
-Cell[59104, 1927, 6252, 198, 258, "Output"]
+Cell[59104, 1927, 6252, 198, 297, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[65393, 2130, 403, 13, 42, "Input"],
@@ -3416,50 +3303,93 @@ Cell[67981, 2216, 1755, 57, 83, "Output"]
 Cell[CellGroupData[{
 Cell[69773, 2278, 126, 1, 44, "Subsection"],
 Cell[CellGroupData[{
-Cell[69924, 2283, 307, 9, 28, "Input"],
-Cell[70234, 2294, 2684, 78, 81, "Output"]
+Cell[69924, 2283, 293, 7, 28, "Input"],
+Cell[70220, 2292, 2040, 60, 81, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[72955, 2377, 307, 9, 28, "Input"],
-Cell[73265, 2388, 2716, 79, 81, "Output"]
+Cell[72297, 2357, 590, 18, 54, "Input"],
+Cell[72890, 2377, 477, 16, 53, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[76018, 2472, 309, 9, 28, "Input"],
-Cell[76330, 2483, 2704, 78, 81, "Output"]
+Cell[73404, 2398, 291, 7, 28, "Input"],
+Cell[73698, 2407, 379, 13, 53, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[79071, 2566, 307, 9, 28, "Input"],
-Cell[79381, 2577, 2654, 78, 97, "Output"]
+Cell[74114, 2425, 292, 7, 28, "Input"],
+Cell[74409, 2434, 414, 14, 53, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[74860, 2453, 291, 7, 28, "Input"],
+Cell[75154, 2462, 393, 14, 53, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[75584, 2481, 246, 6, 28, "Input"],
+Cell[75833, 2489, 283, 9, 85, "Output"]
 }, Open  ]]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[82084, 2661, 121, 1, 44, "Subsection"],
+Cell[76165, 2504, 121, 1, 44, "Subsection"],
 Cell[CellGroupData[{
-Cell[82230, 2666, 275, 8, 28, "Input"],
-Cell[82508, 2676, 2840, 83, 63, "Output"]
+Cell[76311, 2509, 275, 8, 28, "Input"],
+Cell[76589, 2519, 2840, 83, 63, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[85385, 2764, 275, 8, 28, "Input"],
-Cell[85663, 2774, 2875, 84, 63, "Output"]
+Cell[79466, 2607, 275, 8, 28, "Input"],
+Cell[79744, 2617, 2875, 84, 63, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[88575, 2863, 277, 8, 28, "Input"],
-Cell[88855, 2873, 3301, 99, 97, "Output"]
+Cell[82656, 2706, 277, 8, 28, "Input"],
+Cell[82936, 2716, 3301, 99, 97, "Output"]
 }, Open  ]]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[92205, 2978, 127, 1, 44, "Subsection"],
+Cell[86286, 2821, 176, 2, 44, "Subsection"],
 Cell[CellGroupData[{
-Cell[92357, 2983, 284, 8, 28, "Input"],
-Cell[92644, 2993, 3604, 105, 67, "Output"]
+Cell[86487, 2827, 272, 6, 28, "Input"],
+Cell[86762, 2835, 1868, 55, 49, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[96285, 3103, 284, 8, 28, "Input"],
-Cell[96572, 3113, 2519, 74, 63, "Output"]
+Cell[88667, 2895, 593, 17, 51, "Input"],
+Cell[89263, 2914, 524, 17, 35, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[99128, 3192, 282, 8, 28, "Input"],
-Cell[99413, 3202, 3297, 98, 101, "Output"]
+Cell[89824, 2936, 281, 6, 28, "Input"],
+Cell[90108, 2944, 464, 15, 49, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[90609, 2964, 285, 6, 28, "Input"],
+Cell[90897, 2972, 215, 6, 47, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[91149, 2983, 285, 6, 28, "Input"],
+Cell[91437, 2991, 430, 15, 49, "Output"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[91916, 3012, 125, 1, 44, "Subsection"],
+Cell[CellGroupData[{
+Cell[92066, 3017, 656, 19, 28, "Input"],
+Cell[92725, 3038, 421, 14, 61, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[93183, 3057, 781, 22, 46, "Input"],
+Cell[93967, 3081, 625, 18, 48, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[94629, 3104, 240, 6, 28, "Input"],
+Cell[94872, 3112, 211, 6, 48, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[95120, 3123, 237, 6, 28, "Input"],
+Cell[95360, 3131, 384, 11, 28, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[95781, 3147, 238, 6, 28, "Input"],
+Cell[96022, 3155, 311, 8, 28, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[96370, 3168, 240, 6, 28, "Input"],
+Cell[96613, 3176, 384, 11, 28, "Output"]
 }, Open  ]]
 }, Open  ]]
 }
