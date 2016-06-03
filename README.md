@@ -1,4 +1,4 @@
-# PhotoZviaGP
+# Delight
 **Photometric redshift via Gaussian processes with physical kernels**
 
 ![alt tag](https://travis-ci.org/ixkael/PhotoZviaGP.svg?branch=master)
