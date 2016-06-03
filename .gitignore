@@ -1,7 +1,11 @@
 # Project specific
 notebooks/pics
-code/*.pyx
-code/*.c
+notebooks/oldstuff
+notebooks/data
+notebooks/movies
+paper/PhotoZviaGP_paper.pdf
+delight/*.pyx
+delight/*.c
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
