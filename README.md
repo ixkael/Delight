@@ -4,6 +4,8 @@
 ![alt tag](https://travis-ci.org/ixkael/PhotoZviaGP.svg?branch=master)
 ![alt tag](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)
 
+Heavily relies on GPy computation and classes.
+
 ## Requirements
 
 Standard: python, cython, numpy, scipy, pytest

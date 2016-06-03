@@ -7,7 +7,7 @@ from scipy.special import gamma, gammaln, polygamma
 
 class Schechter(Prior):
     """
-    Schechter luminosity function
+    Schechter luminosity function (normalized)
         p(l|t) = (l/l*)^alpha(t) * exp(l/l*) / l* / Gamma(alpha(t)+1)
         with alpha(t) = alpha0 + alpha1 * t
     """
@@ -57,3 +57,52 @@ class Schechter(Prior):
     def lnpdf_grad_alpha1(self, ell, t):
         """Derivative of lnprob with respect to alpha1"""
         return t * (np.log(ell) - self.lnEllStar - polygamma(0, 1 + self.alpha0 + self.alpha1 * t))
+
+
+
+class Kumaraswamy(Prior):
+    """
+    Kumaraswamy distribution
+        p(t) = alpha0 * alpha1 * t^(alpha0-1) * (1-t^alpha0)^(alpha1-1)
+    """
+    domain = _REAL
+    _instances = []
+
+    def __new__(cls, alpha0=1.0, alpha1=1.0):  # Singleton:
+        if cls._instances:
+            cls._instances[:] = [instance for instance in cls._instances if instance()]
+            for instance in cls._instances:
+                if instance().alpha0 == alpha0 and instance().alpha1 == alpha1:
+                    return instance()
+        newfunc = super(Prior, cls).__new__
+        if newfunc is object.__new__:
+            o = newfunc(cls)
+        else:
+            o = newfunc(cls, mu, sigma)
+        cls._instances.append(weakref.ref(o))
+        return cls._instances[-1]()
+
+    def __init__(self, alpha0, alpha1):
+        self.alpha0 = float(alpha0)
+        self.alpha1 = float(alpha1)
+        self.logalpha0 = np.log(alpha0)
+        self.logalpha1 = np.log(alpha1)
+
+    def __str__(self):
+        return "Kumaraswamy({:.2g}, {:.2g})".format(self.alpha0, self.alpha1)
+
+    def lnpdf(self, t):
+        """Lnprob"""
+        return self.logalpha0 + self.logalpha1 + (self.alpha0 - 1) * np.log(t) + (self.alpha1 - 1) * np.log(1 - t**self.alpha0)
+
+    def lnpdf_grad_t(self, t):
+        """Derivative of lnprob with respect to t"""
+        return (self.alpha0 - 1) / t - (self.alpha0 * (self.alpha1- 1 ) * t**(self.alpha0 - 1)) / (1 - t**self.alpha0)
+
+    def lnpdf_grad_alpha0(self, t):
+        """Derivative of lnprob with respect to alpha0"""
+        return 1/self.alpha0 + np.log(t) - (self.alpha1 - 1) * t**self.alpha0 * np.log(t) / (1 - t**self.alpha0)
+
+    def lnpdf_grad_alpha1(self, t):
+        """Derivative of lnprob with respect to alpha1"""
+        return 1/self.alpha1 + np.log(1 - t**self.alpha0)
