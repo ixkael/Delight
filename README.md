@@ -1,5 +1,10 @@
 # PhotoZviaGP
-Photometric redshift via Gaussian processes with physical kernels.
+**Photometric redshift via Gaussian processes with physical kernels**
+
+.. image:: https://travis-ci.org/ixkael/PhotoZviaGP.svg?branch=master
+        :target: https://travis-ci.org/ixkael/PhotoZviaG
+.. image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
+        :target: https://github.com/ixkael/PhotoZviaGP/blob/master/LICENSE
 
 ## Requirements
 
