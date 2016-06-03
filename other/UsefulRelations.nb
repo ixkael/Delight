@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     96115,       3117]
-NotebookOptionsPosition[     92184,       2976]
-NotebookOutlinePosition[     92545,       2992]
-CellTagsIndexPosition[     92502,       2989]
+NotebookDataLength[    107098,       3460]
+NotebookOptionsPosition[    102738,       3304]
+NotebookOutlinePosition[    103099,       3320]
+CellTagsIndexPosition[    103056,       3317]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -2972,10 +2972,338 @@ Cell[BoxData[
   Selectable->False]], "Output",
  CellChangeTimes->{3.673951951401387*^9}]
 }, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Derivatives of Kumaraswamy distributiom", "Subsection",
+ CellChangeTimes->{{3.673952215608829*^9, 3.673952225322907*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"PDF", "[", 
+    RowBox[{
+     RowBox[{"KumaraswamyDistribution", "[", 
+      RowBox[{"a", ",", "b"}], "]"}], ",", "t"}], "]"}], ",", "a"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.673952231095378*^9, 3.6739522313558207`*^9}}],
+
+Cell[BoxData[
+ TagBox[GridBox[{
+    {"\[Piecewise]", GridBox[{
+       {
+        RowBox[{
+         RowBox[{"-", 
+          FractionBox[
+           RowBox[{"b", " ", 
+            SuperscriptBox["t", 
+             RowBox[{
+              RowBox[{"-", "1"}], "+", "a"}]], " ", 
+            SuperscriptBox[
+             RowBox[{"(", 
+              RowBox[{"1", "-", 
+               SuperscriptBox["t", "a"]}], ")"}], "b"]}], 
+           RowBox[{
+            RowBox[{"-", "1"}], "+", 
+            SuperscriptBox["t", "a"]}]]}], "+", 
+         FractionBox[
+          RowBox[{"a", " ", "b", " ", 
+           SuperscriptBox["t", 
+            RowBox[{
+             RowBox[{"-", "1"}], "+", 
+             RowBox[{"2", " ", "a"}]}]], " ", 
+           SuperscriptBox[
+            RowBox[{"(", 
+             RowBox[{"1", "-", 
+              SuperscriptBox["t", "a"]}], ")"}], "b"], " ", 
+           RowBox[{"Log", "[", "t", "]"}]}], 
+          SuperscriptBox[
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"-", "1"}], "+", 
+             SuperscriptBox["t", "a"]}], ")"}], "2"]], "+", 
+         FractionBox[
+          RowBox[{"a", " ", 
+           SuperscriptBox["b", "2"], " ", 
+           SuperscriptBox["t", 
+            RowBox[{
+             RowBox[{"-", "1"}], "+", 
+             RowBox[{"2", " ", "a"}]}]], " ", 
+           SuperscriptBox[
+            RowBox[{"(", 
+             RowBox[{"1", "-", 
+              SuperscriptBox["t", "a"]}], ")"}], 
+            RowBox[{
+             RowBox[{"-", "1"}], "+", "b"}]], " ", 
+           RowBox[{"Log", "[", "t", "]"}]}], 
+          RowBox[{
+           RowBox[{"-", "1"}], "+", 
+           SuperscriptBox["t", "a"]}]], "-", 
+         FractionBox[
+          RowBox[{"a", " ", "b", " ", 
+           SuperscriptBox["t", 
+            RowBox[{
+             RowBox[{"-", "1"}], "+", "a"}]], " ", 
+           SuperscriptBox[
+            RowBox[{"(", 
+             RowBox[{"1", "-", 
+              SuperscriptBox["t", "a"]}], ")"}], "b"], " ", 
+           RowBox[{"Log", "[", "t", "]"}]}], 
+          RowBox[{
+           RowBox[{"-", "1"}], "+", 
+           SuperscriptBox["t", "a"]}]]}], 
+        RowBox[{"0", "<", "t", "<", "1"}]},
+       {"0", 
+        TagBox["True",
+         "PiecewiseDefault",
+         AutoDelete->True]}
+      },
+      AllowedDimensions->{2, Automatic},
+      Editable->True,
+      GridBoxAlignment->{
+       "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
+        "RowsIndexed" -> {}},
+      GridBoxItemSize->{
+       "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
+        "RowsIndexed" -> {}},
+      GridBoxSpacings->{"Columns" -> {
+          Offset[0.27999999999999997`], {
+           Offset[0.84]}, 
+          Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
+          Offset[0.2], {
+           Offset[0.4]}, 
+          Offset[0.2]}, "RowsIndexed" -> {}},
+      Selectable->True]}
+   },
+   GridBoxAlignment->{
+    "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
+     "RowsIndexed" -> {}},
+   GridBoxItemSize->{
+    "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
+     "RowsIndexed" -> {}},
+   GridBoxSpacings->{"Columns" -> {
+       Offset[0.27999999999999997`], {
+        Offset[0.35]}, 
+       Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
+       Offset[0.2], {
+        Offset[0.4]}, 
+       Offset[0.2]}, "RowsIndexed" -> {}}],
+  "Piecewise",
+  DeleteWithContents->True,
+  Editable->False,
+  SelectWithContents->True,
+  Selectable->False]], "Output",
+ CellChangeTimes->{3.673952235495084*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"PDF", "[", 
+    RowBox[{
+     RowBox[{"KumaraswamyDistribution", "[", 
+      RowBox[{"a", ",", "b"}], "]"}], ",", "t"}], "]"}], ",", "b"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.673952238266016*^9, 3.6739522383623247`*^9}}],
+
+Cell[BoxData[
+ TagBox[GridBox[{
+    {"\[Piecewise]", GridBox[{
+       {
+        RowBox[{
+         RowBox[{"-", 
+          FractionBox[
+           RowBox[{"a", " ", 
+            SuperscriptBox["t", 
+             RowBox[{
+              RowBox[{"-", "1"}], "+", "a"}]], " ", 
+            SuperscriptBox[
+             RowBox[{"(", 
+              RowBox[{"1", "-", 
+               SuperscriptBox["t", "a"]}], ")"}], "b"]}], 
+           RowBox[{
+            RowBox[{"-", "1"}], "+", 
+            SuperscriptBox["t", "a"]}]]}], "-", 
+         FractionBox[
+          RowBox[{"a", " ", "b", " ", 
+           SuperscriptBox["t", 
+            RowBox[{
+             RowBox[{"-", "1"}], "+", "a"}]], " ", 
+           SuperscriptBox[
+            RowBox[{"(", 
+             RowBox[{"1", "-", 
+              SuperscriptBox["t", "a"]}], ")"}], "b"], " ", 
+           RowBox[{"Log", "[", 
+            RowBox[{"1", "-", 
+             SuperscriptBox["t", "a"]}], "]"}]}], 
+          RowBox[{
+           RowBox[{"-", "1"}], "+", 
+           SuperscriptBox["t", "a"]}]]}], 
+        RowBox[{"0", "<", "t", "<", "1"}]},
+       {"0", 
+        TagBox["True",
+         "PiecewiseDefault",
+         AutoDelete->True]}
+      },
+      AllowedDimensions->{2, Automatic},
+      Editable->True,
+      GridBoxAlignment->{
+       "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
+        "RowsIndexed" -> {}},
+      GridBoxItemSize->{
+       "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
+        "RowsIndexed" -> {}},
+      GridBoxSpacings->{"Columns" -> {
+          Offset[0.27999999999999997`], {
+           Offset[0.84]}, 
+          Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
+          Offset[0.2], {
+           Offset[0.4]}, 
+          Offset[0.2]}, "RowsIndexed" -> {}},
+      Selectable->True]}
+   },
+   GridBoxAlignment->{
+    "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
+     "RowsIndexed" -> {}},
+   GridBoxItemSize->{
+    "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
+     "RowsIndexed" -> {}},
+   GridBoxSpacings->{"Columns" -> {
+       Offset[0.27999999999999997`], {
+        Offset[0.35]}, 
+       Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
+       Offset[0.2], {
+        Offset[0.4]}, 
+       Offset[0.2]}, "RowsIndexed" -> {}}],
+  "Piecewise",
+  DeleteWithContents->True,
+  Editable->False,
+  SelectWithContents->True,
+  Selectable->False]], "Output",
+ CellChangeTimes->{3.673952238656061*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"D", "[", 
+  RowBox[{
+   RowBox[{"PDF", "[", 
+    RowBox[{
+     RowBox[{"KumaraswamyDistribution", "[", 
+      RowBox[{"a", ",", "b"}], "]"}], ",", "t"}], "]"}], ",", "t"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.673952240602498*^9, 3.673952240754023*^9}}],
+
+Cell[BoxData[
+ TagBox[GridBox[{
+    {"\[Piecewise]", GridBox[{
+       {"0", 
+        RowBox[{"t", "<", "0"}]},
+       {
+        RowBox[{
+         FractionBox[
+          RowBox[{
+           SuperscriptBox["a", "2"], " ", "b", " ", 
+           SuperscriptBox["t", 
+            RowBox[{
+             RowBox[{"-", "2"}], "+", 
+             RowBox[{"2", " ", "a"}]}]], " ", 
+           SuperscriptBox[
+            RowBox[{"(", 
+             RowBox[{"1", "-", 
+              SuperscriptBox["t", "a"]}], ")"}], "b"]}], 
+          SuperscriptBox[
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"-", "1"}], "+", 
+             SuperscriptBox["t", "a"]}], ")"}], "2"]], "+", 
+         FractionBox[
+          RowBox[{
+           SuperscriptBox["a", "2"], " ", 
+           SuperscriptBox["b", "2"], " ", 
+           SuperscriptBox["t", 
+            RowBox[{
+             RowBox[{"-", "2"}], "+", 
+             RowBox[{"2", " ", "a"}]}]], " ", 
+           SuperscriptBox[
+            RowBox[{"(", 
+             RowBox[{"1", "-", 
+              SuperscriptBox["t", "a"]}], ")"}], 
+            RowBox[{
+             RowBox[{"-", "1"}], "+", "b"}]]}], 
+          RowBox[{
+           RowBox[{"-", "1"}], "+", 
+           SuperscriptBox["t", "a"]}]], "-", 
+         FractionBox[
+          RowBox[{
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"-", "1"}], "+", "a"}], ")"}], " ", "a", " ", "b", " ", 
+           SuperscriptBox["t", 
+            RowBox[{
+             RowBox[{"-", "2"}], "+", "a"}]], " ", 
+           SuperscriptBox[
+            RowBox[{"(", 
+             RowBox[{"1", "-", 
+              SuperscriptBox["t", "a"]}], ")"}], "b"]}], 
+          RowBox[{
+           RowBox[{"-", "1"}], "+", 
+           SuperscriptBox["t", "a"]}]]}], 
+        RowBox[{"0", "<", "t", "<", "1"}]},
+       {"0", 
+        RowBox[{"t", ">", "1"}]},
+       {"Indeterminate", 
+        TagBox["True",
+         "PiecewiseDefault",
+         AutoDelete->True]}
+      },
+      AllowedDimensions->{2, Automatic},
+      Editable->True,
+      GridBoxAlignment->{
+       "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
+        "RowsIndexed" -> {}},
+      GridBoxItemSize->{
+       "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
+        "RowsIndexed" -> {}},
+      GridBoxSpacings->{"Columns" -> {
+          Offset[0.27999999999999997`], {
+           Offset[0.84]}, 
+          Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
+          Offset[0.2], {
+           Offset[0.4]}, 
+          Offset[0.2]}, "RowsIndexed" -> {}},
+      Selectable->True]}
+   },
+   GridBoxAlignment->{
+    "Columns" -> {{Left}}, "ColumnsIndexed" -> {}, "Rows" -> {{Baseline}}, 
+     "RowsIndexed" -> {}},
+   GridBoxItemSize->{
+    "Columns" -> {{Automatic}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
+     "RowsIndexed" -> {}},
+   GridBoxSpacings->{"Columns" -> {
+       Offset[0.27999999999999997`], {
+        Offset[0.35]}, 
+       Offset[0.27999999999999997`]}, "ColumnsIndexed" -> {}, "Rows" -> {
+       Offset[0.2], {
+        Offset[0.4]}, 
+       Offset[0.2]}, "RowsIndexed" -> {}}],
+  "Piecewise",
+  DeleteWithContents->True,
+  Editable->False,
+  SelectWithContents->True,
+  Selectable->False]], "Output",
+ CellChangeTimes->{3.673952250060316*^9}]
+}, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1440, 851},
-WindowMargins->{{47, Automatic}, {Automatic, -974}},
+WindowSize->{935, 921},
+WindowMargins->{{-149, Automatic}, {962, Automatic}},
 FrontEndVersion->"10.3 for Mac OS X x86 (32-bit, 64-bit Kernel) (December 10, \
 2015)",
 StyleDefinitions->"Default.nb"
@@ -3001,11 +3329,11 @@ Cell[4429, 151, 1303, 43, 63, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[5769, 199, 819, 22, 28, "Input"],
-Cell[6591, 223, 7701, 229, 237, "Output"]
+Cell[6591, 223, 7701, 229, 390, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[14329, 457, 518, 17, 28, "Input"],
-Cell[14850, 476, 1608, 54, 63, "Output"]
+Cell[14850, 476, 1608, 54, 119, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[16495, 535, 909, 28, 28, "Input"],
@@ -3075,7 +3403,7 @@ Cell[57079, 1857, 1753, 57, 83, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[58869, 1919, 232, 6, 28, "Input"],
-Cell[59104, 1927, 6252, 198, 157, "Output"]
+Cell[59104, 1927, 6252, 198, 258, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
 Cell[65393, 2130, 403, 13, 42, "Input"],
@@ -3117,6 +3445,21 @@ Cell[85663, 2774, 2875, 84, 63, "Output"]
 Cell[CellGroupData[{
 Cell[88575, 2863, 277, 8, 28, "Input"],
 Cell[88855, 2873, 3301, 99, 97, "Output"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[92205, 2978, 127, 1, 44, "Subsection"],
+Cell[CellGroupData[{
+Cell[92357, 2983, 284, 8, 28, "Input"],
+Cell[92644, 2993, 3604, 105, 67, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[96285, 3103, 284, 8, 28, "Input"],
+Cell[96572, 3113, 2519, 74, 63, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[99128, 3192, 282, 8, 28, "Input"],
+Cell[99413, 3202, 3297, 98, 101, "Output"]
 }, Open  ]]
 }, Open  ]]
 }
