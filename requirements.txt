@@ -2,6 +2,7 @@ numpy
 cython
 pytest
 gpy
+paramz
 astropy
 scipy
 matplotlib

@@ -1,0 +1,54 @@
+
+import numpy as np
+from paramz.domains import _REAL, _POSITIVE
+from GPy.core.parameterization.priors import Prior
+import weakref
+from scipy.special import gamma, gammaln, polygamma
+
+class Schechter(Prior):
+    """
+    Schechter luminosity function
+        p(l|t) = (l/l*)^alpha(t) * exp(l/l*) / l* / Gamma(alpha(t)+1)
+        with alpha(t) = alpha0 + alpha1 * t
+    """
+    domain = _REAL
+    _instances = []
+
+    def __new__(cls, ellStar=1.0, alpha0=-0.5, alpha1=0.1):  # Singleton:
+        if cls._instances:
+            cls._instances[:] = [instance for instance in cls._instances if instance()]
+            for instance in cls._instances:
+                if instance().ellStar == ellStar and instance().alpha0 == alpha0 and instance().alpha1 == alpha1:
+                    return instance()
+        newfunc = super(Prior, cls).__new__
+        if newfunc is object.__new__:
+            o = newfunc(cls)
+        else:
+            o = newfunc(cls, mu, sigma)
+        cls._instances.append(weakref.ref(o))
+        return cls._instances[-1]()
+
+    def __init__(self, ellStar, alpha0, alpha1):
+        self.ellStar = float(ellStar)
+        self.lnEllStar = np.log(self.ellStar)
+        self.alpha0 = float(alpha0)
+        self.alpha1 = float(alpha1)
+
+    def __str__(self):
+        return "Schechter({:.2g}, {:.2g}, {:.2g})".format(self.ellStar, self.alpha0, self.alpha1)
+
+    def lnpdf(self, ell, t):
+        alpha = self.alpha0 + self.alpha1 * t
+        return - gammaln(1+alpha) - (alpha+1) * self.lnEllStar + alpha * np.log(ell) + ell/self.ellStar
+
+    def lnpdf_grad_ell(self, ell, t):
+        return 1/self.ellStar + (self.alpha0 + self.alpha1 * t) / ell
+
+    def lnpdf_grad_t(self, ell, t):
+        return self.alpha1 * (np.log(ell) - self.lnEllStar - polygamma(0, 1 + self.alpha0 + self.alpha1 * t))
+
+    def lnpdf_grad_alpha0(self, ell, t):
+        return np.log(ell) - self.lnEllStar - polygamma(0, 1 + self.alpha0 + self.alpha1 * t)
+
+    def lnpdf_grad_alpha1(self, ell, t):
+        return t * (np.log(ell) - self.lnEllStar - polygamma(0, 1 + self.alpha0 + self.alpha1 * t))
