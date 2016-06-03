@@ -1,9 +1,16 @@
 # PhotoZviaGP
-Photometric redshift via Gaussian processes with physical kernels
+Photometric redshift via Gaussian processes with physical kernels.
+
+## Requirements
+
+Standard: python, cython, numpy, scipy, pytest
+
+Less standard: astropy, gpy
 
 ## Authors
 
 Boris Leistedt (NYU)
+
 David W. Hogg (NYU) (MPIA) (SCDA)
 
 ## License
