@@ -4,18 +4,24 @@
 ![alt tag](https://travis-ci.org/ixkael/PhotoZviaGP.svg?branch=master)
 ![alt tag](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)
 
-Heavily relies on GPy computation and classes.
+
+## Content
+
+**./paper/**: journal paper describing the method </br>
+**./delight/**: main code (Python/Cython) </br>
+**./tests/**: test suite for the main code </br>
+**./notebooks/**: demo notebooks using delight </br>
+**./data/**: some useful inputs for tests/demos </br>
+**./other/**: useful mathematica notebooks, etc </br>
 
 ## Requirements
 
-Standard: python, cython, numpy, scipy, pytest
-
-Less standard: astropy, gpy
+**Standard**: python, cython, numpy, scipy, pytest </br>
+**Less standard**: astropy, gpy
 
 ## Authors
 
-Boris Leistedt (NYU)
-
+Boris Leistedt (NYU) </br>
 David W. Hogg (NYU) (MPIA) (SCDA)
 
 ## License
