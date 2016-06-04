@@ -152,18 +152,16 @@ class Photoz(GPy.kern.Kern):
 
         tmp = dL_dK * KT * (KC + KL)
         if X2in is None:
-            tmp = tmp + tmp.T
             X2 = X
         t1 = X[:,0]
         t2 = X2[:,0]
         grad = np.zeros(X.shape, dtype=np.float64)
-        #tempfull  = tmp * self.slope_T * np.outer(np.ones(X.shape[0]), t2)
-        tempfull -= tmp * self.var_T * (t1[:,None] - t2[None,:]) / self.alpha_T**2
+        tempfull = - tmp * self.var_T * (t1[:,None] - t2[None,:]) / self.alpha_T**2
         np.sum(tempfull, axis=1, out=grad[:,0])
         return grad
 
     def gradients_X_diag(self, dL_dKdiag, X):
-        return np.zeros(X.shape)
+        return self.gradients_X(dL_dKdiag, X)
 
 
 
@@ -183,8 +181,8 @@ class SEDRBF(GPy.kern.Kern):
         # Initialize parameters and link them.
         self.kern_T = GPy.kern.RBF(input_dim=1, variance=1.0, lengthscale=alpha_T)
         self.kern_T.variance.fix()
-        self.kern_C = GPy.kern.RBF(input_dim=1, variance=V_C, lengthscale=alpha_C)
-        self.kern_L = GPy.kern.RBF(input_dim=1, variance=V_L, lengthscale=alpha_L)
+        self.kern_C = GPy.kern.RBF(input_dim=1, variance=1.0, lengthscale=alpha_C)
+        self.kern_L = GPy.kern.RBF(input_dim=1, variance=1.0, lengthscale=alpha_L)
 
         self.var_T = Param('var_T', np.asarray(var_T), Logexp())
         self.alpha_C = Param('alpha_C', np.asarray(alpha_C), Logexp())
@@ -199,8 +197,6 @@ class SEDRBF(GPy.kern.Kern):
         self.kern_T.lengthscale = self.alpha_T
         self.kern_C.lengthscale = self.alpha_C
         self.kern_L.lengthscale = self.alpha_L
-        self.kern_C.variance = self.V_C
-        self.kern_L.variance = self.V_L
         super(SEDRBF,self).parameters_changed()
 
     def change_numlines(self, num):
@@ -241,8 +237,6 @@ class SEDRBF(GPy.kern.Kern):
             for mu, sig in zip(self.lines_mu, self.lines_sig):
                 fac += np.exp(-1.0*((mu-X[:,1])/sig)**2)
 
-        self.V_C.gradient = np.sum(dL_dKdiag * KT)
-        self.V_L.gradient = np.sum(dL_dKdiag * KT * fac)
         self.alpha_T.gradient = 0.
         self.alpha_C.gradient = 0.
         self.alpha_L.gradient = 0.
@@ -262,10 +256,8 @@ class SEDRBF(GPy.kern.Kern):
         self.alpha_T.gradient = - np.sum( self.kern_C.dK_dr_via_X(X[:,0:1], X2[:,0:1]) * (KC + fac * KL)
                                          * dL_dK * self.kern_C._scaled_dist(X[:,0:1], X2[:,0:1]) ) / self.alpha_C
 
-        self.V_C.gradient = np.sum(KT * KC * dL_dK) / self.V_C
         self.alpha_C.gradient = - np.sum(self.kern_C.dK_dr_via_X(X[:,1:2], X2[:,1:2]) * KT
                                          * dL_dK * self.kern_C._scaled_dist(X[:,1:2], X2[:,1:2])) / self.alpha_C
 
-        self.V_L.gradient = np.sum(fac * KT * KL * dL_dK) / self.V_L
         self.alpha_L.gradient = - np.sum(self.kern_L.dK_dr_via_X(X[:,1:2], X2[:,1:2]) * fac * KT
                                          * dL_dK * self.kern_L._scaled_dist(X[:,1:2], X2[:,1:2])) / self.alpha_L
