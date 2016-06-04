@@ -1,5 +1,7 @@
 notifications:
-  email: false
+  email:
+    on_failure: always
+    on_success: change
 language: python
 python:
   - "2.7"
