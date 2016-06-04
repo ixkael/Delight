@@ -28,11 +28,11 @@ def test_diagonalOfKernels():
     fz2 = 1 + X2[:,2]
     norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
     KT, KC, KL = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-    D_alpha_C, D_alpha_L = np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
+    D_alpha_C, D_alpha_L, D_alpha_z = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
     kernelparts(NO1, NO2, numCoefs, numLines,
         alpha_C, alpha_L, alpha_T,
         fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu[:numLines], lines_sig[:numLines],
-        t1, b1, fz1, t2, b2, fz2, True, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L)
+        t1, b1, fz1, t2, b2, fz2, True, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
 
     KT_diag, KC_diag, KL_diag = np.zeros((NO1,)), np.zeros((NO1,)), np.zeros((NO1,))
     D_alpha_C_diag, D_alpha_L_diag = np.zeros((NO1,)), np.zeros((NO1,))

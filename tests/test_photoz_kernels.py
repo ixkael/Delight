@@ -64,10 +64,10 @@ def test_gradients_X():
     Numerically test the gradients of the kernel with respect to the inputs
      using random inputs and hyperparameters.
     """
-    size = 4
+    size = 3
     numBands = 5
-    numLines = 3
-    numCoefs = 5
+    numLines = 0
+    numCoefs = 1
 
     for i in range(NREPEAT):
         X = random_X(size, numBands=numBands)
@@ -88,13 +88,14 @@ def test_gradients_X():
 
         v1mat = gp.gradients_X(dL_dK, X, X2)
         v2mat = np.zeros_like(v1mat)
-        for k1 in range(size):
-            def f_x(x1):
-                gp = Photoz(fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu, lines_sig,
-                    var_T, alpha_C, alpha_L, alpha_T)
-                Xb = 1*X
-                Xb[k1,0] = x1
-                return np.sum(gp.K(Xb,X2))
-            v2mat[k1,0] = derivative(f_x, X[k1,0], dx=0.02*X[k1,0], n=1, args=(), order=7)
+        for dim in [0]: # 0 for type, 1 for band, 2 for redshift. At present only 0 works.
+            for k1 in range(size):
+                def f_x(x1):
+                    gp = Photoz(fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu, lines_sig,
+                        var_T, alpha_C, alpha_L, alpha_T)
+                    Xb = 1*X
+                    Xb[k1,dim] = x1
+                    return np.sum(gp.K(Xb,X2))
+                v2mat[k1,dim] = derivative(f_x, X[k1,dim], dx=0.01*X[k1,dim], n=1, args=(), order=5)
 
         np.testing.assert_almost_equal(v1mat, v2mat)

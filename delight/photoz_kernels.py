@@ -8,8 +8,8 @@ from paramz.transformations import Logexp
 from GPy.core.parameterization import Param
 from paramz.core.observable_array import ObsAr
 
-from photoz_kernels_cy import kernelparts as kernelparts_fast
-from photoz_kernels_cy import kernelparts_diag as kernelparts_diag_fast
+from photoz_kernels_cy import kernelparts
+from photoz_kernels_cy import kernelparts_diag
 
 class Photoz(GPy.kern.Kern):
     """
@@ -65,14 +65,13 @@ class Photoz(GPy.kern.Kern):
         norm1 = np.zeros((NO1,))
         KT, KC, KL = np.zeros((NO1,)), np.zeros((NO1,)), np.zeros((NO1,))
         D_alpha_C, D_alpha_L = np.zeros((NO1,)), np.zeros((NO1,))
-        kernelparts_diag_fast(NO1, self.numCoefs, self.numLines,
+        kernelparts_diag(NO1, self.numCoefs, self.numLines,
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
             t1, b1, fz1, True, norm1, KL, KC, KT, D_alpha_C, D_alpha_L)
         self.var_T.gradient = np.sum(dL_dKdiag * KT * (KC + KL))
-        Tpart = self.var_T * KT
-        self.alpha_C.gradient = np.sum(dL_dKdiag * Tpart * D_alpha_C)
-        self.alpha_L.gradient = np.sum(dL_dKdiag * Tpart * D_alpha_L)
+        self.alpha_C.gradient = np.sum(dL_dKdiag * self.var_T * KT * D_alpha_C)
+        self.alpha_L.gradient = np.sum(dL_dKdiag * self.var_T * KT * D_alpha_L)
         self.alpha_T.gradient = 0
 
     def update_gradients_full(self, dL_dK, X, X2=None):
@@ -86,16 +85,15 @@ class Photoz(GPy.kern.Kern):
         fz2 = 1 + X2[:,2]
         norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
         KT, KC, KL = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        D_alpha_C, D_alpha_L = np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        kernelparts_fast(NO1, NO2, self.numCoefs, self.numLines,
+        D_alpha_C, D_alpha_L, D_alpha_z = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
+        kernelparts(NO1, NO2, self.numCoefs, self.numLines,
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
-            t1, b1, fz1, t2, b2, fz2, True, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L)
+            t1, b1, fz1, t2, b2, fz2, True, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
         self.var_T.gradient = np.sum(dL_dK * KT * (KC + KL))
-        Tpart = self.var_T * KT
-        self.alpha_C.gradient = np.sum(dL_dK * Tpart * D_alpha_C)
-        self.alpha_L.gradient = np.sum(dL_dK * Tpart * D_alpha_L)
-        self.alpha_T.gradient = np.sum(dL_dK * (t1[:,None]-t2[None,:])**2 / self.alpha_T**3 * Tpart * (KC + KL))
+        self.alpha_C.gradient = np.sum(dL_dK * self.var_T * KT * D_alpha_C)
+        self.alpha_L.gradient = np.sum(dL_dK * self.var_T * KT * D_alpha_L)
+        self.alpha_T.gradient = np.sum(dL_dK * (t1[:,None]-t2[None,:])**2 / self.alpha_T**3 * self.var_T * KT * (KC + KL))
 
     def Kdiag(self, X):
         NO1 = X.shape[0]
@@ -105,7 +103,7 @@ class Photoz(GPy.kern.Kern):
         norm1 = np.zeros((NO1,))
         KT, KC, KL = np.zeros((NO1,)), np.zeros((NO1,)), np.zeros((NO1,))
         D_alpha_C, D_alpha_L = np.zeros((NO1,)), np.zeros((NO1,))
-        kernelparts_diag_fast(NO1, self.numCoefs, self.numLines,
+        kernelparts_diag(NO1, self.numCoefs, self.numLines,
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
             t1, b1, fz1, False, norm1, KL, KC, KT, D_alpha_C, D_alpha_L)
@@ -122,19 +120,17 @@ class Photoz(GPy.kern.Kern):
         fz2 = 1 + X2[:,2]
         norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
         KT, KC, KL = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        D_alpha_C, D_alpha_L = np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        kernelparts_fast(NO1, NO2, self.numCoefs, self.numLines,
+        D_alpha_C, D_alpha_L, D_alpha_z = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
+        kernelparts(NO1, NO2, self.numCoefs, self.numLines,
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
-            t1, b1, fz1, t2, b2, fz2, False, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L)
+            t1, b1, fz1, t2, b2, fz2, False, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
         return self.var_T * KT * (KC + KL)
 
-    def gradients_X(self, dL_dK, X, X2in=None):
+    def gradients_X(self, dL_dK, X, X2=None):
 
-        if X2in is None:
+        if X2 is None:
             X2 = X
-        else:
-            X2 = X2in
         NO1, NO2 = X.shape[0], X2.shape[0]
         t1 = X[:,0]
         t2 = X2[:,0]
@@ -144,24 +140,29 @@ class Photoz(GPy.kern.Kern):
         fz2 = 1 + X2[:,2]
         norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
         KT, KC, KL = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        D_alpha_C, D_alpha_L = np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        kernelparts_fast(NO1, NO2, self.numCoefs, self.numLines,
+        D_alpha_C, D_alpha_L, D_alpha_z = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
+        kernelparts(NO1, NO2, self.numCoefs, self.numLines,
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
-            t1, b1, fz1, t2, b2, fz2, False, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L)
+            t1, b1, fz1, t2, b2, fz2, False, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
 
         tmp = dL_dK * KT * (KC + KL)
-        if X2in is None:
-            X2 = X
         t1 = X[:,0]
         t2 = X2[:,0]
         grad = np.zeros(X.shape, dtype=np.float64)
+
         tempfull = - tmp * self.var_T * (t1[:,None] - t2[None,:]) / self.alpha_T**2
         np.sum(tempfull, axis=1, out=grad[:,0])
+
+        tempfull = dL_dK * self.var_T * KT * D_alpha_z
+        np.sum(tempfull, axis=1, out=grad[:,2])
+
         return grad
 
     def gradients_X_diag(self, dL_dKdiag, X):
         return self.gradients_X(dL_dKdiag, X)
+
+
 
 
 

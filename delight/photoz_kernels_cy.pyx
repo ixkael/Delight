@@ -103,12 +103,13 @@ def kernelparts(
         double[:,:] KC,
         double[:,:] KT,
         double [:,:] D_alpha_C,
-        double [:,:] D_alpha_L
+        double [:,:] D_alpha_L,
+        double [:,:] D_alpha_z
     ):
 
     cdef double sqrt2pi = sqrt(2 * M_PI)
     cdef int l1, l2, o1, o2, i, j
-    cdef double opz1, opz2, mu1, mu2, amp1, amp2, sig1, sig2, sigma, mul1, mul2
+    cdef double theexp, opz1, opz2, mu1, mu2, amp1, amp2, sig1, sig2, sigma, mul1, mul2
     #, sigl1, sigl2
 
     for o1 in prange(NO1, nogil=True):
@@ -128,6 +129,10 @@ def kernelparts(
             KT[o1,o2] = 0
             KC[o1,o2] = 0
             KL[o1,o2] = 0
+            if grad_needed is True:
+                D_alpha_L[o1,o2] = 0
+                D_alpha_C[o1,o2] = 0
+                D_alpha_z[o1,o2] = 0
             for i in range(NC):
                 mu1 = fcoefs_mu[b1[o1],i]
                 amp1 = fcoefs_amp[b1[o1],i]
@@ -137,9 +142,14 @@ def kernelparts(
                     amp2 = fcoefs_amp[b2[o2],j]
                     sig2 = fcoefs_sig[b2[o2],j]
                     sigma = sqrt( pow(opz1*sig2,2) + pow(opz2*sig1,2) + pow(opz1*opz2*alpha_C,2) )
-                    KC[o1,o2] += amp1 * amp2 * 2 * M_PI * alpha_C * sig1 * sig2 * exp(-0.5*pow((opz1*mu2 - opz2*mu1)/sigma,2)) / sigma
+                    theexp = exp(-0.5*pow((opz1*mu2 - opz2*mu1)/sigma,2))
+                    KC[o1,o2] += amp1 * amp2 * 2 * M_PI * alpha_C * sig1 * sig2 * theexp / sigma
                     if grad_needed is True:
-                        D_alpha_C[o1,o2] += amp1 * amp2 * 2 * M_PI * sig1 * sig2 * exp(-0.5*pow((opz1*mu2 - opz2*mu1)/sigma,2)) / sigma * (1 - pow(alpha_C*opz1*opz2/sigma,2)  + pow(alpha_C*(opz1*mu2 - opz2*mu1)*opz1*opz2,2) /sigma**4  )
+                        D_alpha_C[o1,o2] += amp1 * amp2 * 2 * M_PI * sig1 * sig2 * theexp / sigma \
+                          * (1 - pow(alpha_C*opz1*opz2/sigma,2)  + pow(alpha_C*(opz1*mu2 - opz2*mu1)*opz1*opz2,2) /sigma**4  )
+                        D_alpha_z[o1,o2] += amp1 * amp2 * 2 * M_PI * alpha_C * sig1 * sig2  * theexp / sigma \
+                          * ( (sig2**2 * opz1 + opz1 * opz2**2 * alpha_C**2) * ((mu2*opz1 - mu1*opz2)**2 / sigma**4  -  1 / sigma**2) \
+                              - mu2 * (mu2*opz1 - mu1*opz2) / sigma**2 )
 
                     if NL > 0:
                         for l1 in range(NL):
@@ -166,3 +176,4 @@ def kernelparts(
             if grad_needed is True:
                 D_alpha_C[o1,o2] /= norm1[o1] * norm2[o2]
                 D_alpha_L[o1,o2] /= norm1[o1] * norm2[o2]
+                D_alpha_z[o1,o2] /= norm1[o1] * norm2[o2]
