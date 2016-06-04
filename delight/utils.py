@@ -11,7 +11,7 @@ def random_X(size, numTypes=8, numBands=5, redshiftMax=3.0):
 
 def random_filtercoefs(numBands, numCoefs):
     """Create random (but reasonable) coefficients describing numBands photometric filters as sum of gaussians"""
-    fcoefs_amp = np.random.uniform(low=0, high=1, size=numBands*numCoefs).reshape((numBands, numCoefs))
+    fcoefs_amp = np.random.uniform(low=0.5, high=1, size=numBands*numCoefs).reshape((numBands, numCoefs))
     fcoefs_mu = np.random.uniform(low=2e3, high=8e3, size=numBands*numCoefs).reshape((numBands, numCoefs))
     fcoefs_sig = np.random.uniform(low=100, high=500, size=numBands*numCoefs).reshape((numBands, numCoefs))
     return fcoefs_amp, fcoefs_mu, fcoefs_sig
@@ -24,7 +24,6 @@ def random_linecoefs(numLines):
 
 def random_hyperparams():
     """Create random (but reasonable) hyperparameters for photo-z GP"""
-    alpha_T, var_T = np.random.uniform(low=0, high=1, size=2)
-    slope_T = np.random.uniform(low=-1, high=1, size=1)
-    alpha_C, alpha_L = np.random.uniform(low=10, high=1000, size=2)
-    return var_T, slope_T, alpha_C, alpha_L, alpha_T
+    alpha_T, var_T = np.random.uniform(low=0.2, high=2.0, size=2)
+    alpha_C, alpha_L = np.random.uniform(low=10.0, high=1000.0, size=2)
+    return var_T, alpha_C, alpha_L, alpha_T
