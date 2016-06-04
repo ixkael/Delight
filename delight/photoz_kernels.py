@@ -15,7 +15,7 @@ class Photoz(GPy.kern.Kern):
     """
     Photoz kernel based on RBF kernel.
     """
-    def __init__(self, fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu, lines_sig, var_T, slope_T, alpha_C, alpha_L, alpha_T, name='photoz'):
+    def __init__(self, fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu, lines_sig, var_T, alpha_C, alpha_L, alpha_T, name='photoz'):
         """ Constructor."""
         # Call standard Kern constructor with 3 dimensions.
         super(Photoz, self).__init__(3, None, name)
@@ -30,12 +30,10 @@ class Photoz(GPy.kern.Kern):
         self.numBands = fcoefs_amp.shape[0]
         self.norms = np.sqrt(2*np.pi) * np.sum(self.fcoefs_amp * self.fcoefs_sig, axis=1)
         # Initialize parameters and link them.
-        self.slope_T = Param('slope_T', np.asarray(slope_T), Logexp())
         self.var_T = Param('var_T', np.asarray(var_T), Logexp())
         self.alpha_C = Param('alpha_C', np.asarray(alpha_C), Logexp())
         self.alpha_L = Param('alpha_L', np.asarray(alpha_L), Logexp())
         self.alpha_T = Param('alpha_T', np.asarray(alpha_T), Logexp())
-        self.link_parameter(self.slope_T)
         self.link_parameter(self.var_T)
         self.link_parameter(self.alpha_C)
         self.link_parameter(self.alpha_L)
@@ -71,9 +69,8 @@ class Photoz(GPy.kern.Kern):
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
             t1, b1, fz1, True, norm1, KL, KC, KT, D_alpha_C, D_alpha_L)
-        self.slope_T.gradient = np.sum(dL_dKdiag * t1 * t1 * KT * (KC + KL))
         self.var_T.gradient = np.sum(dL_dKdiag * KT * (KC + KL))
-        Tpart = (self.var_T + self.slope_T * t1 * t1) * KT
+        Tpart = self.var_T * KT
         self.alpha_C.gradient = np.sum(dL_dKdiag * Tpart * D_alpha_C)
         self.alpha_L.gradient = np.sum(dL_dKdiag * Tpart * D_alpha_L)
         self.alpha_T.gradient = 0
@@ -94,9 +91,8 @@ class Photoz(GPy.kern.Kern):
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
             t1, b1, fz1, t2, b2, fz2, True, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L)
-        self.slope_T.gradient = np.sum(dL_dK * t1[:,None] * t2[None,:] * KT * (KC + KL))
         self.var_T.gradient = np.sum(dL_dK * KT * (KC + KL))
-        Tpart = (self.var_T + self.slope_T * t1[:,None] * t2[None,:]) * KT
+        Tpart = self.var_T * KT
         self.alpha_C.gradient = np.sum(dL_dK * Tpart * D_alpha_C)
         self.alpha_L.gradient = np.sum(dL_dK * Tpart * D_alpha_L)
         self.alpha_T.gradient = np.sum(dL_dK * (t1[:,None]-t2[None,:])**2 / self.alpha_T**3 * Tpart * (KC + KL))
@@ -113,7 +109,7 @@ class Photoz(GPy.kern.Kern):
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
             t1, b1, fz1, False, norm1, KL, KC, KT, D_alpha_C, D_alpha_L)
-        return (self.var_T + self.slope_T * t1 * t1)  * KT * (KC + KL)
+        return self.var_T * KT * (KC + KL)
 
     def K(self, X, X2=None):
         if X2 is None: X2 = X
@@ -131,7 +127,7 @@ class Photoz(GPy.kern.Kern):
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
             t1, b1, fz1, t2, b2, fz2, False, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L)
-        return (self.var_T + self.slope_T * t1[:,None] * t2[None,:]) * KT * (KC + KL)
+        return self.var_T * KT * (KC + KL)
 
     def gradients_X(self, dL_dK, X, X2in=None):
 
@@ -161,8 +157,8 @@ class Photoz(GPy.kern.Kern):
         t1 = X[:,0]
         t2 = X2[:,0]
         grad = np.zeros(X.shape, dtype=np.float64)
-        tempfull  = tmp * self.slope_T * np.outer(np.ones(X.shape[0]), t2)
-        tempfull -= tmp * (self.var_T + self.slope_T * t1[:,None] * t2[None,:]) * (t1[:,None] - t2[None,:]) / self.alpha_T**2
+        #tempfull  = tmp * self.slope_T * np.outer(np.ones(X.shape[0]), t2)
+        tempfull -= tmp * self.var_T * (t1[:,None] - t2[None,:]) / self.alpha_T**2
         np.sum(tempfull, axis=1, out=grad[:,0])
         return grad
 
@@ -176,7 +172,7 @@ class SEDRBF(GPy.kern.Kern):
     """
     SED kernel based on RBF kernel.
     """
-    def __init__(self, lines_mu, lines_sig, var_T, slope_T, alpha_C, alpha_L, alpha_T, name='sed'):
+    def __init__(self, lines_mu, lines_sig, var_T, alpha_C, alpha_L, alpha_T, name='sed'):
         """ Constructor."""
         # Call standard Kern constructor with 3 dimensions.
         super(SEDRBF, self).__init__(2, None, name)
@@ -191,12 +187,10 @@ class SEDRBF(GPy.kern.Kern):
         self.kern_L = GPy.kern.RBF(input_dim=1, variance=V_L, lengthscale=alpha_L)
 
         self.var_T = Param('var_T', np.asarray(var_T), Logexp())
-        self.slope_T = Param('slope_T', np.asarray(slope_T), Logexp())
         self.alpha_C = Param('alpha_C', np.asarray(alpha_C), Logexp())
         self.alpha_L = Param('alpha_L', np.asarray(alpha_L), Logexp())
         self.alpha_T = Param('alpha_T', np.asarray(alpha_T), Logexp())
         self.link_parameter(self.var_T)
-        self.link_parameter(self.slope_T)
         self.link_parameter(self.alpha_C)
         self.link_parameter(self.alpha_L)
         self.link_parameter(self.alpha_T)

@@ -4,12 +4,15 @@ from delight.utils import *
 from delight.photoz_kernels_cy import kernelparts, kernelparts_diag
 
 def test_diagonalOfKernels():
+    """
+    Test that diagonal of kernels and derivatives are correct across functions.
+    """
     size = 5
     numBands = 5
-    X = random_X(size, numBands=numBands)
-    X2 = X
     numLines = 4
     numCoefs = 5
+    X = random_X(size, numBands=numBands)
+    X2 = X
 
     fcoefs_amp, fcoefs_mu, fcoefs_sig = random_filtercoefs(numBands, numCoefs)
     lines_mu, lines_sig = random_linecoefs(numLines)
