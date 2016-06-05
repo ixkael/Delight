@@ -63,11 +63,12 @@ class Photoz_kernel(GPy.kern.Kern):
         super(Photoz_kernel, self).__init__(3, None, name)
         # If luminosity_distance function not provided, use approximation
         if DL_z is None:
-            self.DL_z = approx_DL
+            self.DL_z = approx_DL()
         else:
             self.DL_z = DL_z
         # Store arrays of coefficients.
         self.g_AB = g_AB
+        self.fourpi = 4 * np.pi
         self.lines_mu = np.array(lines_mu)
         self.lines_sig = np.array(lines_sig)
         self.numLines = lines_mu.size
@@ -138,10 +139,11 @@ class Photoz_kernel(GPy.kern.Kern):
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
             t1, b1, fz1, t2, b2, fz2, True, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
+        prefac = (fz1[:,None] * fz2[None,:] / (self.fourpi * self.g_AB * self.DL_z(X[:,2])[:,None] * self.DL_z(X2[:,2])[None,:]))**2
         self.var_T.gradient = np.sum(dL_dK * KT * (KC + KL))
-        self.alpha_C.gradient = np.sum(dL_dK * self.var_T * KT * D_alpha_C)
-        self.alpha_L.gradient = np.sum(dL_dK * self.var_T * KT * D_alpha_L)
-        self.alpha_T.gradient = np.sum(dL_dK * (t1[:,None]-t2[None,:])**2 / self.alpha_T**3 * self.var_T * KT * (KC + KL))
+        self.alpha_C.gradient = np.sum(dL_dK * self.var_T * KT * prefac * D_alpha_C)
+        self.alpha_L.gradient = np.sum(dL_dK * self.var_T * KT * prefac * D_alpha_L)
+        self.alpha_T.gradient = np.sum(dL_dK * (t1[:,None]-t2[None,:])**2 / self.alpha_T**3 * self.var_T * KT * prefac * (KC + KL))
 
     def Kdiag(self, X):
         NO1 = X.shape[0]
@@ -155,7 +157,8 @@ class Photoz_kernel(GPy.kern.Kern):
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
             t1, b1, fz1, False, norm1, KL, KC, KT, D_alpha_C, D_alpha_L)
-        return self.var_T * KT * (KC + KL)
+        prefac = fz1**2 / (self.fourpi * self.g_AB * self.DL_z(X[:,2])**2)
+        return self.var_T * KT * prefac**2 * (KC + KL)
 
     def K(self, X, X2=None):
         if X2 is None: X2 = X
@@ -173,7 +176,8 @@ class Photoz_kernel(GPy.kern.Kern):
             self.alpha_C, self.alpha_L, self.alpha_T,
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
             t1, b1, fz1, t2, b2, fz2, False, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
-        return self.var_T * KT * (KC + KL)
+        prefac = fz1[:,None] * fz2[None,:] / (self.fourpi * self.g_AB * self.DL_z(X[:,2])[:,None] * self.DL_z(X2[:,2])[None,:])
+        return self.var_T * KT * prefac**2 * (KC + KL)
 
     def gradients_X(self, dL_dK, X, X2=None):
 
@@ -194,7 +198,9 @@ class Photoz_kernel(GPy.kern.Kern):
             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig, self.lines_mu[:self.numLines], self.lines_sig[:self.numLines],
             t1, b1, fz1, t2, b2, fz2, False, norm1, norm2, KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
 
-        tmp = dL_dK * KT * (KC + KL)
+        prefac = fz1[:,None] * fz2[None,:] / (self.fourpi * self.g_AB * self.DL_z(X[:,2])[:,None] * self.DL_z(X2[:,2])[None,:])
+
+        tmp = dL_dK * KT * prefac**2 * (KC + KL)
         t1 = X[:,0]
         t2 = X2[:,0]
         grad = np.zeros(X.shape, dtype=np.float64)
