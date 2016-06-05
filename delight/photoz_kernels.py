@@ -11,15 +11,63 @@ from paramz.core.observable_array import ObsAr
 from photoz_kernels_cy import kernelparts
 from photoz_kernels_cy import kernelparts_diag
 
-class Photoz(GPy.kern.Kern):
+from delight.utils import approx_DL
+
+
+class Photoz_mean_function(GPy.core.Mapping):
+    """
+    Mean function of photoz GP.
+    """
+    def __init__(self, g_AB=1.0, DL_z=None, name='photoz'):
+        """ Constructor."""
+        # Call standard Kern constructor with 2 dimensions (z and l).
+        super(Photoz_mean_function, self).__init__(2, 1, name)
+        # If luminosity_distance function not provided, use approximation
+        if DL_z is None:
+            self.DL_z = approx_DL()
+        else:
+            self.DL_z = DL_z
+        self.g_AB = g_AB
+        self.fourpi = 4 * np.pi
+
+    def f(self, X):
+        z = X[:,0]
+        l = X[:,1]
+        return (1 + z) * l / self.fourpi / self.DL_z(z)**2.0 / self.g_AB
+
+    def gradients_X(self, dL_dF, X):
+        z = X[:,0]
+        l = X[:,1]
+        if isinstance(self.DL_z, approx_DL):
+            dDLdz = self.DL_z.derivative(z)
+            DLz = self.DL_z(z)
+            grad = np.zeros_like(X)
+            grad[:,0] = (l - 2 * l * (1 + z) * dDLdz / DLz) / DLz**2 / self.g_AB / self.fourpi
+            grad[:,1] = (1 + z) / self.fourpi / self.DL_z(z)**2.0 / self.g_AB
+            return np.dot(dL_dF, grad)
+        else:
+            raise NotImplementedError
+
+    def update_gradients(self, dL_dF, X):
+        pass # no parameters in this function, so nothing here
+
+
+class Photoz_kernel(GPy.kern.Kern):
     """
     Photoz kernel based on RBF kernel.
     """
-    def __init__(self, fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu, lines_sig, var_T, alpha_C, alpha_L, alpha_T, name='photoz'):
+    def __init__(self, fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu, lines_sig,
+        var_T, alpha_C, alpha_L, alpha_T, g_AB=1.0, DL_z=None, name='photoz'):
         """ Constructor."""
-        # Call standard Kern constructor with 3 dimensions.
-        super(Photoz, self).__init__(3, None, name)
+        # Call standard Kern constructor with 3 dimensions (type, band and redshift).
+        super(Photoz_kernel, self).__init__(3, None, name)
+        # If luminosity_distance function not provided, use approximation
+        if DL_z is None:
+            self.DL_z = approx_DL
+        else:
+            self.DL_z = DL_z
         # Store arrays of coefficients.
+        self.g_AB = g_AB
         self.lines_mu = np.array(lines_mu)
         self.lines_sig = np.array(lines_sig)
         self.numLines = lines_mu.size
@@ -161,104 +209,3 @@ class Photoz(GPy.kern.Kern):
 
     def gradients_X_diag(self, dL_dKdiag, X):
         return self.gradients_X(dL_dKdiag, X)
-
-
-
-
-
-
-class SEDRBF(GPy.kern.Kern):
-    """
-    SED kernel based on RBF kernel.
-    """
-    def __init__(self, lines_mu, lines_sig, var_T, alpha_C, alpha_L, alpha_T, name='sed'):
-        """ Constructor."""
-        # Call standard Kern constructor with 3 dimensions.
-        super(SEDRBF, self).__init__(2, None, name)
-        # Store arrays of coefficients.
-        self.lines_mu = np.array(lines_mu)
-        self.lines_sig = np.array(lines_sig)
-        self.numLines = lines_mu.size
-        # Initialize parameters and link them.
-        self.kern_T = GPy.kern.RBF(input_dim=1, variance=1.0, lengthscale=alpha_T)
-        self.kern_T.variance.fix()
-        self.kern_C = GPy.kern.RBF(input_dim=1, variance=1.0, lengthscale=alpha_C)
-        self.kern_L = GPy.kern.RBF(input_dim=1, variance=1.0, lengthscale=alpha_L)
-
-        self.var_T = Param('var_T', np.asarray(var_T), Logexp())
-        self.alpha_C = Param('alpha_C', np.asarray(alpha_C), Logexp())
-        self.alpha_L = Param('alpha_L', np.asarray(alpha_L), Logexp())
-        self.alpha_T = Param('alpha_T', np.asarray(alpha_T), Logexp())
-        self.link_parameter(self.var_T)
-        self.link_parameter(self.alpha_C)
-        self.link_parameter(self.alpha_L)
-        self.link_parameter(self.alpha_T)
-
-    def parameters_changed(self):
-        self.kern_T.lengthscale = self.alpha_T
-        self.kern_C.lengthscale = self.alpha_C
-        self.kern_L.lengthscale = self.alpha_L
-        super(SEDRBF,self).parameters_changed()
-
-    def change_numlines(self, num):
-        self.numLines = num
-        self.lines_mu = self.lines_mu[0:num]
-        self.lines_sig = self.lines_sig[0:num]
-
-    def K(self, X, X2=None):
-        if X2 is None: X2 = X
-        KT = self.kern_T.K(X[:,0:1], X2[:,0:1])
-        KC = self.kern_C.K(X[:,1:2], X2[:,1:2])
-        KL = self.kern_L.K(X[:,1:2], X2[:,1:2])
-        fac = 0*KT
-        if self.numLines > 0:
-            for mu, sig in zip(self.lines_mu, self.lines_sig):
-                term = ((mu-X[:,1][:,None])/sig)**2 + ((mu-X2[:,1][None,:])/sig)**2
-                fac += np.exp(-0.5*term)
-        return KT * (KC + fac * KL)
-
-    def Kdiag(self, X):
-        KT = self.kern_T.Kdiag(X[:,0:1])
-        KC = self.kern_C.Kdiag(X[:,1:2])
-        KL = self.kern_L.Kdiag(X[:,1:2])
-        fac = 0*KT
-        if self.numLines > 0:
-            for mu, sig in zip(self.lines_mu, self.lines_sig):
-                fac += np.exp(-1.0*((mu-X[:,1])/sig)**2)
-        return KT * (KC + fac * KL)
-
-
-    def update_gradients_diag(self, dL_dKdiag, X):
-
-        KT = self.kern_T.Kdiag(X[:,0:1])
-        KC = self.kern_C.Kdiag(X[:,1:2])
-        KL = self.kern_L.Kdiag(X[:,1:2])
-        fac = 0*KT
-        if self.numLines > 0:
-            for mu, sig in zip(self.lines_mu, self.lines_sig):
-                fac += np.exp(-1.0*((mu-X[:,1])/sig)**2)
-
-        self.alpha_T.gradient = 0.
-        self.alpha_C.gradient = 0.
-        self.alpha_L.gradient = 0.
-
-    def update_gradients_full(self, dL_dK, X, X2=None):
-        if X2 is None: X2 = X
-
-        KT = self.kern_T.K(X[:,0:1], X2[:,0:1])
-        KC = self.kern_C.K(X[:,1:2], X2[:,1:2])
-        KL = self.kern_L.K(X[:,1:2], X2[:,1:2])
-        fac = 0*KT
-        if self.numLines > 0:
-            for mu, sig in zip(self.lines_mu, self.lines_sig):
-                term = ((mu-X[:,1][:,None])/sig)**2 + ((mu-X2[:,1][None,:])/sig)**2
-                fac += np.exp(-0.5*term)
-
-        self.alpha_T.gradient = - np.sum( self.kern_C.dK_dr_via_X(X[:,0:1], X2[:,0:1]) * (KC + fac * KL)
-                                         * dL_dK * self.kern_C._scaled_dist(X[:,0:1], X2[:,0:1]) ) / self.alpha_C
-
-        self.alpha_C.gradient = - np.sum(self.kern_C.dK_dr_via_X(X[:,1:2], X2[:,1:2]) * KT
-                                         * dL_dK * self.kern_C._scaled_dist(X[:,1:2], X2[:,1:2])) / self.alpha_C
-
-        self.alpha_L.gradient = - np.sum(self.kern_L.dK_dr_via_X(X[:,1:2], X2[:,1:2]) * fac * KT
-                                         * dL_dK * self.kern_L._scaled_dist(X[:,1:2], X2[:,1:2])) / self.alpha_L

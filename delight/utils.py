@@ -1,12 +1,29 @@
 
 import numpy as np
 
-def random_X(size, numTypes=8, numBands=5, redshiftMax=3.0):
+class approx_DL():
+    """
+    Approximate luminosity_distance relation,
+    agrees with astropy.FlatLambdaCDM(H0=70, Om0=0.3, Ob0=None) better than 1%
+    """
+    def __call__(self, z):
+        return 30.5 * z**0.04 - 21.7
+    def derivative(self, z):
+        return 1.22 / z**0.96
+
+def random_X_tbz(size, numTypes=8, numBands=5, redshiftMax=3.0):
     """Create random (but reasonable) input space for photo-z GP """
     X = np.zeros((size, 3))
     X[:,0] = np.random.uniform(low=0, high=numTypes-1, size=size) / float(numTypes)
     X[:,1] = np.random.randint(low=0, high=numBands-1, size=size)
     X[:,2] = np.random.uniform(low=0, high=redshiftMax, size=size)
+    return X
+
+def random_X_zl(size, redshiftMax=3.0, ellMax=10.0):
+    """Create random (but reasonable) input space for photo-z GP """
+    X = np.zeros((size, 2))
+    X[:,0] = np.random.uniform(low=0, high=redshiftMax, size=size)
+    X[:,1] = np.random.uniform(low=0, high=ellMax, size=size)
     return X
 
 def random_filtercoefs(numBands, numCoefs):

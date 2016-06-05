@@ -11,7 +11,7 @@ def test_diagonalOfKernels():
     numBands = 5
     numLines = 4
     numCoefs = 5
-    X = random_X(size, numBands=numBands)
+    X = random_X_tbz(size, numBands=numBands)
     X2 = X
 
     fcoefs_amp, fcoefs_mu, fcoefs_sig = random_filtercoefs(numBands, numCoefs)
