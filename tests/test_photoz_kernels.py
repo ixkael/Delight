@@ -3,7 +3,8 @@
 
 import numpy as np
 from scipy.misc import derivative
-from delight.utils import random_X_tbz, random_X_zl, random_filtercoefs
+from delight.utils import random_X_tbz, random_X_zl,\
+    random_filtercoefs, random_linecoefs, random_hyperparams
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 NREPEAT = 4

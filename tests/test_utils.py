@@ -1,5 +1,5 @@
 
-from delight.utils import *
+from delight.utils import random_X_tbz, random_X_zl
 
 
 def test_random_X():
