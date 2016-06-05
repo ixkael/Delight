@@ -1,6 +1,6 @@
 
-#from .context import delight
 from delight.utils import *
+
 
 def test_random_X():
     size = 10

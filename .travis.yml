@@ -24,9 +24,11 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib cython astropy pytest
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib cython pytest pylint pep8
   - source activate test-environment
   - pip install -r requirements.txt
 script:
   - python setup.py build_ext --inplace
   - py.test
+  - find . -name delight\*.py -exec pep8 --ignore=E402 {} +
+  - find . -name tests\*.py -exec pep8 --ignore=E402 {} +

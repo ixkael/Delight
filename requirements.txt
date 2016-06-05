@@ -3,6 +3,7 @@ cython
 pytest
 gpy
 paramz
-astropy
+pylint
+pep8
 scipy
 matplotlib
