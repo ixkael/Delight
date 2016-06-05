@@ -1,9 +1,10 @@
 # Delight
-**Photometric redshift via Gaussian processes with physical kernels**
+**Photometric redshift via Gaussian processes with physical kernels.**
 
-![alt tag](https://travis-ci.org/ixkael/PhotoZviaGP.svg?branch=master)
+![alt tag](https://travis-ci.org/ixkael/Delight.svg?branch=master)
 ![alt tag](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)
 
+**Tests**: pytest for unit tests, PEP8 and Pylint for static checks and code style.
 
 ## Content
 
@@ -17,7 +18,7 @@
 ## Requirements
 
 **Standard**: python, cython, numpy, scipy, pytest </br>
-**Less standard**: astropy, gpy
+**Less standard**: gpy
 
 ## Authors
 
