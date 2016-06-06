@@ -12,7 +12,7 @@ def test_diagonalOfKernels():
     numBands = 5
     numLines = 4
     numCoefs = 5
-    X = random_X_tbz(size, numBands=numBands)
+    X = random_X_bztl(size, numBands=numBands)
     X2 = X
 
     fcoefs_amp, fcoefs_mu, fcoefs_sig = random_filtercoefs(numBands, numCoefs)
@@ -21,12 +21,12 @@ def test_diagonalOfKernels():
     norms = np.sqrt(2*np.pi) * np.sum(fcoefs_amp * fcoefs_sig, axis=1)
 
     NO1, NO2 = X.shape[0], X2.shape[0]
-    t1 = X[:, 0]
-    t2 = X2[:, 0]
-    b1 = X[:, 1].astype(int)
-    b2 = X2[:, 1].astype(int)
-    fz1 = 1 + X[:, 2]
-    fz2 = 1 + X2[:, 2]
+    b1 = X[:, 0].astype(int)
+    b2 = X2[:, 0].astype(int)
+    fz1 = 1 + X[:, 1]
+    fz2 = 1 + X2[:, 1]
+    t1 = X[:, 2]
+    t2 = X2[:, 2]
     norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
     KT, KC, KL \
         = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
