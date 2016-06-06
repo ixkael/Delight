@@ -6,6 +6,79 @@ import weakref
 from scipy.special import gamma, gammaln, polygamma
 
 
+class FullZTLPrior(Prior):
+    """
+    Full prior p(z,ell,t), combining
+    Rayleigh, Schechter, and Kumaraswamy distributions
+    """
+
+    domain = _REAL
+    _instances = []
+
+    def __new__(cls, L_ellStar=1.0, L_alpha0=-0.5, L_alpha1=0.1,
+                T_alpha0=1.0, T_alpha1=1.0,
+                Z_alpha0=1.0, Z_alpha1=1.0):  # Singleton:
+        if cls._instances:
+            cls._instances[:]\
+                = [instance for instance in cls._instances if instance()]
+            for instance in cls._instances:
+                if instance().L_ellStar == L_ellStar\
+                    and instance().L_alpha0 == L_alpha0\
+                        and instance().L_alpha1 == L_alpha1\
+                        and instance().T_alpha0 == L_alpha0\
+                        and instance().L_alpha1 == L_alpha1\
+                        and instance().Z_alpha0 == Z_alpha0\
+                        and instance().Z_alpha1 == Z_alpha1:
+                    return instance()
+        newfunc = super(Prior, cls).__new__
+        if newfunc is object.__new__:
+            o = newfunc(cls)
+        else:
+            o = newfunc(cls, L_ellStar, L_alpha0, L_alpha1,
+                        T_alpha0, T_alpha1,
+                        Z_alpha0, Z_alpha1)
+        cls._instances.append(weakref.ref(o))
+        return cls._instances[-1]()
+
+    def __init__(self,
+                 L_ellStar, L_alpha0, L_alpha1,
+                 T_alpha0, T_alpha1,
+                 Z_alpha0, Z_alpha1
+                 ):
+        self.p_z_t = Rayleigh(Z_alpha0, Z_alpha1)
+        self.p_l_t = Schechter(L_ellStar, L_alpha0, L_alpha1)
+        self.p_t = Kumaraswamy(T_alpha0, T_alpha1)
+        self.L_ellStar = self.p_l_t.ellStar
+        self.L_alpha0 = self.p_l_t.alpha0
+        self.L_alpha1 = self.p_l_t.alpha1
+        self.T_alpha0 = self.p_t.alpha0
+        self.T_alpha1 = self.p_t.alpha1
+        self.Z_alpha0 = self.p_z_t.alpha0
+        self.Z_alpha1 = self.p_z_t.alpha1
+
+    def lnpdf(self, z, ell, t):
+        """Full lnprob"""
+        return self.p_z_t.lnpdf(z, t) +\
+            self.p_l_t.lnpdf(ell, t) +\
+            self.p_t.lnpdf(t)
+
+    def lnpdf_grad_ell(self, z, ell, t):
+        """Derivative of lnprob with respect to ell"""
+        return self.p_l_t.lnpdf_grad_ell(ell, t)
+
+    def lnpdf_grad_t(self, z, ell, t):
+        """Derivative of lnprob with respect to t"""
+        return self.p_z_t.lnpdf_grad_t(z, t) +\
+            self.p_l_t.lnpdf_grad_t(ell, t) +\
+            self.p_t.lnpdf_grad_t(t)
+
+    def lnpdf_grad_z(self, z, ell, t):
+        """Derivative of lnprob with respect to t"""
+        return self.p_z_t.lnpdf_grad_z(z, t)
+
+    # TODO: add gradients, in separate or combined function
+
+
 class Schechter(Prior):
     """
     Schechter luminosity function (normalized)
