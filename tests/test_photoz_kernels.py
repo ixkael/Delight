@@ -3,8 +3,10 @@
 
 import numpy as np
 from scipy.misc import derivative
-from delight.utils import random_X_tbz, random_X_zl,\
+
+from delight.utils import random_X_bztl,\
     random_filtercoefs, random_linecoefs, random_hyperparams
+
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 
@@ -22,8 +24,8 @@ def test_kernel_gradients():
     numCoefs = 5
 
     for i in range(NREPEAT):
-        X = random_X_tbz(size, numBands=numBands)
-        X2 = random_X_tbz(size, numBands=numBands)
+        X = random_X_bztl(size, numBands=numBands)
+        X2 = random_X_bztl(size, numBands=numBands)
 
         fcoefs_amp, fcoefs_mu, fcoefs_sig \
             = random_filtercoefs(numBands, numCoefs)
@@ -82,8 +84,8 @@ def test_kernel_gradients_X():
     numCoefs = 1
 
     for i in range(NREPEAT):
-        X = random_X_tbz(size, numBands=numBands)
-        X2 = random_X_tbz(size, numBands=numBands)
+        X = random_X_bztl(size, numBands=numBands)
+        X2 = random_X_bztl(size, numBands=numBands)
 
         fcoefs_amp, fcoefs_mu, fcoefs_sig \
             = random_filtercoefs(numBands, numCoefs)
@@ -102,7 +104,7 @@ def test_kernel_gradients_X():
 
         v1mat = gp.gradients_X(dL_dK, X, X2)
         v2mat = np.zeros_like(v1mat)
-        for dim in [0]:  # 0 for t, 1 for b, 2 for z. At present only 0 works
+        for dim in [2]:  # 0 for b, 1 for z, 2 for t, 3 for l. Only 0 works.
             for k1 in range(size):
                 def f_x(x1):
                     gp = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
@@ -126,12 +128,12 @@ def test_meanfunction_gradients_X():
     size = 5
 
     for i in range(NREPEAT):
-        X = random_X_zl(size)
+        X = random_X_bztl(size)
         mf = Photoz_mean_function()
         dL_dK = 1.0
         v1mat = mf.gradients_X(dL_dK, X)
         v2mat = np.zeros_like(v1mat)
-        for dim in [0, 1]:  # 0 for type, 1 for redshift, 2 for luminosity.
+        for dim in [1, 3]:  # Order: b z t l.
             for k1 in range(size):
                 def f_x(x1):
                     Xb = 1*X

@@ -21,7 +21,7 @@ class Photoz_mean_function(GPy.core.Mapping):
     def __init__(self, g_AB=1.0, DL_z=None, name='photoz'):
         """ Constructor."""
         # Call standard Kern constructor with 2 dimensions (z and l).
-        super(Photoz_mean_function, self).__init__(2, 1, name)
+        super(Photoz_mean_function, self).__init__(4, 1, name)
         # If luminosity_distance function not provided, use approximation
         if DL_z is None:
             self.DL_z = approx_DL()
@@ -31,20 +31,24 @@ class Photoz_mean_function(GPy.core.Mapping):
         self.fourpi = 4 * np.pi
 
     def f(self, X):
-        z = X[:, 0]
-        l = X[:, 1]
+        b = X[:, 0]
+        z = X[:, 1]
+        t = X[:, 2]
+        l = X[:, 3]
         return (1 + z) * l / self.fourpi / self.DL_z(z)**2.0 / self.g_AB
 
     def gradients_X(self, dL_dF, X):
-        z = X[:, 0]
-        l = X[:, 1]
+        b = X[:, 0]
+        z = X[:, 1]
+        t = X[:, 2]
+        l = X[:, 3]
         if isinstance(self.DL_z, approx_DL):
             dDLdz = self.DL_z.derivative(z)
             DLz = self.DL_z(z)
             grad = np.zeros_like(X)
-            grad[:, 0] = (l - 2 * l * (1 + z) * dDLdz / DLz)\
+            grad[:, 1] = (l - 2 * l * (1 + z) * dDLdz / DLz)\
                 / DLz**2 / self.g_AB / self.fourpi
-            grad[:, 1] = (1 + z) / self.fourpi / self.DL_z(z)**2.0 / self.g_AB
+            grad[:, 3] = (1 + z) / self.fourpi / self.DL_z(z)**2.0 / self.g_AB
             return np.dot(dL_dF, grad)
         else:
             raise NotImplementedError
@@ -63,7 +67,7 @@ class Photoz_kernel(GPy.kern.Kern):
                  g_AB=1.0, DL_z=None, name='photoz'):
         """ Constructor."""
         # Call standard Kern constructor with 3 dimensions (t, b and z).
-        super(Photoz_kernel, self).__init__(3, None, name)
+        super(Photoz_kernel, self).__init__(4, None, name)
         # If luminosity_distance function not provided, use approximation
         if DL_z is None:
             self.DL_z = approx_DL()
@@ -112,9 +116,10 @@ class Photoz_kernel(GPy.kern.Kern):
 
     def update_gradients_diag(self, dL_dKdiag, X):
         NO1 = X.shape[0]
-        t1 = X[:, 0]
-        b1 = self.roundband(X[:, 1])
-        fz1 = (1.+X[:, 2])
+        b1 = self.roundband(X[:, 0])
+        fz1 = (1.+X[:, 1])
+        t1 = X[:, 2]
+        l1 = X[:, 3]
         norm1 = np.zeros((NO1,))
         KT, KC, KL = np.zeros((NO1,)), np.zeros((NO1,)), np.zeros((NO1,))
         D_alpha_C, D_alpha_L = np.zeros((NO1,)), np.zeros((NO1,))
@@ -133,12 +138,14 @@ class Photoz_kernel(GPy.kern.Kern):
         if X2 is None:
             X2 = X
         NO1, NO2 = X.shape[0], X2.shape[0]
-        t1 = X[:, 0]
-        t2 = X2[:, 0]
-        b1 = self.roundband(X[:, 1])
-        b2 = self.roundband(X2[:, 1])
-        fz1 = 1 + X[:, 2]
-        fz2 = 1 + X2[:, 2]
+        b1 = self.roundband(X[:, 0])
+        fz1 = (1.+X[:, 1])
+        t1 = X[:, 2]
+        l1 = X[:, 3]
+        b2 = self.roundband(X2[:, 0])
+        fz2 = (1.+X2[:, 1])
+        t2 = X2[:, 2]
+        l2 = X2[:, 3]
         norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
         KT, KC, KL\
             = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
@@ -152,8 +159,8 @@ class Photoz_kernel(GPy.kern.Kern):
                     t1, b1, fz1, t2, b2, fz2, True, norm1, norm2,
                     KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
         prefac = (fz1[:, None] * fz2[None, :] /
-                  (self.fourpi * self.g_AB * self.DL_z(X[:, 2])[:, None] *
-                   self.DL_z(X2[:, 2])[None, :]))**2
+                  (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
+                   self.DL_z(X2[:, 1])[None, :]))**2
         self.var_T.gradient = np.sum(dL_dK * KT * (KC + KL))
         self.alpha_C.gradient\
             = np.sum(dL_dK * self.var_T * KT * prefac * D_alpha_C)
@@ -165,9 +172,10 @@ class Photoz_kernel(GPy.kern.Kern):
 
     def Kdiag(self, X):
         NO1 = X.shape[0]
-        t1 = X[:, 0]
-        b1 = self.roundband(X[:, 1])
-        fz1 = (1.+X[:, 2])
+        b1 = self.roundband(X[:, 0])
+        fz1 = (1.+X[:, 1])
+        t1 = X[:, 2]
+        l1 = X[:, 3]
         norm1 = np.zeros((NO1,))
         KT, KC, KL = np.zeros((NO1,)), np.zeros((NO1,)), np.zeros((NO1,))
         D_alpha_C, D_alpha_L = np.zeros((NO1,)), np.zeros((NO1,))
@@ -178,19 +186,21 @@ class Photoz_kernel(GPy.kern.Kern):
                          self.lines_sig[:self.numLines],
                          t1, b1, fz1, False, norm1, KL, KC, KT,
                          D_alpha_C, D_alpha_L)
-        prefac = fz1**2 / (self.fourpi * self.g_AB * self.DL_z(X[:, 2])**2)
+        prefac = fz1**2 / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])**2)
         return self.var_T * KT * prefac**2 * (KC + KL)
 
     def K(self, X, X2=None):
         if X2 is None:
             X2 = X
         NO1, NO2 = X.shape[0], X2.shape[0]
-        t1 = X[:, 0]
-        t2 = X2[:, 0]
-        b1 = self.roundband(X[:, 1])
-        b2 = self.roundband(X2[:, 1])
-        fz1 = 1 + X[:, 2]
-        fz2 = 1 + X2[:, 2]
+        b1 = self.roundband(X[:, 0])
+        fz1 = (1.+X[:, 1])
+        t1 = X[:, 2]
+        l1 = X[:, 3]
+        b2 = self.roundband(X2[:, 0])
+        fz2 = (1.+X2[:, 1])
+        t2 = X2[:, 2]
+        l2 = X2[:, 3]
         norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
         KT, KC, KL\
             = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
@@ -204,20 +214,22 @@ class Photoz_kernel(GPy.kern.Kern):
                     t1, b1, fz1, t2, b2, fz2, False, norm1, norm2,
                     KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
         prefac = fz1[:, None] * fz2[None, :]\
-            / (self.fourpi * self.g_AB * self.DL_z(X[:, 2])[:, None] *
-               self.DL_z(X2[:, 2])[None, :])
+            / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
+               self.DL_z(X2[:, 1])[None, :])
         return self.var_T * KT * prefac**2 * (KC + KL)
 
     def gradients_X(self, dL_dK, X, X2=None):
         if X2 is None:
             X2 = X
         NO1, NO2 = X.shape[0], X2.shape[0]
-        t1 = X[:, 0]
-        t2 = X2[:, 0]
-        b1 = self.roundband(X[:, 1])
-        b2 = self.roundband(X2[:, 1])
-        fz1 = 1 + X[:, 2]
-        fz2 = 1 + X2[:, 2]
+        b1 = self.roundband(X[:, 0])
+        fz1 = (1.+X[:, 1])
+        t1 = X[:, 2]
+        l1 = X[:, 3]
+        b2 = self.roundband(X2[:, 0])
+        fz2 = (1.+X2[:, 1])
+        t2 = X2[:, 2]
+        l2 = X2[:, 3]
         norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
         KT, KC, KL\
             = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
@@ -233,20 +245,18 @@ class Photoz_kernel(GPy.kern.Kern):
                     D_alpha_C, D_alpha_L, D_alpha_z)
 
         prefac = fz1[:, None] * fz2[None, :]\
-            / (self.fourpi * self.g_AB * self.DL_z(X[:, 2])[:, None] *
-               self.DL_z(X2[:, 2])[None, :])
+            / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
+               self.DL_z(X2[:, 1])[None, :])
 
         tmp = dL_dK * KT * prefac**2 * (KC + KL)
-        t1 = X[:, 0]
-        t2 = X2[:, 0]
         grad = np.zeros(X.shape, dtype=np.float64)
 
         tempfull = - tmp * self.var_T * (t1[:, None] - t2[None, :])\
             / self.alpha_T**2
-        np.sum(tempfull, axis=1, out=grad[:, 0])
+        np.sum(tempfull, axis=1, out=grad[:, 2])
 
         tempfull = dL_dK * self.var_T * KT * D_alpha_z
-        np.sum(tempfull, axis=1, out=grad[:, 2])
+        np.sum(tempfull, axis=1, out=grad[:, 1])
 
         return grad
 
