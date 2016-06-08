@@ -1,8 +1,10 @@
 
+import numpy as np
 from delight.priors import *
 from scipy.misc import derivative
 
 NREPEAT = 5
+relative_accuracy = 0.05
 
 
 def test_schechter_derivatives():
@@ -24,7 +26,7 @@ def test_schechter_derivatives():
 
         v1 = dist.lnpdf(ell, t)
         v2 = -np.log(dist.pdf(ell, t))
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_ell(ell, t)
 
@@ -32,7 +34,7 @@ def test_schechter_derivatives():
             dist2 = Schechter(ellStar, alpha0, alpha1)
             return dist2.lnpdf(ell, t)
         v2 = derivative(f_ell, ell, dx=0.01*ell)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_t(ell, t)
 
@@ -40,7 +42,7 @@ def test_schechter_derivatives():
             dist2 = Schechter(ellStar, alpha0, alpha1)
             return dist2.lnpdf(ell, t)
         v2 = derivative(f_t, t, dx=0.01*t)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.grad_ell(ell, t)
 
@@ -48,7 +50,7 @@ def test_schechter_derivatives():
             dist2 = Schechter(ellStar, alpha0, alpha1)
             return dist2.pdf(ell, t)
         v2 = derivative(f_ell, ell, dx=0.01*ell)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.grad_t(ell, t)
 
@@ -56,7 +58,7 @@ def test_schechter_derivatives():
             dist2 = Schechter(ellStar, alpha0, alpha1)
             return dist2.pdf(ell, t)
         v2 = derivative(f_t, t, dx=0.01*t)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_alpha0(ell, t)
 
@@ -64,7 +66,7 @@ def test_schechter_derivatives():
             dist2 = Schechter(ellStar, alpha0, alpha1)
             return dist2.lnpdf(ell, t)
         v2 = derivative(f_alpha0, alpha0, dx=0.01*alpha0)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_alpha1(ell, t)
 
@@ -72,7 +74,7 @@ def test_schechter_derivatives():
             dist2 = Schechter(ellStar, alpha0, alpha1)
             return dist2.lnpdf(ell, t)
         v2 = derivative(f_alpha1, alpha1, dx=0.01*alpha1)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_ellStar(ell, t)
 
@@ -80,7 +82,7 @@ def test_schechter_derivatives():
             dist2 = Schechter(ellStar, alpha0, alpha1)
             return dist2.lnpdf(ell, t)
         v2 = derivative(f_ellStar, ellStar, dx=0.01*ellStar)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         dist.update_gradients(ell, t)
 
@@ -90,7 +92,7 @@ def test_schechter_derivatives():
             dist2 = Schechter(ellStar, alpha0, alpha1)
             return dist2.pdf(ell, t)
         v2 = derivative(f_alpha0, alpha0, dx=0.01*alpha0)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.alpha1.gradient
 
@@ -98,7 +100,7 @@ def test_schechter_derivatives():
             dist2 = Schechter(ellStar, alpha0, alpha1)
             return dist2.pdf(ell, t)
         v2 = derivative(f_alpha1, alpha1, dx=0.01*alpha1)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.ellStar.gradient
 
@@ -106,7 +108,7 @@ def test_schechter_derivatives():
             dist2 = Schechter(ellStar, alpha0, alpha1)
             return dist2.pdf(ell, t)
         v2 = derivative(f_ellStar, ellStar, dx=0.01*ellStar)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
 
 def test_kumaraswamy_derivatives():
@@ -123,7 +125,7 @@ def test_kumaraswamy_derivatives():
 
         v1 = dist.lnpdf(t)
         v2 = -np.log(dist.pdf(t))
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_t(t)
 
@@ -131,7 +133,7 @@ def test_kumaraswamy_derivatives():
             dist2 = Kumaraswamy(alpha0, alpha1)
             return dist2.lnpdf(t)
         v2 = derivative(f_t, t, dx=0.01*t, args=(alpha0, alpha1), order=5)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.grad_t(t)
 
@@ -139,7 +141,7 @@ def test_kumaraswamy_derivatives():
             dist2 = Kumaraswamy(alpha0, alpha1)
             return dist2.pdf(t)
         v2 = derivative(f_t, t, dx=0.01*t, args=(alpha0, alpha1), order=5)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_alpha0(t)
 
@@ -147,7 +149,7 @@ def test_kumaraswamy_derivatives():
             dist2 = Kumaraswamy(alpha0, alpha1)
             return dist2.lnpdf(t)
         v2 = derivative(f_alpha0, alpha0, dx=0.01*alpha0)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_alpha1(t)
 
@@ -155,7 +157,7 @@ def test_kumaraswamy_derivatives():
             dist2 = Kumaraswamy(alpha0, alpha1)
             return dist2.lnpdf(t)
         v2 = derivative(f_alpha1, alpha1, dx=0.01*alpha1)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         dist.update_gradients(t)
 
@@ -165,7 +167,7 @@ def test_kumaraswamy_derivatives():
             dist2 = Kumaraswamy(alpha0, alpha1)
             return dist2.pdf(t)
         v2 = derivative(f_alpha0, alpha0, dx=0.01*alpha0)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.alpha1.gradient
 
@@ -173,7 +175,7 @@ def test_kumaraswamy_derivatives():
             dist2 = Kumaraswamy(alpha0, alpha1)
             return dist2.pdf(t)
         v2 = derivative(f_alpha1, alpha1, dx=0.01*alpha1)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
 
 def test_rayleigh_derivatives():
@@ -192,7 +194,7 @@ def test_rayleigh_derivatives():
 
         v1 = dist.lnpdf(z, t)
         v2 = -np.log(dist.pdf(z, t))
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_z(z, t)
 
@@ -200,7 +202,7 @@ def test_rayleigh_derivatives():
             dist2 = Rayleigh(alpha0, alpha1)
             return dist2.lnpdf(z, t)
         v2 = derivative(f_z, z, dx=0.01*z)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_t(z, t)
 
@@ -208,7 +210,7 @@ def test_rayleigh_derivatives():
             dist2 = Rayleigh(alpha0, alpha1)
             return dist2.lnpdf(z, t)
         v2 = derivative(f_t, t, dx=0.01*t)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.grad_z(z, t)
 
@@ -216,7 +218,7 @@ def test_rayleigh_derivatives():
             dist2 = Rayleigh(alpha0, alpha1)
             return dist2.pdf(z, t)
         v2 = derivative(f_z, z, dx=0.01*z)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.grad_t(z, t)
 
@@ -224,7 +226,7 @@ def test_rayleigh_derivatives():
             dist2 = Rayleigh(alpha0, alpha1)
             return dist2.pdf(z, t)
         v2 = derivative(f_t, t, dx=0.01*t)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_alpha0(z, t)
 
@@ -232,7 +234,7 @@ def test_rayleigh_derivatives():
             dist2 = Rayleigh(alpha0, alpha1)
             return dist2.lnpdf(z, t)
         v2 = derivative(f_alpha0, alpha0, dx=0.01*alpha0)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.lnpdf_grad_alpha1(z, t)
 
@@ -240,7 +242,7 @@ def test_rayleigh_derivatives():
             dist2 = Rayleigh(alpha0, alpha1)
             return dist2.lnpdf(z, t)
         v2 = derivative(f_alpha1, alpha1, dx=0.01*alpha1)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         dist.update_gradients(z, t)
 
@@ -250,7 +252,7 @@ def test_rayleigh_derivatives():
             dist2 = Rayleigh(alpha0, alpha1)
             return dist2.pdf(z, t)
         v2 = derivative(f_alpha0, alpha0, dx=0.01*alpha0)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = dist.alpha1.gradient
 
@@ -258,4 +260,4 @@ def test_rayleigh_derivatives():
             dist2 = Rayleigh(alpha0, alpha1)
             return dist2.pdf(z, t)
         v2 = derivative(f_alpha1, alpha1, dx=0.01*alpha1)
-        assert abs(v1/v2-1) < 0.01
+        assert abs(v1/v2-1) < relative_accuracy

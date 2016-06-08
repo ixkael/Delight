@@ -11,6 +11,7 @@ from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 
 NREPEAT = 4
+relative_accuracy = 0.05
 
 
 def test_kernel_gradients():
@@ -48,7 +49,7 @@ def test_kernel_gradients():
 
         v2 = derivative(f_alpha_T, alpha_T, dx=0.01*alpha_T, order=5)
         if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
-            assert abs(v1/v2-1) < 0.01
+            assert abs(v1/v2-1) < relative_accuracy
 
         v1 = gp.alpha_L.gradient
 
@@ -59,7 +60,7 @@ def test_kernel_gradients():
 
         v2 = derivative(f_alpha_L, alpha_L, dx=0.01*alpha_L, order=5)
         if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
-            assert abs(v1/v2-1) < 0.01
+            assert abs(v1/v2-1) < relative_accuracy
 
         v1 = gp.alpha_C.gradient
 
@@ -70,7 +71,7 @@ def test_kernel_gradients():
 
         v2 = derivative(f_alpha_C, alpha_C, dx=0.01*alpha_C, order=5)
         if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
-            assert abs(v1/v2-1) < 0.01
+            assert abs(v1/v2-1) < relative_accuracy
 
 
 def test_kernel_gradients_X():
