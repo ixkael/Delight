@@ -49,6 +49,6 @@ def random_linecoefs(numLines):
 
 def random_hyperparams():
     """Create random (but reasonable) hyperparameters for photo-z GP"""
-    alpha_T, var_T = np.random.uniform(low=0.2, high=2.0, size=2)
+    alpha_T, var_T = np.random.uniform(low=0.5, high=2.0, size=2)
     alpha_C, alpha_L = np.random.uniform(low=10.0, high=1000.0, size=2)
     return var_T, alpha_C, alpha_L, alpha_T
