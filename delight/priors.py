@@ -28,30 +28,48 @@ class Schechter(Parameterized):
         return "Schechter({:.2g}, {:.2g}, {:.2g})"\
             .format(self.ellStar, self.alpha0, self.alpha1)
 
-    def lnpdf(self, ell, t):
-        """Lnprob"""
+    def pdf(self, ell, t):
+        """prob"""
         alpha = self.alpha0 + self.alpha1 * t
-        return - gammaln(1+alpha) - (alpha+1)\
-            * self.lnEllStar + alpha * np.log(ell) + ell/self.ellStar
+        return (ell / self.ellStar)**alpha * np.exp(ell / self.ellStar)\
+            / self.ellStar / gamma(1+alpha)
+
+    def lnpdf(self, ell, t):
+        """minus Lnprob"""
+        alpha = self.alpha0 + self.alpha1 * t
+        return gammaln(1+alpha) + (alpha+1)\
+            * self.lnEllStar - alpha * np.log(ell) - ell/self.ellStar
 
     def lnpdf_grad_ell(self, ell, t):
         """Derivative of lnprob with respect to ell"""
-        return 1/self.ellStar + (self.alpha0 + self.alpha1 * t) / ell
+        return - 1/self.ellStar - (self.alpha0 + self.alpha1 * t) / ell
 
     def lnpdf_grad_t(self, ell, t):
         """Derivative of lnprob with respect to t"""
-        return self.alpha1 * (np.log(ell) - self.lnEllStar -
+        return - self.alpha1*(np.log(ell) - self.lnEllStar -
                               polygamma(0, 1 + self.alpha0 + self.alpha1 * t))
 
     def lnpdf_grad_alpha0(self, ell, t):
         """Derivative of lnprob with respect to alpha0"""
-        return np.log(ell) - self.lnEllStar\
-            - polygamma(0, 1 + self.alpha0 + self.alpha1 * t)
+        return - np.log(ell) + self.lnEllStar\
+            + polygamma(0, 1 + self.alpha0 + self.alpha1 * t)
 
     def lnpdf_grad_alpha1(self, ell, t):
         """Derivative of lnprob with respect to alpha1"""
-        return t * (np.log(ell) - self.lnEllStar -
-                    polygamma(0, 1 + self.alpha0 + self.alpha1 * t))
+        return - t * (np.log(ell) - self.lnEllStar -
+                      polygamma(0, 1 + self.alpha0 + self.alpha1 * t))
+
+    def lnpdf_grad_ellStar(self, ell, t):
+        """Derivative of lnprob with respect to alpha1"""
+        return 1/self.ellStar *\
+            (1 + self.alpha0 + self.alpha1 * t + ell/self.ellStar)
+
+    def update_gradients(self, ell, t):
+        """Update gradient structures"""
+        ff = self.pdf(ell, t)
+        self.ellStar.gradient = - self.lnpdf_grad_ellStar(ell, t) * ff
+        self.alpha0.gradient = - self.lnpdf_grad_alpha0(ell, t) * ff
+        self.alpha1.gradient = - self.lnpdf_grad_alpha1(ell, t) * ff
 
 
 class Kumaraswamy(Parameterized):
@@ -73,32 +91,43 @@ class Kumaraswamy(Parameterized):
     def __str__(self):
         return "Kumaraswamy({:.2g}, {:.2g})".format(self.alpha0, self.alpha1)
 
+    def pdf(self, t):
+        """Prob"""
+        return self.alpha0 * self.alpha1 * t**(self.alpha0 - 1) *\
+            (1 - t**self.alpha0)**(self.alpha1 - 1)
+
     def lnpdf(self, t):
-        """Lnprob"""
-        return self.logalpha0 + self.logalpha1\
-            + (self.alpha0 - 1) * np.log(t) + (self.alpha1 - 1) *\
+        """Minus Lnprob"""
+        return - self.logalpha0 - self.logalpha1\
+            - (self.alpha0 - 1) * np.log(t) - (self.alpha1 - 1) *\
             np.log(1 - t**self.alpha0)
 
     def lnpdf_grad_t(self, t):
         """Derivative of lnprob with respect to t"""
-        return (self.alpha0 - 1) / t\
-            - (self.alpha0 * (self.alpha1 - 1) *
+        return - (self.alpha0 - 1) / t\
+            + (self.alpha0 * (self.alpha1 - 1) *
                t**(self.alpha0 - 1)) / (1 - t**self.alpha0)
 
     def lnpdf_grad_alpha0(self, t):
         """Derivative of lnprob with respect to alpha0"""
-        return 1/self.alpha0 + np.log(t) - (self.alpha1 - 1) *\
+        return - 1/self.alpha0 - np.log(t) + (self.alpha1 - 1) *\
             t**self.alpha0 * np.log(t) / (1 - t**self.alpha0)
 
     def lnpdf_grad_alpha1(self, t):
         """Derivative of lnprob with respect to alpha1"""
-        return 1/self.alpha1 + np.log(1 - t**self.alpha0)
+        return - 1/self.alpha1 - np.log(1 - t**self.alpha0)
+
+    def update_gradients(self, t):
+        """Update gradient structures"""
+        ff = self.pdf(t)
+        self.alpha0.gradient = - self.lnpdf_grad_alpha0(t) * ff
+        self.alpha1.gradient = - self.lnpdf_grad_alpha1(t) * ff
 
 
 class Rayleigh(Parameterized):
     """
     Rayleigh distribution
-        p(z|t) = exp(-0.5 * z^2 / alpha(t)^2) / alpha(t)^2
+        p(z|t) = z * exp(-0.5 * z^2 / alpha(t)^2) / alpha(t)^2
         with alpha(t) = alpha0 + alpha1 * t
     """
     domain = _REAL
@@ -113,27 +142,38 @@ class Rayleigh(Parameterized):
     def __str__(self):
         return "Rayleigh({:.2g}, {:.2g})".format(self.alpha0, self.alpha1)
 
-    def lnpdf(self, z, t):
+    def pdf(self, z, t):
         """Lnprob"""
         alpha2 = (self.alpha0 + self.alpha1 * t)**2.0
-        return - alpha2 + np.log(z) - z**2 / 2 / alpha2
+        return z * np.exp(-0.5 * z**2 / alpha2) / alpha2
+
+    def lnpdf(self, z, t):
+        """Minus Lnprob"""
+        alpha2 = (self.alpha0 + self.alpha1 * t)**2.0
+        return np.log(alpha2) - np.log(z) + 0.5 * z**2 / alpha2
 
     def lnpdf_grad_z(self, z, t):
         """Derivative of lnprob with respect to z"""
         alpha2 = (self.alpha0 + self.alpha1 * t)**2
-        return 1.0 / z - z / alpha2
+        return - 1.0 / z + z / alpha2
 
     def lnpdf_grad_t(self, z, t):
         """Derivative of lnprob with respect to t"""
         alpha = (self.alpha0 + self.alpha1 * t)
-        return -2 * self.alpha1 * alpha + self.alpha1 * z**2 / alpha**3
+        return 2 * self.alpha1 / alpha - self.alpha1 * z**2 / alpha**3
 
     def lnpdf_grad_alpha0(self, z, t):
         """Derivative of lnprob with respect to alpha0"""
         alpha = (self.alpha0 + self.alpha1 * t)
-        return -2 * alpha + z**2 / alpha**3
+        return 2 / alpha - z**2 / alpha**3
 
     def lnpdf_grad_alpha1(self, z, t):
         """Derivative of lnprob with respect to alpha1"""
         alpha = (self.alpha0 + self.alpha1 * t)
-        return -2 * t * alpha + t * z**2 / alpha**3
+        return 2 * t / alpha - t * z**2 / alpha**3
+
+    def update_gradients(self, z, t):
+        """Update gradient structures"""
+        ff = self.pdf(z, t)
+        self.alpha0.gradient = - self.lnpdf_grad_alpha0(z, t) * ff
+        self.alpha1.gradient = - self.lnpdf_grad_alpha1(z, t) * ff
