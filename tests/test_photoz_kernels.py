@@ -145,3 +145,16 @@ def test_meanfunction_gradients_X():
                     = derivative(f_x, X[k1, dim], dx=0.01*X[k1, dim], order=5)
 
         np.testing.assert_almost_equal(v1mat, v2mat)
+
+
+def test_meanfunction():
+    """
+    Other tests of the mean function
+    """
+    size = 5
+
+    for i in range(NREPEAT):
+        X = random_X_bztl(size)
+        mf = Photoz_mean_function()
+        print 'mf.f(X).shape', mf.f(X).shape
+        assert mf.f(X).shape == (size, 1)

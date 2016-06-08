@@ -35,7 +35,8 @@ class Photoz_mean_function(GPy.core.Mapping):
         z = X[:, 1]
         t = X[:, 3]
         l = X[:, 2]
-        return (1 + z) * l / self.fourpi / self.DL_z(z)**2.0 / self.g_AB
+        return ((1 + z) * l / self.fourpi / self.DL_z(z)**2.0 / self.g_AB)\
+            .reshape(-1, 1)
 
     def gradients_X(self, dL_dF, X):
         b = X[:, 0]
