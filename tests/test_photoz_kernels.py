@@ -104,7 +104,7 @@ def test_kernel_gradients_X():
 
         v1mat = gp.gradients_X(dL_dK, X, X2)
         v2mat = np.zeros_like(v1mat)
-        for dim in [2]:  # 0 for b, 1 for z, 2 for t, 3 for l. Only 0 works.
+        for dim in [3]:  # 0 for b, 1 for z, 2 for l, 3 for t. Only 0 works.
             for k1 in range(size):
                 def f_x(x1):
                     gp = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
@@ -133,7 +133,7 @@ def test_meanfunction_gradients_X():
         dL_dK = 1.0
         v1mat = mf.gradients_X(dL_dK, X)
         v2mat = np.zeros_like(v1mat)
-        for dim in [1, 3]:  # Order: b z t l.
+        for dim in [1, 2]:  # Order: b z l t.
             for k1 in range(size):
                 def f_x(x1):
                     Xb = 1*X
