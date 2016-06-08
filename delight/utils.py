@@ -13,6 +13,12 @@ class approx_DL():
     def derivative(self, z):
         return 1.22 / z**0.96
 
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
 
 def random_X_bztl(size, numTypes=8, numBands=5, redshiftMax=3.0):
     """Create random (but reasonable) input space for photo-z GP """
