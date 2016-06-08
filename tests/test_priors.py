@@ -42,6 +42,22 @@ def test_schechter_derivatives():
         v2 = derivative(f_t, t, dx=0.01*t)
         assert abs(v1/v2-1) < 0.01
 
+        v1 = dist.grad_ell(ell, t)
+
+        def f_ell(ell):
+            dist2 = Schechter(ellStar, alpha0, alpha1)
+            return dist2.pdf(ell, t)
+        v2 = derivative(f_ell, ell, dx=0.01*ell)
+        assert abs(v1/v2-1) < 0.01
+
+        v1 = dist.grad_t(ell, t)
+
+        def f_t(t):
+            dist2 = Schechter(ellStar, alpha0, alpha1)
+            return dist2.pdf(ell, t)
+        v2 = derivative(f_t, t, dx=0.01*t)
+        assert abs(v1/v2-1) < 0.01
+
         v1 = dist.lnpdf_grad_alpha0(ell, t)
 
         def f_alpha0(alpha0):
@@ -117,6 +133,14 @@ def test_kumaraswamy_derivatives():
         v2 = derivative(f_t, t, dx=0.01*t, args=(alpha0, alpha1), order=5)
         assert abs(v1/v2-1) < 0.01
 
+        v1 = dist.grad_t(t)
+
+        def f_t(t, alpha0, alpha1):
+            dist2 = Kumaraswamy(alpha0, alpha1)
+            return dist2.pdf(t)
+        v2 = derivative(f_t, t, dx=0.01*t, args=(alpha0, alpha1), order=5)
+        assert abs(v1/v2-1) < 0.01
+
         v1 = dist.lnpdf_grad_alpha0(t)
 
         def f_alpha0(alpha0):
@@ -183,6 +207,22 @@ def test_rayleigh_derivatives():
         def f_t(t):
             dist2 = Rayleigh(alpha0, alpha1)
             return dist2.lnpdf(z, t)
+        v2 = derivative(f_t, t, dx=0.01*t)
+        assert abs(v1/v2-1) < 0.01
+
+        v1 = dist.grad_z(z, t)
+
+        def f_z(z):
+            dist2 = Rayleigh(alpha0, alpha1)
+            return dist2.pdf(z, t)
+        v2 = derivative(f_z, z, dx=0.01*z)
+        assert abs(v1/v2-1) < 0.01
+
+        v1 = dist.grad_t(z, t)
+
+        def f_t(t):
+            dist2 = Rayleigh(alpha0, alpha1)
+            return dist2.pdf(z, t)
         v2 = derivative(f_t, t, dx=0.01*t)
         assert abs(v1/v2-1) < 0.01
 

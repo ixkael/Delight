@@ -71,6 +71,14 @@ class Schechter(Parameterized):
         self.alpha0.gradient = - self.lnpdf_grad_alpha0(ell, t) * ff
         self.alpha1.gradient = - self.lnpdf_grad_alpha1(ell, t) * ff
 
+    def grad_ell(self, ell, t):
+        """Derivative of prob with respect to ell"""
+        return - self.pdf(ell, t) * self.lnpdf_grad_ell(ell, t)
+
+    def grad_t(self, ell, t):
+        """Derivative of prob with respect to t"""
+        return - self.pdf(ell, t) * self.lnpdf_grad_t(ell, t)
+
 
 class Kumaraswamy(Parameterized):
     """
@@ -122,6 +130,10 @@ class Kumaraswamy(Parameterized):
         ff = self.pdf(t)
         self.alpha0.gradient = - self.lnpdf_grad_alpha0(t) * ff
         self.alpha1.gradient = - self.lnpdf_grad_alpha1(t) * ff
+
+    def grad_t(self, t):
+        """Derivative of prob with respect to t"""
+        return - self.pdf(t) * self.lnpdf_grad_t(t)
 
 
 class Rayleigh(Parameterized):
@@ -177,3 +189,11 @@ class Rayleigh(Parameterized):
         ff = self.pdf(z, t)
         self.alpha0.gradient = - self.lnpdf_grad_alpha0(z, t) * ff
         self.alpha1.gradient = - self.lnpdf_grad_alpha1(z, t) * ff
+
+    def grad_z(self, z, t):
+        """Derivative of prob with respect to z"""
+        return - self.pdf(z, t) * self.lnpdf_grad_z(z, t)
+
+    def grad_t(self, z, t):
+        """Derivative of prob with respect to t"""
+        return - self.pdf(z, t) * self.lnpdf_grad_t(z, t)
