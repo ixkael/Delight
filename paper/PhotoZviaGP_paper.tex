@@ -350,8 +350,12 @@ and the line kernel is
 }	
 Finally, the type kernel is assumed to be a Gaussian, sometimes called Radial Basis Function (RBF) in the Gaussian Process litterature,
 \eqn{
-	k^t(t,t') = \mathcal{N}\left(t, t', {\alpha}_t\right)
+	k^t(t,t') = \alpha_0 \ \mathcal{N}\left(t, t', {\alpha}_t\right)
 }
+
+\todo{Describe hyperparameters}
+
+So our full vector of hyperparameters is $\bm{\alpha} = (\alpha_0, \alpha_t, \alpha_L, \alpha_C)$
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Luminosity, redshift and type priors}
