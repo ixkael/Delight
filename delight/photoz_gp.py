@@ -29,6 +29,15 @@ class PhotozGP(Model):
 
         super(PhotozGP, self).__init__(name)
 
+        assert bands.shape[1] == 1
+        assert redshifts.shape[1] == 1
+        assert luminosities.shape[1] == 1
+        assert types.shape[1] == 1
+        assert bands.shape[0] == bands.shape[0] and\
+            bands.shape[0] == redshifts.shape[0] and\
+            bands.shape[0] == luminosities.shape[0] and\
+            bands.shape[0] == types.shape[0]
+
         self.bands = ObsAr(bands)
 
         self.redshifts = Param('redshifts', redshifts)
@@ -39,10 +48,6 @@ class PhotozGP(Model):
 
         self.types = Param('types', types)
         self.link_parameter(self.types)
-
-        assert self.redshifts.shape[0] == self.bands.shape[0] and\
-            self.redshifts.shape[0] == self.types.shape[0] and\
-            self.redshifts.shape[0] == self.luminosities.shape[0]
 
         self.X = np.hstack((self.bands.values, self.redshifts.values,
                             self.luminosities.values, self.types.values))
@@ -60,7 +65,7 @@ class PhotozGP(Model):
             assert mean_function.g_AB == kern.g_AB
             assert mean_function.DL_z == kern.DL_z
         self.mean_function = mean_function
-        self.link_parameter(self.mean_function)
+        #  No need to link mean_function because it has no parameters
         self.kern = kern
         self.link_parameter(self.kern)
 
@@ -101,7 +106,6 @@ class PhotozGP(Model):
                             self.luminosities.values, self.types.values))
         assert self.X.shape[1] == 4
 
-        print 'Shapes', self.X.shape, self.Y.shape, self.mean_function.f(self.X).shape
         self.gp_posterior, self.gp_log_marginal_likelihood, self.gp_grad_dict\
             = self.inference_method.inference(self.kern, self.X,
                                               self.likelihood,
@@ -124,11 +128,10 @@ class PhotozGP(Model):
 
         self.kern.update_gradients_diag(self.gp_grad_dict['dL_dK'], self.X)
 
-        #  TODO: fix that!!!!
-        gradX = self.mean_function.gradients_X(self.gp_grad_dict['dL_dK'],
+        gradX = self.mean_function.gradients_X(self.gp_grad_dict['dL_dm'].T,
                                                self.X)\
-            + self.kern.gradients_X_diag(self.gp_grad_dict['dL_dK'],
-                                         self.X)
+            + self.kern.gradients_X(self.gp_grad_dict['dL_dK'],
+                                    self.X)
 
         if not self.redshifts.is_fixed:
             self.redshifts.gradients = 0
@@ -197,4 +200,6 @@ class PhotozGP(Model):
         :param Y_metadata: metadata associated with the test points
         """
         mu_star, var_star = self._raw_predict(x_test)
-        return self.likelihood.log_predictive_density(y_test, mu_star, var_star, Y_metadata=Y_metadata)
+        return self.likelihood.log_predictive_density(y_test, mu_star,
+                                                      var_star,
+                                                      Y_metadata=Y_metadata)
