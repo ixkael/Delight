@@ -16,17 +16,48 @@ class Schechter(Parameterized):
 
     def __init__(self, ellStar, alpha0, alpha1, name='Schechter'):
         super(Schechter, self).__init__(name=name)
-        self.ellStar = Param('Schechter_ellStar', float(ellStar))
-        self.alpha0 = Param('Schechter_alpha0', float(alpha0))
-        self.alpha1 = Param('Schechter_alpha1', float(alpha1))
+        self.ellStar = Param('ellStar', float(ellStar))
+        self.alpha0 = Param('alpha0', float(alpha0))
+        self.alpha1 = Param('alpha1', float(alpha1))
         self.link_parameter(self.ellStar)
         self.link_parameter(self.alpha0)
         self.link_parameter(self.alpha1)
-        self.lnEllStar = np.log(self.ellStar)
+        self.lnEllStar = np.log(ellStar)
+
+    def set_ellStar(self, ellStar):
+        """Set ellStar"""
+        self.update_model(False)
+        index = self.ellStar._parent_index_
+        self.unlink_parameter(self.ellStar)
+        self.ellStar = Param('ellStar', float(ellStar))
+        self.link_parameter(self.ellStar, index=index)
+        self.lnEllStar = np.log(ellStar)
+        self.update_model(True)
+
+    def set_alpha0(self, alpha0):
+        """Set alpha0"""
+        self.update_model(False)
+        index = self.alpha0._parent_index_
+        self.unlink_parameter(self.alpha0)
+        self.alpha0 = Param('alpha0', float(alpha0))
+        self.link_parameter(self.alpha0, index=index)
+        self.logalpha0 = np.log(alpha0)
+        self.update_model(True)
+
+    def set_alpha1(self, alpha1):
+        """Set alpha1"""
+        self.update_model(False)
+        index = self.alpha1._parent_index_
+        self.unlink_parameter(self.alpha1)
+        self.alpha1 = Param('alpha1', float(alpha1))
+        self.link_parameter(self.alpha1, index=index)
+        self.logalpha0 = np.log(alpha1)
+        self.update_model(True)
 
     def __str__(self):
-        return "Schechter({:.2g}, {:.2g}, {:.2g})"\
-            .format(self.ellStar, self.alpha0, self.alpha1)
+        return "Schechter({}, {}, {})".format(self.ellStar.values[0],
+                                              self.alpha0.values[0],
+                                              self.alpha1.values[0])
 
     def pdf(self, ell, t):
         """prob"""
@@ -64,12 +95,11 @@ class Schechter(Parameterized):
         return 1/self.ellStar *\
             (1 + self.alpha0 + self.alpha1 * t + ell/self.ellStar)
 
-    def update_gradients(self, ell, t):
+    def update_gradients(self, dL,  ell, t):
         """Update gradient structures"""
-        ff = self.pdf(ell, t)
-        self.ellStar.gradient = - self.lnpdf_grad_ellStar(ell, t) * ff
-        self.alpha0.gradient = - self.lnpdf_grad_alpha0(ell, t) * ff
-        self.alpha1.gradient = - self.lnpdf_grad_alpha1(ell, t) * ff
+        self.ellStar.gradient = np.sum(dL * self.lnpdf_grad_ellStar(ell, t))
+        self.alpha0.gradient = np.sum(dL * self.lnpdf_grad_alpha0(ell, t))
+        self.alpha1.gradient = np.sum(dL * self.lnpdf_grad_alpha1(ell, t))
 
     def grad_ell(self, ell, t):
         """Derivative of prob with respect to ell"""
@@ -89,15 +119,37 @@ class Kumaraswamy(Parameterized):
 
     def __init__(self, alpha0, alpha1, name='Kumaraswamy'):
         super(Kumaraswamy, self).__init__(name=name)
-        self.alpha0 = Param('Kumaraswamy_alpha0', float(alpha0))
-        self.alpha1 = Param('Kumaraswamy_alpha1', float(alpha1))
+        self.alpha0 = Param('alpha0', float(alpha0))
+        self.alpha1 = Param('alpha1', float(alpha1))
         self.link_parameter(self.alpha0)
         self.link_parameter(self.alpha1)
         self.logalpha0 = np.log(alpha0)
         self.logalpha1 = np.log(alpha1)
 
+    def set_alpha0(self, alpha0):
+        """Set alpha0"""
+        self.update_model(False)
+        index = self.alpha0._parent_index_
+        self.unlink_parameter(self.alpha0)
+        self.alpha0 = Param('alpha0', float(alpha0))
+        self.link_parameter(self.alpha0, index=index)
+        self.logalpha0 = np.log(alpha0)
+        self.update_model(True)
+
+    def set_alpha1(self, alpha1):
+        """Set alpha1"""
+        self.update_model(False)
+        index = self.alpha1._parent_index_
+        self.unlink_parameter(self.alpha1)
+        self.alpha1 = Param('alpha1', float(alpha1))
+        self.link_parameter(self.alpha1, index=index)
+        self.logalpha0 = np.log(alpha1)
+        self.update_model(True)
+
     def __str__(self):
-        return "Kumaraswamy({:.2g}, {:.2g})".format(self.alpha0, self.alpha1)
+        print self.alpha0.values, self.alpha1.values
+        return "Kumaraswamy({}, {})".format(self.alpha0.values[0],
+                                            self.alpha1.values[0])
 
     def pdf(self, t):
         """Prob"""
@@ -125,11 +177,10 @@ class Kumaraswamy(Parameterized):
         """Derivative of lnprob with respect to alpha1"""
         return - 1/self.alpha1 - np.log(1 - t**self.alpha0)
 
-    def update_gradients(self, t):
+    def update_gradients(self, dL, t):
         """Update gradient structures"""
-        ff = self.pdf(t)
-        self.alpha0.gradient = - self.lnpdf_grad_alpha0(t) * ff
-        self.alpha1.gradient = - self.lnpdf_grad_alpha1(t) * ff
+        self.alpha0.gradient = np.sum(dL * self.lnpdf_grad_alpha0(t))
+        self.alpha1.gradient = np.sum(dL * self.lnpdf_grad_alpha1(t))
 
     def grad_t(self, t):
         """Derivative of prob with respect to t"""
@@ -146,13 +197,14 @@ class Rayleigh(Parameterized):
 
     def __init__(self, alpha0, alpha1, name='Rayleigh'):
         super(Rayleigh, self).__init__(name)
-        self.alpha0 = Param('Rayleigh_alpha0', float(alpha0))
-        self.alpha1 = Param('Rayleigh_alpha1', float(alpha1))
+        self.alpha0 = Param('alpha0', float(alpha0))
+        self.alpha1 = Param('alpha1', float(alpha1))
         self.link_parameter(self.alpha0)
         self.link_parameter(self.alpha1)
 
     def __str__(self):
-        return "Rayleigh({:.2g}, {:.2g})".format(self.alpha0, self.alpha1)
+        return "Rayleigh({}, {})".format(self.alpha0.values[0],
+                                         self.alpha1.values[0])
 
     def pdf(self, z, t):
         """Lnprob"""
@@ -184,11 +236,10 @@ class Rayleigh(Parameterized):
         alpha = (self.alpha0 + self.alpha1 * t)
         return 2 * t / alpha - t * z**2 / alpha**3
 
-    def update_gradients(self, z, t):
+    def update_gradients(self, dL, z, t):
         """Update gradient structures"""
-        ff = self.pdf(z, t)
-        self.alpha0.gradient = - self.lnpdf_grad_alpha0(z, t) * ff
-        self.alpha1.gradient = - self.lnpdf_grad_alpha1(z, t) * ff
+        self.alpha0.gradient = np.sum(dL * self.lnpdf_grad_alpha0(z, t))
+        self.alpha1.gradient = np.sum(dL * self.lnpdf_grad_alpha1(z, t))
 
     def grad_z(self, z, t):
         """Derivative of prob with respect to z"""
