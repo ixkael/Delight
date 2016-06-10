@@ -304,8 +304,14 @@ class Photoz_kernel(Kern):
         np.sum(tempfull, axis=1, out=grad[:, 3])  # t
 
         # TODO: add kernel derivatives with respect to redshift
-        tempfull = dL_dK * self.var_T * KT * D_alpha_z
-        np.sum(tempfull, axis=1, out=grad[:, 1])  # z
+        prefac = fz2[None, :]\
+            / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
+               self.DL_z(X2[:, 1])[None, :])
+        cst = dL_dK * self.var_T * KT * prefac
+        tempfull = (2 * fz1[:, None] - 2 * fz1[:, None]**2 *
+                    self.DL_z.derivative(X[:, 1])[:, None]) * (KC + KL)\
+            + D_alpha_z * fz1[:, None]**2
+        np.sum(cst * tempfull, axis=1, out=grad[:, 1])  # z
 
         return grad
 
