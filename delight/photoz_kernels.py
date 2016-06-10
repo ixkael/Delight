@@ -98,6 +98,10 @@ class Photoz_kernel(Kern):
         self.link_parameter(self.alpha_C)
         self.link_parameter(self.alpha_L)
         self.link_parameter(self.alpha_T)
+        self.var_T.constrain_positive()
+        self.alpha_C.constrain_positive()
+        self.alpha_L.constrain_positive()
+        self.alpha_T.constrain_positive()
 
     def set_alpha_C(self, alpha_C):
         """Set alpha_C"""

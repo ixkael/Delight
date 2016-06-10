@@ -3,9 +3,9 @@ import numpy as np
 from delight.priors import *
 from scipy.misc import derivative
 
-NREPEAT = 5
+NREPEAT = 2
 relative_accuracy = 0.05
-size = 4
+size = 1
 
 
 def test_schechter_derivatives():
@@ -17,10 +17,11 @@ def test_schechter_derivatives():
         ellStar = np.random.uniform(low=0., high=2.0, size=1)
         ell = np.random.uniform(low=0., high=2.0*ellStar, size=size)
         t = np.random.uniform(low=0, high=1.0, size=size)
-        alpha0 = np.random.uniform(low=-0.7, high=-0.3, size=1)
-        alpha1 = np.random.uniform(low=0.1, high=0.2, size=1)
-        alpha = alpha0 + t * alpha1
-        if np.any(alpha < -0.9) or np.any(alpha > -0.1):
+        alpha0 = np.random.uniform(low=-1, high=-0, size=1)
+        alpha1 = np.random.uniform(low=-1, high=-0, size=1)
+        alpha = alpha0 + t * (alpha1 - alpha0)
+        if np.any(alpha < -1) or np.any(alpha > 0):
+            raise AssertionError("Problem with alphas")
             break
         dist = Schechter(ellStar, alpha0, alpha1)
         print 'Schechter parameters: ', ellStar, alpha0, alpha1, ell, t

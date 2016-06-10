@@ -2,6 +2,8 @@
 import pytest
 import numpy as np
 
+import GPy
+
 from delight.priors import Rayleigh, Schechter, Kumaraswamy
 from delight.photoz_gp import PhotozGP
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
@@ -33,7 +35,8 @@ def create_p_ell_t(request):
     if request.param is False:
         return None
     else:
-        ellStar, alpha0, alpha1 = np.random.uniform(0., 2., size=3)
+        ellStar = np.random.uniform(0., 10., size=1)
+        alpha0, alpha1 = np.random.uniform(-1., 0., size=2)
         return Schechter(ellStar, alpha0, alpha1)
 
 
@@ -130,7 +133,8 @@ def test_gradients(create_gp):
         return gp2._log_marginal_likelihood
     v2 = derivative(f_alpha_T, gp.kern.alpha_T.values,
                     dx=0.01*gp.kern.alpha_T.values)
-    assert abs(v1/v2-1) < relative_accuracy
+    if np.abs(v1) > 1e-12 and np.abs(v2) > 1e-12:
+        assert abs(v1/v2-1) < relative_accuracy
 
     if gp.prior_z_t is not None:
 
@@ -225,3 +229,27 @@ def test_gradients(create_gp):
         assert abs(v1/v2-1)
 
         #  TODO: add tests for redshift gradients
+
+
+def test_optimize(create_gp):
+    gp = create_gp
+    assert(isinstance(gp, PhotozGP))
+
+    #  TODO: let redshifts free
+    gp.types.fix()
+    gp.redshifts.fix()
+
+    gp.optimize()
+
+
+def test_hmc(create_gp):
+    gp = create_gp
+    assert(isinstance(gp, PhotozGP))
+
+    #  TODO: let redshifts free
+    gp.redshifts.fix()
+    print gp.parameter_names_flat()
+    print gp.optimizer_array
+
+    hmc = GPy.inference.mcmc.HMC(gp, stepsize=1e-2)
+    s = hmc.sample(num_samples=3)

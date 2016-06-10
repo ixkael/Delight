@@ -41,12 +41,15 @@ class PhotozGP(Model):
         self.bands = ObsAr(bands)
 
         self.redshifts = Param('redshifts', redshifts)
+        self.redshifts.constrain_positive()
         self.link_parameter(self.redshifts)
 
         self.luminosities = Param('luminosities', luminosities)
+        self.luminosities.constrain_positive()
         self.link_parameter(self.luminosities)
 
         self.types = Param('types', types)
+        self.types.constrain_bounded(0, 1)
         self.link_parameter(self.types)
 
         self.X = np.hstack((self.bands.values, self.redshifts.values,
@@ -71,10 +74,10 @@ class PhotozGP(Model):
 
         self.Y_metadata = {
             'output_index': np.arange(Ny)[:, None],
-            'variance': flux_variances
         }
 
         self.likelihood = HeteroscedasticGaussian(self.Y_metadata)
+        self.likelihood.variance.fix(flux_variances[:, None])
 
         self.inference_method =\
             exact_gaussian_inference.ExactGaussianInference()
@@ -98,6 +101,7 @@ class PhotozGP(Model):
             self.Y_inducing = np.zeros((X_inducing.shape[0], 1))
             if not fix_inducing_to_mean_prediction:  # also sample Y_inducing!
                 # Otherwise Y_inducing will be set to mean GP prediction
+                self.Y_inducing.constrain_positive()
                 self.link_parameter(self.Y_inducing)
 
     def set_bands(self, bands):
@@ -120,6 +124,7 @@ class PhotozGP(Model):
         index = self.redshifts._parent_index_
         self.unlink_parameter(self.redshifts)
         self.redshifts = Param('redshifts', redshifts)
+        self.redshifts.constrain_positive()
         self.link_parameter(self.redshifts, index=index)
         self.update_model(True)
 
@@ -133,6 +138,7 @@ class PhotozGP(Model):
         index = self.luminosities._parent_index_
         self.unlink_parameter(self.luminosities)
         self.luminosities = Param('luminosities', luminosities)
+        self.luminosities.constrain_positive()
         self.link_parameter(self.luminosities, index=index)
         self.update_model(True)
 
@@ -146,6 +152,7 @@ class PhotozGP(Model):
         index = self.types._parent_index_
         self.unlink_parameter(self.types)
         self.types = Param('types', types)
+        self.types.constrain_bounded(0, 1)
         self.link_parameter(self.types, index=index)
         self.update_model(True)
 
@@ -155,13 +162,11 @@ class PhotozGP(Model):
                             self.luminosities.values, self.types.values))
         assert self.X.shape[1] == 4
 
-        self.gp_posterior, self.gp_log_marginal_likelihood, self.gp_grad_dict\
+        self.posterior, self._log_marginal_likelihood, self.grad_dict\
             = self.inference_method.inference(self.kern, self.X,
                                               self.likelihood,
                                               self.Y, self.mean_function,
                                               self.Y_metadata)
-
-        self._log_marginal_likelihood = 1*self.gp_log_marginal_likelihood
 
         if self.X_inducing is not None:
             if fix_inducing_to_mean_prediction:
@@ -174,13 +179,13 @@ class PhotozGP(Model):
                 #  TODO : update gradients of inducting points
                 #  self.Y_inducing.gradient =
 
-        self.mean_function.update_gradients(self.gp_grad_dict['dL_dm'], self.X)
+        self.mean_function.update_gradients(self.grad_dict['dL_dm'], self.X)
 
-        self.kern.update_gradients_full(self.gp_grad_dict['dL_dK'], self.X)
+        self.kern.update_gradients_full(self.grad_dict['dL_dK'], self.X)
 
-        gradX = self.mean_function.gradients_X(self.gp_grad_dict['dL_dm'].T,
+        gradX = self.mean_function.gradients_X(self.grad_dict['dL_dm'].T,
                                                self.X)\
-            + self.kern.gradients_X_diag(self.gp_grad_dict['dL_dK'],
+            + self.kern.gradients_X_diag(self.grad_dict['dL_dK'],
                                          self.X)
 
         if not self.redshifts.is_fixed:

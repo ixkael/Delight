@@ -19,6 +19,9 @@ class Schechter(Parameterized):
         self.ellStar = Param('ellStar', float(ellStar))
         self.alpha0 = Param('alpha0', float(alpha0))
         self.alpha1 = Param('alpha1', float(alpha1))
+        self.ellStar.constrain_positive()
+        self.alpha0.constrain_bounded(-1, 0)
+        self.alpha1.constrain_bounded(-1, 0)
         self.link_parameter(self.ellStar)
         self.link_parameter(self.alpha0)
         self.link_parameter(self.alpha1)
@@ -30,6 +33,7 @@ class Schechter(Parameterized):
         index = self.ellStar._parent_index_
         self.unlink_parameter(self.ellStar)
         self.ellStar = Param('ellStar', float(ellStar))
+        self.ellStar.constrain_positive()
         self.link_parameter(self.ellStar, index=index)
         self.lnEllStar = np.log(ellStar)
         self.update_model(True)
@@ -40,8 +44,8 @@ class Schechter(Parameterized):
         index = self.alpha0._parent_index_
         self.unlink_parameter(self.alpha0)
         self.alpha0 = Param('alpha0', float(alpha0))
+        self.alpha0.constrain_bounded(-1, 0)
         self.link_parameter(self.alpha0, index=index)
-        self.logalpha0 = np.log(alpha0)
         self.update_model(True)
 
     def set_alpha1(self, alpha1):
@@ -50,8 +54,8 @@ class Schechter(Parameterized):
         index = self.alpha1._parent_index_
         self.unlink_parameter(self.alpha1)
         self.alpha1 = Param('alpha1', float(alpha1))
+        self.alpha1.constrain_bounded(-1, 0)
         self.link_parameter(self.alpha1, index=index)
-        self.logalpha0 = np.log(alpha1)
         self.update_model(True)
 
     def __str__(self):
@@ -61,39 +65,44 @@ class Schechter(Parameterized):
 
     def pdf(self, ell, t):
         """prob"""
-        alpha = self.alpha0 + self.alpha1 * t
+        alpha = self.alpha0 + (self.alpha1 - self.alpha0) * t
         return (ell / self.ellStar)**alpha * np.exp(ell / self.ellStar)\
-            / self.ellStar / gamma(1+alpha)
+            / self.ellStar / gamma(1 + alpha)
 
     def lnpdf(self, ell, t):
         """minus Lnprob"""
-        alpha = self.alpha0 + self.alpha1 * t
-        return gammaln(1+alpha) + (alpha+1)\
+        alpha = self.alpha0 + (self.alpha1 - self.alpha0) * t
+        return gammaln(1 + alpha) + (alpha + 1)\
             * self.lnEllStar - alpha * np.log(ell) - ell/self.ellStar
 
     def lnpdf_grad_ell(self, ell, t):
         """Derivative of lnprob with respect to ell"""
-        return - 1/self.ellStar - (self.alpha0 + self.alpha1 * t) / ell
+        return - 1/self.ellStar - (self.alpha0 +
+                                   (self.alpha1 - self.alpha0) * t) / ell
 
     def lnpdf_grad_t(self, ell, t):
         """Derivative of lnprob with respect to t"""
-        return - self.alpha1*(np.log(ell) - self.lnEllStar -
-                              polygamma(0, 1 + self.alpha0 + self.alpha1 * t))
+        return - (self.alpha1 - self.alpha0)*(np.log(ell) - self.lnEllStar -
+                                              polygamma(0, 1 + self.alpha0 +
+                                              (self.alpha1 - self.alpha0) * t))
 
     def lnpdf_grad_alpha0(self, ell, t):
         """Derivative of lnprob with respect to alpha0"""
-        return - np.log(ell) + self.lnEllStar\
-            + polygamma(0, 1 + self.alpha0 + self.alpha1 * t)
+        return (1-t) * (-np.log(ell) + self.lnEllStar +
+                        polygamma(0, 1 + self.alpha0 +
+                        (self.alpha1 - self.alpha0) * t))
 
     def lnpdf_grad_alpha1(self, ell, t):
         """Derivative of lnprob with respect to alpha1"""
         return - t * (np.log(ell) - self.lnEllStar -
-                      polygamma(0, 1 + self.alpha0 + self.alpha1 * t))
+                      polygamma(0, 1 + self.alpha0 +
+                                (self.alpha1 - self.alpha0) * t))
 
     def lnpdf_grad_ellStar(self, ell, t):
         """Derivative of lnprob with respect to alpha1"""
         return 1/self.ellStar *\
-            (1 + self.alpha0 + self.alpha1 * t + ell/self.ellStar)
+            (1 + self.alpha0 + (self.alpha1 - self.alpha0) *
+             t + ell/self.ellStar)
 
     def update_gradients(self, dL,  ell, t):
         """Update gradient structures"""
@@ -121,6 +130,8 @@ class Kumaraswamy(Parameterized):
         super(Kumaraswamy, self).__init__(name=name)
         self.alpha0 = Param('alpha0', float(alpha0))
         self.alpha1 = Param('alpha1', float(alpha1))
+        self.alpha0.constrain_positive()
+        self.alpha1.constrain_positive()
         self.link_parameter(self.alpha0)
         self.link_parameter(self.alpha1)
         self.logalpha0 = np.log(alpha0)
@@ -132,6 +143,7 @@ class Kumaraswamy(Parameterized):
         index = self.alpha0._parent_index_
         self.unlink_parameter(self.alpha0)
         self.alpha0 = Param('alpha0', float(alpha0))
+        self.alpha0.constrain_positive()
         self.link_parameter(self.alpha0, index=index)
         self.logalpha0 = np.log(alpha0)
         self.update_model(True)
@@ -142,6 +154,7 @@ class Kumaraswamy(Parameterized):
         index = self.alpha1._parent_index_
         self.unlink_parameter(self.alpha1)
         self.alpha1 = Param('alpha1', float(alpha1))
+        self.alpha1.constrain_positive()
         self.link_parameter(self.alpha1, index=index)
         self.logalpha0 = np.log(alpha1)
         self.update_model(True)
@@ -199,6 +212,8 @@ class Rayleigh(Parameterized):
         super(Rayleigh, self).__init__(name)
         self.alpha0 = Param('alpha0', float(alpha0))
         self.alpha1 = Param('alpha1', float(alpha1))
+        self.alpha0.constrain_positive()
+        self.alpha1.constrain_positive()
         self.link_parameter(self.alpha0)
         self.link_parameter(self.alpha1)
 
@@ -208,6 +223,7 @@ class Rayleigh(Parameterized):
         index = self.alpha0._parent_index_
         self.unlink_parameter(self.alpha0)
         self.alpha0 = Param('alpha0', float(alpha0))
+        self.alpha0.constrain_positive()
         self.link_parameter(self.alpha0, index=index)
         self.logalpha0 = np.log(alpha0)
         self.update_model(True)
@@ -218,6 +234,7 @@ class Rayleigh(Parameterized):
         index = self.alpha1._parent_index_
         self.unlink_parameter(self.alpha1)
         self.alpha1 = Param('alpha1', float(alpha1))
+        self.alpha1.constrain_positive()
         self.link_parameter(self.alpha1, index=index)
         self.logalpha0 = np.log(alpha1)
         self.update_model(True)
