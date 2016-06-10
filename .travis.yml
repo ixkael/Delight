@@ -30,5 +30,5 @@ install:
 script:
   - python setup.py build_ext --inplace
   - py.test
-  - find . -name delight\*.py -exec pep8 --ignore=E402 {} +
-  - find . -name tests\*.py -exec pep8 --ignore=E402 {} +
+  - pep8 delight/*py
+  - pep8 tests/*py
