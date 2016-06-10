@@ -23,6 +23,7 @@ relative_accuracy = 0.05
 
 @pytest.fixture(params=[False, True])
 def create_p_z_t(request):
+    """Create valid p(z|t) prior with reasonable parameters"""
     if request.param is False:
         return None
     else:
@@ -32,6 +33,7 @@ def create_p_z_t(request):
 
 @pytest.fixture(params=[False, True])
 def create_p_ell_t(request):
+    """Create valid p(ell|t) prior with reasonable parameters"""
     if request.param is False:
         return None
     else:
@@ -42,6 +44,7 @@ def create_p_ell_t(request):
 
 @pytest.fixture(params=[False, True])
 def create_p_t(request):
+    """Create valid p(t) prior with reasonable parameters"""
     if request.param is False:
         return None
     else:
@@ -51,6 +54,7 @@ def create_p_t(request):
 
 @pytest.fixture()
 def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
+    """Create valid GP with reasonable parameters, kernel, mean fct"""
 
     X = random_X_bztl(size, numBands=numBands)
     bands, redshifts, types, luminosities = np.split(X, 4, axis=1)
@@ -91,6 +95,7 @@ def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
 
 
 def test_gradients(create_gp):
+    """Test all gradients of the full likelihood function"""
     gp = create_gp
     assert(isinstance(gp, PhotozGP))
 
@@ -232,10 +237,11 @@ def test_gradients(create_gp):
 
 
 def test_optimize(create_gp):
+    """Test optimizer"""
     gp = create_gp
     assert(isinstance(gp, PhotozGP))
 
-    #  TODO: let redshifts free
+    #  TODO: let types and redshifts free
     gp.types.fix()
     gp.redshifts.fix()
 
@@ -243,6 +249,7 @@ def test_optimize(create_gp):
 
 
 def test_hmc(create_gp):
+    """Test HMC: initialize the sampler and draw a few points"""
     gp = create_gp
     assert(isinstance(gp, PhotozGP))
 
