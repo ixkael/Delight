@@ -1,0 +1,3 @@
+py.test
+pep8 delight/*py
+pep8 tests/*py
