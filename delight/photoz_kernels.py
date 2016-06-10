@@ -7,6 +7,8 @@ import GPy
 from paramz.transformations import Logexp
 from GPy.core.parameterization import Param
 from paramz.core.observable_array import ObsAr
+from GPy.kern import Kern
+from GPy.core import Mapping
 
 from photoz_kernels_cy import kernelparts
 from photoz_kernels_cy import kernelparts_diag
@@ -14,7 +16,7 @@ from photoz_kernels_cy import kernelparts_diag
 from delight.utils import approx_DL
 
 
-class Photoz_mean_function(GPy.core.Mapping):
+class Photoz_mean_function(Mapping):
     """
     Mean function of photoz GP.
     """
@@ -58,7 +60,7 @@ class Photoz_mean_function(GPy.core.Mapping):
         pass  # no parameters in this function, so nothing here
 
 
-class Photoz_kernel(GPy.kern.Kern):
+class Photoz_kernel(Kern):
     """
     Photoz kernel based on RBF kernel.
     """
