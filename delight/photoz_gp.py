@@ -161,7 +161,7 @@ class PhotozGP(Model):
                                               self.Y, self.mean_function,
                                               self.Y_metadata)
 
-        self._log_marginal_likelihood = self.gp_log_marginal_likelihood
+        self._log_marginal_likelihood = 1*self.gp_log_marginal_likelihood
 
         if self.X_inducing is not None:
             if fix_inducing_to_mean_prediction:
@@ -192,36 +192,38 @@ class PhotozGP(Model):
         if not self.redshifts.is_fixed:
             self.redshifts.gradient[:, 0] += 2*gradX[:, 1]
             if self.prior_z_t is not None:
-                self._log_marginal_likelihood +=\
-                    self.prior_z_t.lnprob(self.redshifts, self.types)
-                self.prior_z_t.update_gradients(self.redshifts, self.types)
+                self._log_marginal_likelihood += np.sum(
+                    self.prior_z_t.lnpdf(self.redshifts, self.types))
+                self.prior_z_t.update_gradients(1, self.redshifts, self.types)
                 self.redshifts.gradient +=\
-                    self.prior_z_t.grad_z(self.redshifts, self.types)
+                    self.prior_z_t.lnpdf_grad_z(self.redshifts, self.types)
                 if not self.types.is_fixed:
                     self.types.gradient +=\
-                        self.prior_z_t.grad_t(self.redshifts, self.types)
+                        self.prior_z_t.lnpdf_grad_t(self.redshifts, self.types)
 
         if not self.luminosities.is_fixed:
             self.luminosities.gradient[:, 0] += 2*gradX[:, 2]
             if self.prior_ell_t is not None:
-                self._log_marginal_likelihood +=\
-                    self.prior_ell_t.lnprob(self.luminosities, self.types)
-                self.prior_ell_t.update_gradients(self.luminosities,
+                self._log_marginal_likelihood += np.sum(
+                    self.prior_ell_t.lnpdf(self.luminosities, self.types))
+                self.prior_ell_t.update_gradients(1, self.luminosities,
                                                   self.types)
                 self.luminosities.gradient +=\
-                    self.prior_ell_t.grad_ell(self.luminosities, self.types)
+                    self.prior_ell_t.lnpdf_grad_ell(self.luminosities,
+                                                    self.types)
                 if not self.types.is_fixed:
                     self.types.gradient +=\
-                        self.prior_ell_t.grad_t(self.luminosities, self.types)
+                        self.prior_ell_t.lnpdf_grad_t(self.luminosities,
+                                                      self.types)
 
         if not self.types.is_fixed:
             self.types.gradient[:, 0] += 2*gradX[:, 3]
             if self.prior_t is not None:
-                self._log_marginal_likelihood +=\
-                    self.prior_t.lnprob(self.types)
-                self.prior_t.update_gradients(self.types)
+                self._log_marginal_likelihood += np.sum(
+                    self.prior_t.lnpdf(self.types))
+                self.prior_t.update_gradients(1, self.types)
                 self.types.gradient +=\
-                    self.prior_t.grad_t(self.types)
+                    self.prior_t.lnpdf_grad_t(self.types)
 
     def log_likelihood(self):
         return self._log_marginal_likelihood

@@ -12,11 +12,11 @@ from scipy.misc import derivative
 from copy import deepcopy
 
 NREPEAT = 4
-size = 10
+size = 2
 numBands = 5
 numLines = 3
 numCoefs = 3
-relative_accuracy = 0.01
+relative_accuracy = 0.05
 
 
 @pytest.fixture(params=[False])
@@ -28,16 +28,16 @@ def create_p_z_t(request):
         return Rayleigh(alpha0, alpha1)
 
 
-@pytest.fixture(params=[False])
+@pytest.fixture(params=[False, True])
 def create_p_ell_t(request):
     if request.param is False:
         return None
     else:
-        ellStar, alpha0, alpha1 = np.random.uniform(0., 2., size=2)
+        ellStar, alpha0, alpha1 = np.random.uniform(0., 2., size=3)
         return Schechter(ellStar, alpha0, alpha1)
 
 
-@pytest.fixture(params=[False])
+@pytest.fixture(params=[False, True])
 def create_p_t(request):
     if request.param is False:
         return None
@@ -99,7 +99,7 @@ def test_gradients(create_gp):
         return gp2._log_marginal_likelihood
     v2 = derivative(f_alpha_L, gp.kern.alpha_L.values,
                     dx=0.01*gp.kern.alpha_L.values)
-    if np.abs(v1) > 1e-14 and np.abs(v2) > 1e-14:
+    if np.abs(v1) > 1e-12 and np.abs(v2) > 1e-12:
         assert abs(v1/v2-1) < relative_accuracy
 
     v1 = gp.kern.alpha_C.gradient
@@ -131,6 +131,50 @@ def test_gradients(create_gp):
     v2 = derivative(f_alpha_T, gp.kern.alpha_T.values,
                     dx=0.01*gp.kern.alpha_T.values)
     assert abs(v1/v2-1) < relative_accuracy
+
+    if gp.prior_ell_t is not None:
+
+        v1 = gp.prior_ell_t.alpha0.gradient
+
+        def f_L_alpha0(v):
+            gp2 = deepcopy(gp)
+            gp2.prior_ell_t.set_alpha0(v)
+            return gp2._log_marginal_likelihood
+        v2 = derivative(f_L_alpha0, gp.prior_ell_t.alpha0.values,
+                        dx=0.01*gp.prior_ell_t.alpha0.values)
+        assert abs(v1/v2-1) < relative_accuracy
+
+        v1 = gp.prior_ell_t.alpha1.gradient
+
+        def f_L_alpha1(v):
+            gp2 = deepcopy(gp)
+            gp2.prior_ell_t.set_alpha1(v)
+            return gp2._log_marginal_likelihood
+        v2 = derivative(f_L_alpha1, gp.prior_ell_t.alpha1.values,
+                        dx=0.01*gp.prior_ell_t.alpha1.values)
+        assert abs(v1/v2-1) < relative_accuracy
+
+    if gp.prior_t is not None:
+
+        v1 = gp.prior_t.alpha0.gradient
+
+        def f_T_alpha0(v):
+            gp2 = deepcopy(gp)
+            gp2.prior_t.set_alpha0(v)
+            return gp2._log_marginal_likelihood
+        v2 = derivative(f_T_alpha0, gp.prior_t.alpha0.values,
+                        dx=0.01*gp.prior_t.alpha0.values)
+        assert abs(v1/v2-1) < relative_accuracy
+
+        v1 = gp.prior_t.alpha1.gradient
+
+        def f_T_alpha1(v):
+            gp2 = deepcopy(gp)
+            gp2.prior_t.set_alpha1(v)
+            return gp2._log_marginal_likelihood
+        v2 = derivative(f_T_alpha1, gp.prior_t.alpha1.values,
+                        dx=0.01*gp.prior_t.alpha1.values)
+        assert abs(v1/v2-1) < relative_accuracy
 
     for dim in range(size):
 
