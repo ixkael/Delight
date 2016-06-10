@@ -88,14 +88,50 @@ class Photoz_kernel(GPy.kern.Kern):
         self.norms = np.sqrt(2*np.pi)\
             * np.sum(self.fcoefs_amp * self.fcoefs_sig, axis=1)
         # Initialize parameters and link them.
-        self.var_T = Param('var_T', np.asarray(var_T), Logexp())
-        self.alpha_C = Param('alpha_C', np.asarray(alpha_C), Logexp())
-        self.alpha_L = Param('alpha_L', np.asarray(alpha_L), Logexp())
-        self.alpha_T = Param('alpha_T', np.asarray(alpha_T), Logexp())
+        self.var_T = Param('var_T', float(var_T))
+        self.alpha_C = Param('alpha_C', float(alpha_C))
+        self.alpha_L = Param('alpha_L', float(alpha_L))
+        self.alpha_T = Param('alpha_T', float(alpha_T))
         self.link_parameter(self.var_T)
         self.link_parameter(self.alpha_C)
         self.link_parameter(self.alpha_L)
         self.link_parameter(self.alpha_T)
+
+    def set_alpha_C(self, alpha_C):
+        """Set alpha_C"""
+        self.update_model(False)
+        index = self.alpha_C._parent_index_
+        self.unlink_parameter(self.alpha_C)
+        self.alpha_C = Param('alpha_C', float(alpha_C))
+        self.link_parameter(self.alpha_C, index=index)
+        self.update_model(True)
+
+    def set_alpha_L(self, alpha_L):
+        """Set alpha_L"""
+        self.update_model(False)
+        index = self.alpha_L._parent_index_
+        self.unlink_parameter(self.alpha_L)
+        self.alpha_L = Param('alpha_L', float(alpha_L))
+        self.link_parameter(self.alpha_L, index=index)
+        self.update_model(True)
+
+    def set_var_T(self, var_T):
+        """Set var_T"""
+        self.update_model(False)
+        index = self.var_T._parent_index_
+        self.unlink_parameter(self.var_T)
+        self.var_T = Param('var_T', float(var_T))
+        self.link_parameter(self.var_T, index=index)
+        self.update_model(True)
+
+    def set_alpha_T(self, alpha_T):
+        """Set alpha_T"""
+        self.update_model(False)
+        index = self.alpha_T._parent_index_
+        self.unlink_parameter(self.alpha_T)
+        self.alpha_T = Param('alpha_T', float(alpha_T))
+        self.link_parameter(self.alpha_T, index=index)
+        self.update_model(True)
 
     def change_numlines(self, num):
         self.numLines = num
@@ -130,9 +166,14 @@ class Photoz_kernel(GPy.kern.Kern):
                          self.lines_mu[:self.numLines],
                          self.lines_sig[:self.numLines], t1, b1, fz1, True,
                          norm1, KL, KC, KT, D_alpha_C, D_alpha_L)
-        self.var_T.gradient = np.sum(dL_dKdiag * KT * (KC + KL))
-        self.alpha_C.gradient = np.sum(dL_dKdiag * self.var_T * KT * D_alpha_C)
-        self.alpha_L.gradient = np.sum(dL_dKdiag * self.var_T * KT * D_alpha_L)
+        prefac = (fz1 * fz1 /
+                  (self.fourpi * self.g_AB * self.DL_z(X[:, 1]) *
+                   self.DL_z(X2[:, 1])))**2
+        self.var_T.gradient = np.sum(dL_dKdiag * KT * prefac * (KC + KL))
+        self.alpha_C.gradient = np.sum(dL_dKdiag * self.var_T *
+                                       KT * prefac * D_alpha_C)
+        self.alpha_L.gradient = np.sum(dL_dKdiag * self.var_T *
+                                       KT * prefac * D_alpha_L)
         self.alpha_T.gradient = 0
 
     def update_gradients_full(self, dL_dK, X, X2=None):
@@ -162,7 +203,7 @@ class Photoz_kernel(GPy.kern.Kern):
         prefac = (fz1[:, None] * fz2[None, :] /
                   (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
                    self.DL_z(X2[:, 1])[None, :]))**2
-        self.var_T.gradient = np.sum(dL_dK * KT * (KC + KL))
+        self.var_T.gradient = np.sum(dL_dK * KT * prefac * (KC + KL))
         self.alpha_C.gradient\
             = np.sum(dL_dK * self.var_T * KT * prefac * D_alpha_C)
         self.alpha_L.gradient\

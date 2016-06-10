@@ -73,6 +73,19 @@ def test_kernel_gradients():
         if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
             assert abs(v1/v2-1) < relative_accuracy
 
+        v1 = gp.var_T.gradient
+
+        def f_var_T(var_T):
+            gp = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu,
+                               lines_sig, var_T, alpha_C, alpha_L, alpha_T)
+            return np.sum(gp.K(X, X2))
+
+        v2 = derivative(f_var_T, var_T, dx=0.01*var_T, order=5)
+        if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
+            assert abs(v1/v2-1) < relative_accuracy
+
+        # TODO: test gradients diag
+
 
 def test_kernel_gradients_X():
     """
