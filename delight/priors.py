@@ -202,6 +202,26 @@ class Rayleigh(Parameterized):
         self.link_parameter(self.alpha0)
         self.link_parameter(self.alpha1)
 
+    def set_alpha0(self, alpha0):
+        """Set alpha0"""
+        self.update_model(False)
+        index = self.alpha0._parent_index_
+        self.unlink_parameter(self.alpha0)
+        self.alpha0 = Param('alpha0', float(alpha0))
+        self.link_parameter(self.alpha0, index=index)
+        self.logalpha0 = np.log(alpha0)
+        self.update_model(True)
+
+    def set_alpha1(self, alpha1):
+        """Set alpha1"""
+        self.update_model(False)
+        index = self.alpha1._parent_index_
+        self.unlink_parameter(self.alpha1)
+        self.alpha1 = Param('alpha1', float(alpha1))
+        self.link_parameter(self.alpha1, index=index)
+        self.logalpha0 = np.log(alpha1)
+        self.update_model(True)
+
     def __str__(self):
         return "Rayleigh({}, {})".format(self.alpha0.values[0],
                                          self.alpha1.values[0])

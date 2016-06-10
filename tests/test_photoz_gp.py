@@ -19,7 +19,7 @@ numCoefs = 3
 relative_accuracy = 0.05
 
 
-@pytest.fixture(params=[False])
+@pytest.fixture(params=[False, True])
 def create_p_z_t(request):
     if request.param is False:
         return None
@@ -132,6 +132,28 @@ def test_gradients(create_gp):
                     dx=0.01*gp.kern.alpha_T.values)
     assert abs(v1/v2-1) < relative_accuracy
 
+    if gp.prior_z_t is not None:
+
+        v1 = gp.prior_z_t.alpha0.gradient
+
+        def f_z_alpha0(v):
+            gp2 = deepcopy(gp)
+            gp2.prior_z_t.set_alpha0(v)
+            return gp2._log_marginal_likelihood
+        v2 = derivative(f_z_alpha0, gp.prior_z_t.alpha0.values,
+                        dx=0.01*gp.prior_z_t.alpha0.values)
+        assert abs(v1/v2-1) < relative_accuracy
+
+        v1 = gp.prior_z_t.alpha1.gradient
+
+        def f_z_alpha1(v):
+            gp2 = deepcopy(gp)
+            gp2.prior_z_t.set_alpha1(v)
+            return gp2._log_marginal_likelihood
+        v2 = derivative(f_z_alpha1, gp.prior_z_t.alpha1.values,
+                        dx=0.01*gp.prior_z_t.alpha1.values)
+        assert abs(v1/v2-1) < relative_accuracy
+
     if gp.prior_ell_t is not None:
 
         v1 = gp.prior_ell_t.alpha0.gradient
@@ -202,4 +224,4 @@ def test_gradients(create_gp):
                         dx=0.01*gp.luminosities.values[dim])
         assert abs(v1/v2-1)
 
-        #  TODO: add redshifts
+        #  TODO: add tests for redshift gradients

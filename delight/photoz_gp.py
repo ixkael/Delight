@@ -171,7 +171,8 @@ class PhotozGP(Model):
                 self._log_marginal_likelihood +=\
                     self.log_predictive_density(X_inducing, Y_inducing)
                 raise NotImplementedError("Uncertain inducing not implemented")
-                #  self.Y_inducing.gradient =  #  TODO : update gradients
+                #  TODO : update gradients of inducting points
+                #  self.Y_inducing.gradient =
 
         self.mean_function.update_gradients(self.gp_grad_dict['dL_dm'], self.X)
 
