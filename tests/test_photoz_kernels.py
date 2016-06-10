@@ -10,8 +10,9 @@ from delight.utils import random_X_bztl,\
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 
-NREPEAT = 4
+NREPEAT = 2
 relative_accuracy = 0.05
+# TODO: add tests for diagonal gradients of kernel?
 
 
 def test_kernel_gradients():
@@ -83,8 +84,6 @@ def test_kernel_gradients():
         v2 = derivative(f_var_T, var_T, dx=0.01*var_T, order=5)
         if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
             assert abs(v1/v2-1) < relative_accuracy
-
-        # TODO: test gradients diag
 
 
 def test_kernel_gradients_X():

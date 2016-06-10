@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     70489,       2371]
-NotebookOptionsPosition[     65377,       2189]
-NotebookOutlinePosition[     65733,       2205]
-CellTagsIndexPosition[     65690,       2202]
+NotebookDataLength[     70928,       2386]
+NotebookOptionsPosition[     65701,       2200]
+NotebookOutlinePosition[     66057,       2216]
+CellTagsIndexPosition[     66014,       2213]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -2185,6 +2185,17 @@ Cell[BoxData[
   SuperscriptBox["z", "0.96`"]]], "Output",
  CellChangeTimes->{3.674121156746944*^9, 3.674121384764614*^9}]
 }, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Derivative of GP kernel with respect to redshift", "Section",
+ CellChangeTimes->{{3.674574560271649*^9, 3.674574575191428*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"f", "[", "z_", "]"}], " ", "=", " "}]], "Input",
+ CellChangeTimes->{{3.6745745901273937`*^9, 3.674574593694895*^9}}]
 }, Open  ]]
 },
 WindowSize->{866, 851},
@@ -2210,7 +2221,7 @@ Cell[797, 27, 100, 1, 64, "Section"],
 Cell[CellGroupData[{
 Cell[922, 32, 169, 2, 44, "Subsection"],
 Cell[CellGroupData[{
-Cell[1116, 38, 1553, 47, 46, "Input"],
+Cell[1116, 38, 1553, 47, 63, "Input"],
 Cell[2672, 87, 1753, 57, 83, "Output"]
 }, Open  ]],
 Cell[CellGroupData[{
@@ -2372,6 +2383,10 @@ Cell[CellGroupData[{
 Cell[65029, 2176, 173, 4, 28, "Input"],
 Cell[65205, 2182, 144, 3, 48, "Output"]
 }, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[65398, 2191, 133, 1, 64, "Section"],
+Cell[65534, 2194, 151, 3, 28, "Input"]
 }, Open  ]]
 }
 ]
