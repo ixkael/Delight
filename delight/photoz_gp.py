@@ -100,6 +100,55 @@ class PhotozGP(Model):
                 # Otherwise Y_inducing will be set to mean GP prediction
                 self.link_parameter(self.Y_inducing)
 
+    def set_bands(self, bands):
+        """Set bands"""
+        assert bands.shape[1] == 1
+        assert bands.shape[0] == self.redshifts.shape[0] and\
+            bands.shape[0] == self.types.shape[0] and\
+            bands.shape[0] == self.luminosities.shape[0]
+        self.update_model(False)
+        self.bands = ObsAr(bands)
+        self.update_model(True)
+
+    def set_redshifts(self, redshifts):
+        """Set redshifts"""
+        assert redshifts.shape[1] == 1
+        assert redshifts.shape[0] == self.bands.shape[0] and\
+            redshifts.shape[0] == self.types.shape[0] and\
+            redshifts.shape[0] == self.luminosities.shape[0]
+        self.update_model(False)
+        index = self.redshifts._parent_index_
+        self.unlink_parameter(self.redshifts)
+        self.redshifts = Param('redshifts', redshifts)
+        self.link_parameter(self.redshifts, index=index)
+        self.update_model(True)
+
+    def set_luminosities(self, luminosities):
+        """Set luminosities"""
+        assert luminosities.shape[1] == 1
+        assert luminosities.shape[0] == self.bands.shape[0] and\
+            luminosities.shape[0] == self.types.shape[0] and\
+            luminosities.shape[0] == self.redshifts.shape[0]
+        self.update_model(False)
+        index = self.luminosities._parent_index_
+        self.unlink_parameter(self.luminosities)
+        self.luminosities = Param('luminosities', luminosities)
+        self.link_parameter(self.luminosities, index=index)
+        self.update_model(True)
+
+    def set_types(self, types):
+        """Set types"""
+        assert types.shape[1] == 1
+        assert types.shape[0] == self.bands.shape[0] and\
+            types.shape[0] == self.redshifts.shape[0] and\
+            types.shape[0] == self.luminosities.shape[0]
+        self.update_model(False)
+        index = self.types._parent_index_
+        self.unlink_parameter(self.types)
+        self.types = Param('types', types)
+        self.link_parameter(self.types, index=index)
+        self.update_model(True)
+
     def parameters_changed(self):
         """If parameters changed, compute gradients"""
         self.X = np.hstack((self.bands.values, self.redshifts.values,
@@ -122,56 +171,56 @@ class PhotozGP(Model):
                 self._log_marginal_likelihood +=\
                     self.log_predictive_density(X_inducing, Y_inducing)
                 raise NotImplementedError("Uncertain inducing not implemented")
-                #  self.Y_inducing.gradients =  #  TODO : update gradients
+                #  self.Y_inducing.gradient =  #  TODO : update gradients
 
         self.mean_function.update_gradients(self.gp_grad_dict['dL_dm'], self.X)
 
-        self.kern.update_gradients_diag(self.gp_grad_dict['dL_dK'], self.X)
+        self.kern.update_gradients_full(self.gp_grad_dict['dL_dK'], self.X)
 
         gradX = self.mean_function.gradients_X(self.gp_grad_dict['dL_dm'].T,
                                                self.X)\
-            + self.kern.gradients_X(self.gp_grad_dict['dL_dK'],
-                                    self.X)
+            + self.kern.gradients_X_diag(self.gp_grad_dict['dL_dK'],
+                                         self.X)
 
         if not self.redshifts.is_fixed:
-            self.redshifts.gradients = 0
+            self.redshifts.gradient[:] = 0
         if not self.luminosities.is_fixed:
-            self.luminosities.gradients = 0
+            self.luminosities.gradient[:] = 0
         if not self.types.is_fixed:
-            self.types.gradients = 0
+            self.types.gradient[:] = 0
 
         if not self.redshifts.is_fixed:
-            self.redshifts.gradients += gradX[:, 1]
+            self.redshifts.gradient[:, 0] += 2*gradX[:, 1]
             if self.prior_z_t is not None:
                 self._log_marginal_likelihood +=\
                     self.prior_z_t.lnprob(self.redshifts, self.types)
                 self.prior_z_t.update_gradients(self.redshifts, self.types)
-                self.redshifts.gradients +=\
+                self.redshifts.gradient +=\
                     self.prior_z_t.grad_z(self.redshifts, self.types)
                 if not self.types.is_fixed:
-                    self.types.gradients +=\
+                    self.types.gradient +=\
                         self.prior_z_t.grad_t(self.redshifts, self.types)
 
         if not self.luminosities.is_fixed:
-            self.luminosities.gradients += gradX[:, 2]
+            self.luminosities.gradient[:, 0] += 2*gradX[:, 2]
             if self.prior_ell_t is not None:
                 self._log_marginal_likelihood +=\
                     self.prior_ell_t.lnprob(self.luminosities, self.types)
                 self.prior_ell_t.update_gradients(self.luminosities,
                                                   self.types)
-                self.luminosities.gradients +=\
+                self.luminosities.gradient +=\
                     self.prior_ell_t.grad_ell(self.luminosities, self.types)
                 if not self.types.is_fixed:
-                    self.types.gradients +=\
+                    self.types.gradient +=\
                         self.prior_ell_t.grad_t(self.luminosities, self.types)
 
         if not self.types.is_fixed:
-            self.types.gradients += gradX[:, 3]
+            self.types.gradient[:, 0] += 2*gradX[:, 3]
             if self.prior_t is not None:
                 self._log_marginal_likelihood +=\
                     self.prior_t.lnprob(self.types)
                 self.prior_t.update_gradients(self.types)
-                self.types.gradients +=\
+                self.types.gradient +=\
                     self.prior_t.grad_t(self.types)
 
     def log_likelihood(self):
