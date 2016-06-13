@@ -85,7 +85,7 @@ def test_kernel_gradients():
             assert abs(v1/v2-1) < relative_accuracy
 
 
-def test_kernel_gradients_X():
+def test_kernel_gradients():
     """
     Numerically test the gradients of the kernel with respect to the inputs
      using random inputs and hyperparameters.
@@ -136,12 +136,24 @@ def test_meanfunction_gradients_X():
     fcoefs_amp, fcoefs_mu, fcoefs_sig \
         = random_filtercoefs(numBands, numCoefs)
     for i in range(NREPEAT):
+        alpha = np.random.uniform(low=0, high=1e-4, size=1)
         X = random_X_bztl(size)
-        mf = Photoz_mean_function(fcoefs_amp, fcoefs_mu, fcoefs_sig)
+        mf = Photoz_mean_function(alpha, fcoefs_amp, fcoefs_mu, fcoefs_sig)
         dL_dK = 1.0
+
+        mf.update_gradients(dL_dK, X)
+        v1 = mf.alpha.gradient
+
+        def f_alpha(alpha):
+            mf = Photoz_mean_function(alpha, fcoefs_amp, fcoefs_mu, fcoefs_sig)
+            return np.sum(mf.f(X))
+
+        v2 = derivative(f_alpha, alpha, dx=0.01*alpha)
+        assert abs(v1/v2-1) < relative_accuracy
+
         v1mat = mf.gradients_X(dL_dK, X)
         v2mat = np.zeros_like(v1mat)
-        for dim in [1, 2]:  # Order: b z l t.
+        for dim in [2]:  # Order: b z l t.
             for k1 in range(size):
                 def f_x(x1):
                     Xb = 1*X
@@ -160,8 +172,8 @@ def test_meanfunction():
     """
     fcoefs_amp, fcoefs_mu, fcoefs_sig \
         = random_filtercoefs(numBands, numCoefs)
-
+    alpha = np.random.uniform(low=0, high=0.1, size=1)
     for i in range(NREPEAT):
         X = random_X_bztl(size)
-        mf = Photoz_mean_function(fcoefs_amp, fcoefs_mu, fcoefs_sig)
+        mf = Photoz_mean_function(alpha, fcoefs_amp, fcoefs_mu, fcoefs_sig)
         assert mf.f(X).shape == (size, 1)

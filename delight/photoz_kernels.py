@@ -1,6 +1,7 @@
 
 import numpy as np
 from copy import copy
+from scipy.special import erf
 
 import GPy
 
@@ -20,8 +21,8 @@ class Photoz_mean_function(Mapping):
     """
     Mean function of photoz GP
     """
-    def __init__(self, fcoefs_amp, fcoefs_mu, fcoefs_sig,
-                 g_AB=1.0, DL_z=None, name='photoz'):
+    def __init__(self, alpha, fcoefs_amp, fcoefs_mu, fcoefs_sig,
+                 g_AB=1.0, lambdaRef=4.5e3, DL_z=None, name='photoz'):
         """ Constructor."""
         # Call standard Kern constructor with 2 dimensions (z and l).
         super(Photoz_mean_function, self).__init__(4, 1, name)
@@ -31,21 +32,36 @@ class Photoz_mean_function(Mapping):
         else:
             self.DL_z = DL_z
         self.g_AB = g_AB
-        self.fourpi = 4 * np.pi
+        self.lambdaRef = lambdaRef
+        self.eightpi = 8 * np.pi
         self.fcoefs_amp = np.array(fcoefs_amp)
         self.fcoefs_mu = np.array(fcoefs_mu)
         self.fcoefs_sig = np.array(fcoefs_sig)
         self.numCoefs = fcoefs_amp.shape[1]
         self.norms = np.sqrt(2*np.pi)\
             * np.sum(self.fcoefs_amp * self.fcoefs_sig, axis=1)
+        self.alpha = Param('alpha', float(alpha))
+        self.alpha.constrain_positive()
+        self.link_parameter(self.alpha)
 
     def f(self, X):
         b = X[:, 0].astype(int)
         z = X[:, 1]
         t = X[:, 3]
         l = X[:, 2]
-        return ((1 + z) * l / self.fourpi / self.DL_z(z)**2.0 / self.g_AB /
-                self.norms[b]).reshape(-1, 1)
+        opz = 1. + z
+        fac = 1. / self.eightpi / self.DL_z(z)**2.0 / self.g_AB / self.norms[b]
+        thesum = 0.0
+        for i in range(self.numCoefs):
+            amp, mu, sig = self.fcoefs_amp[b, i],\
+                           self.fcoefs_mu[b, i],\
+                           self.fcoefs_sig[b, i]
+            alphat = self.alpha * t
+            term1 = (mu * opz - alphat * sig**2) /\
+                (1.41421356237 * sig * opz)
+            term2 = alphat * (self.lambdaRef - mu/opz + alphat*(sig/opz)**2/2)
+            thesum += amp * (1 + erf(term1)) * np.exp(term2)
+        return (opz * l * fac * thesum).reshape(-1, 1)
 
     def gradients_X(self, dL_dF, X):
         b = X[:, 0].astype(int)
@@ -56,15 +72,36 @@ class Photoz_mean_function(Mapping):
             dDLdz = self.DL_z.derivative(z)
             DLz = self.DL_z(z)
             grad = np.zeros_like(X)
-            grad[:, 1] = (l - 2 * l * (1 + z) * dDLdz / DLz)\
-                / DLz**2 / self.g_AB / self.fourpi / self.norms[b]  # z
-            grad[:, 2] = (1 + z) / self.fourpi / self.DL_z(z)**2.0 /\
-                self.g_AB / self.norms[b]
-            return np.dot(dL_dF, grad)  # ell
+            # TODO: implement t gradient
+            # TODO: implement z gradient
+            grad[:, 2] = self.f(X).flatten() / l  # ell
+            return np.dot(dL_dF, grad)
         else:
             raise NotImplementedError
 
     def update_gradients(self, dL_dF, X):
+        b = X[:, 0].astype(int)
+        z = X[:, 1]
+        t = X[:, 3]
+        l = X[:, 2]
+        opz = 1 + z
+        fac = 1. / self.eightpi / self.DL_z(z)**2.0 / self.g_AB / self.norms[b]
+        thesum = 0.0
+        for i in range(self.numCoefs):
+            amp, mu, sig = self.fcoefs_amp[b, i],\
+                           self.fcoefs_mu[b, i],\
+                           self.fcoefs_sig[b, i]
+            alphat = self.alpha * t
+            term1 = (mu * opz - alphat * sig**2) /\
+                (1.41421356237 * sig * opz)
+            term2 = alphat * (self.lambdaRef - mu/opz + alphat*(sig/opz)**2/2)
+            Dterm1 = np.sqrt(2/np.pi) * sig * t / opz *\
+                np.exp(-0.5*((mu*opz - alphat * sig**2 * t) / sig / opz)**2)
+            Dterm2 = t * (self.lambdaRef - mu/opz + alphat*(sig/opz)**2/2)\
+                + alphat*(t*sig/opz)**2/2
+            thesum += amp * (1 + erf(term1)) * np.exp(term2) * Dterm2
+            thesum += amp * np.exp(term2) * Dterm1
+        self.alpha.gradient = np.sum(dL_dF * opz * l * fac * thesum)
         pass  # no parameters in this function, so nothing here
 
 
@@ -119,6 +156,7 @@ class Photoz_kernel(Kern):
         self.unlink_parameter(self.alpha_C)
         self.alpha_C = Param('alpha_C', float(alpha_C))
         self.link_parameter(self.alpha_C, index=index)
+        self.alpha_C.constrain_positive()
         self.update_model(True)
 
     def set_alpha_L(self, alpha_L):
@@ -128,6 +166,7 @@ class Photoz_kernel(Kern):
         self.unlink_parameter(self.alpha_L)
         self.alpha_L = Param('alpha_L', float(alpha_L))
         self.link_parameter(self.alpha_L, index=index)
+        self.alpha_L.constrain_positive()
         self.update_model(True)
 
     def set_var_T(self, var_T):
@@ -137,6 +176,7 @@ class Photoz_kernel(Kern):
         self.unlink_parameter(self.var_T)
         self.var_T = Param('var_T', float(var_T))
         self.link_parameter(self.var_T, index=index)
+        self.var_T.constrain_positive()
         self.update_model(True)
 
     def set_alpha_T(self, alpha_T):
@@ -146,6 +186,7 @@ class Photoz_kernel(Kern):
         self.unlink_parameter(self.alpha_T)
         self.alpha_T = Param('alpha_T', float(alpha_T))
         self.link_parameter(self.alpha_T, index=index)
+        self.alpha_T.constrain_positive()
         self.update_model(True)
 
     def change_numlines(self, num):
