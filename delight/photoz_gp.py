@@ -6,6 +6,7 @@ from GPy.core.model import Model
 from GPy.likelihoods.gaussian import HeteroscedasticGaussian
 from GPy.inference.latent_function_inference import exact_gaussian_inference
 from GPy.core.parameterization.param import Param
+from GPy.plotting.gpy_plot.gp_plots import plot
 from paramz import ObsAr
 
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
@@ -234,29 +235,106 @@ class PhotozGP(Model):
     def log_likelihood(self):
         return self._log_marginal_likelihood
 
-    def _raw_predict(self, Xnew, full_cov=False):
+    def _raw_predict(self, Xnew, full_cov=False, kern=None):
         """
         For making predictions, without normalization or likelihood
         """
         mu, var = self.posterior._raw_predict(
-            kern=self.kern, Xnew=Xnew, pred_var=self.X, full_cov=full_cov)
+            kern=self.kern if kern is None else kern,
+            Xnew=Xnew, pred_var=self.X, full_cov=full_cov)
         mu += self.mean_function.f(Xnew)
         return mu, var
 
     def log_predictive_density(self, x_test, y_test, Y_metadata=None):
         """
         Calculation of the log predictive density
-
-        .. math:
-            p(y_{*}|D) = p(y_{*}|f_{*})p(f_{*}|\mu_{*}\\sigma^{2}_{*})
-
-        :param x_test: test locations (x_{*})
-        :type x_test: (Nx1) array
-        :param y_test: test observations (y_{*})
-        :type y_test: (Nx1) array
-        :param Y_metadata: metadata associated with the test points
         """
         mu_star, var_star = self._raw_predict(x_test)
         return self.likelihood.log_predictive_density(y_test, mu_star,
                                                       var_star,
                                                       Y_metadata=Y_metadata)
+
+    def plot_f(self, plot_limits=None, fixed_inputs=None,
+               resolution=None,
+               apply_link=False,
+               which_data_ycols='all', which_data_rows='all',
+               visible_dims=None,
+               levels=20, samples=0, lower=2.5, upper=97.5,
+               plot_density=False,
+               plot_data=True, plot_inducing=True,
+               projection='2d', legend=True,
+               predict_kw=None,
+               **kwargs):
+        """
+        Convenience function for plotting the fit of a GP.
+        """
+        return plot(self, plot_limits, fixed_inputs, resolution, True,
+                    apply_link, which_data_ycols, which_data_rows,
+                    visible_dims, levels, samples, 0,
+                    lower, upper, plot_data, plot_inducing,
+                    plot_density, predict_kw, projection, legend, **kwargs)
+
+    def predict(self, Xnew, full_cov=False, Y_metadata=None, kern=None,
+                likelihood=None, include_likelihood=True):
+        mu, var = self._raw_predict(Xnew, full_cov=full_cov, kern=kern)
+        if include_likelihood:
+            if likelihood is None:
+                likelihood = self.likelihood
+            mu, var = likelihood.predictive_values(mu, var,
+                                                   full_cov,
+                                                   Y_metadata=Y_metadata)
+        return mu, var
+
+    def predict_quantiles(self, X, quantiles=(2.5, 97.5), Y_metadata=None,
+                          kern=None, likelihood=None):
+        """
+        Get the predictive quantiles around the prediction at X
+        """
+        m, v = self._raw_predict(X,  full_cov=False, kern=kern)
+        if likelihood is None:
+            likelihood = self.likelihood
+        return likelihood.predictive_quantiles(m, v, quantiles,
+                                               Y_metadata=Y_metadata)
+
+    def posterior_samples_f(self, X, size=10, full_cov=True, **predict_kwargs):
+        """
+        Samples the posterior GP at the points X.
+        """
+        m, v = self._raw_predict(X,  full_cov=full_cov, **predict_kwargs)
+
+        def sim_one_dim(m, v):
+            if not full_cov:
+                return np.random.multivariate_normal(m.flatten(),
+                                                     np.diag(v.flatten()),
+                                                     size).T
+            else:
+                return np.random.multivariate_normal(m.flatten(), v, size).T
+
+        if self.output_dim == 1:
+            return sim_one_dim(m, v)
+        else:
+            fsim = np.empty((self.output_dim, self.num_data, size))
+            for d in range(self.output_dim):
+                if full_cov and v.ndim == 3:
+                    fsim[d] = sim_one_dim(m[:, d], v[:, :, d])
+                elif (not full_cov) and v.ndim == 2:
+                    fsim[d] = sim_one_dim(m[:, d], v[:, d])
+                else:
+                    fsim[d] = sim_one_dim(m[:, d], v)
+        return fsim
+
+    def posterior_samples(self, X, size=10, full_cov=False, Y_metadata=None,
+                          likelihood=None, **predict_kwargs):
+        """
+        Samples the posterior GP at the points X.
+        """
+        fsim = self.posterior_samples_f(X, size, full_cov=full_cov,
+                                        **predict_kwargs)
+        if likelihood is None:
+            likelihood = self.likelihood
+        if fsim.ndim == 3:
+            for d in range(fsim.shape[0]):
+                fsim[d] = likelihood.samples(fsim[d], Y_metadata=Y_metadata)
+        else:
+            fsim = likelihood.samples(fsim, Y_metadata=Y_metadata)
+        return fsim

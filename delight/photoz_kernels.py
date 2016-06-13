@@ -18,9 +18,10 @@ from delight.utils import approx_DL
 
 class Photoz_mean_function(Mapping):
     """
-    Mean function of photoz GP.
+    Mean function of photoz GP
     """
-    def __init__(self, g_AB=1.0, DL_z=None, name='photoz'):
+    def __init__(self, fcoefs_amp, fcoefs_mu, fcoefs_sig,
+                 g_AB=1.0, DL_z=None, name='photoz'):
         """ Constructor."""
         # Call standard Kern constructor with 2 dimensions (z and l).
         super(Photoz_mean_function, self).__init__(4, 1, name)
@@ -31,17 +32,23 @@ class Photoz_mean_function(Mapping):
             self.DL_z = DL_z
         self.g_AB = g_AB
         self.fourpi = 4 * np.pi
+        self.fcoefs_amp = np.array(fcoefs_amp)
+        self.fcoefs_mu = np.array(fcoefs_mu)
+        self.fcoefs_sig = np.array(fcoefs_sig)
+        self.numCoefs = fcoefs_amp.shape[1]
+        self.norms = np.sqrt(2*np.pi)\
+            * np.sum(self.fcoefs_amp * self.fcoefs_sig, axis=1)
 
     def f(self, X):
-        b = X[:, 0]
+        b = X[:, 0].astype(int)
         z = X[:, 1]
         t = X[:, 3]
         l = X[:, 2]
-        return ((1 + z) * l / self.fourpi / self.DL_z(z)**2.0 / self.g_AB)\
-            .reshape(-1, 1)
+        return ((1 + z) * l / self.fourpi / self.DL_z(z)**2.0 / self.g_AB /
+                self.norms[b]).reshape(-1, 1)
 
     def gradients_X(self, dL_dF, X):
-        b = X[:, 0]
+        b = X[:, 0].astype(int)
         z = X[:, 1]
         t = X[:, 3]
         l = X[:, 2]
@@ -50,8 +57,9 @@ class Photoz_mean_function(Mapping):
             DLz = self.DL_z(z)
             grad = np.zeros_like(X)
             grad[:, 1] = (l - 2 * l * (1 + z) * dDLdz / DLz)\
-                / DLz**2 / self.g_AB / self.fourpi  # z
-            grad[:, 2] = (1 + z) / self.fourpi / self.DL_z(z)**2.0 / self.g_AB
+                / DLz**2 / self.g_AB / self.fourpi / self.norms[b]  # z
+            grad[:, 2] = (1 + z) / self.fourpi / self.DL_z(z)**2.0 /\
+                self.g_AB / self.norms[b]
             return np.dot(dL_dF, grad)  # ell
         else:
             raise NotImplementedError
@@ -102,6 +110,7 @@ class Photoz_kernel(Kern):
         self.alpha_C.constrain_positive()
         self.alpha_L.constrain_positive()
         self.alpha_T.constrain_positive()
+        # TODO: addd more concrete constraints?
 
     def set_alpha_C(self, alpha_C):
         """Set alpha_C"""
@@ -304,14 +313,15 @@ class Photoz_kernel(Kern):
         np.sum(tempfull, axis=1, out=grad[:, 3])  # t
 
         # TODO: add kernel derivatives with respect to redshift
-        prefac = fz2[None, :]\
-            / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
-               self.DL_z(X2[:, 1])[None, :])
-        cst = dL_dK * self.var_T * KT * prefac
-        tempfull = (2 * fz1[:, None] - 2 * fz1[:, None]**2 *
-                    self.DL_z.derivative(X[:, 1])[:, None]) * (KC + KL)\
-            + D_alpha_z * fz1[:, None]**2
-        np.sum(cst * tempfull, axis=1, out=grad[:, 1])  # z
+        if False:
+            prefac = fz2[None, :]\
+                / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
+                   self.DL_z(X2[:, 1])[None, :])
+            cst = dL_dK * self.var_T * KT * prefac
+            tempfull = (2 * fz1[:, None] - 2 * fz1[:, None]**2 *
+                        self.DL_z.derivative(X[:, 1])[:, None]) * (KC + KL)\
+                + D_alpha_z * fz1[:, None]**2
+            np.sum(cst * tempfull, axis=1, out=grad[:, 1])  # z
 
         return grad
 

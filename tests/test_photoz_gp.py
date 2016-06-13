@@ -68,7 +68,7 @@ def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
                          lines_mu, lines_sig, var_T,
                          alpha_C, alpha_L, alpha_T)
 
-    mean_function = Photoz_mean_function()
+    mean_function = Photoz_mean_function(fcoefs_amp, fcoefs_mu, fcoefs_sig)
 
     noisy_fluxes = np.random.uniform(low=0., high=1., size=size)
     flux_variances = np.random.uniform(low=0., high=1., size=size)
@@ -90,7 +90,7 @@ def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
         X_inducing=None,
         fix_inducing_to_mean_prediction=True
         )
-    gp.set_types(types)
+
     return gp
 
 
