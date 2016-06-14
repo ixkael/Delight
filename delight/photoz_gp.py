@@ -182,6 +182,8 @@ class PhotozGP(Model):
                 #  TODO : update gradients of inducting points
                 #  self.Y_inducing.gradient =
 
+        self.likelihood.update_gradients(self.grad_dict['dL_dthetaL'])
+
         self.mean_function.update_gradients(self.grad_dict['dL_dm'], self.X)
 
         self.kern.update_gradients_full(self.grad_dict['dL_dK'], self.X)

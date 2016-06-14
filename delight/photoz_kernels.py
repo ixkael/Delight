@@ -48,6 +48,26 @@ class Photoz_mean_function(Mapping):
         self.beta.constrain_positive()
         self.link_parameter(self.beta)
 
+    def set_alpha(self, alpha):
+        """Set alpha"""
+        self.update_model(False)
+        index = self.alpha._parent_index_
+        self.unlink_parameter(self.alpha)
+        self.alpha = Param('alpha', float(alpha))
+        self.link_parameter(self.alpha, index=index)
+        self.alpha.constrain_positive()
+        self.update_model(True)
+
+    def set_beta(self, beta):
+        """Set beta"""
+        self.update_model(False)
+        index = self.beta._parent_index_
+        self.unlink_parameter(self.beta)
+        self.beta = Param('beta', float(beta))
+        self.link_parameter(self.beta, index=index)
+        self.beta.constrain_positive()
+        self.update_model(True)
+
     def f(self, X):
         b = X[:, 0].astype(int)
         z = X[:, 1]
@@ -125,8 +145,10 @@ class Photoz_mean_function(Mapping):
             sum_beta += amp * (1 + erf(term1)) * np.exp(term2) * Dterm2 *\
                 self.sqrthalfpi * sig
 
-        self.alpha.gradient = np.sum(dL_dF * opz * l * fac * sum_alpha)
-        self.beta.gradient = np.sum(dL_dF * opz * l * fac * sum_beta)
+        self.alpha.gradient = np.dot(dL_dF.T, opz * l * fac * sum_alpha)
+        ind = t > 0
+        if ind.sum() > 0:
+            self.beta.gradient = np.dot(dL_dF[ind].T, (opz * l * fac * sum_beta)[ind])
 
 
 class Photoz_kernel(Kern):

@@ -38,7 +38,7 @@ def create_p_ell_t(request):
         return None
     else:
         ellStar = np.random.uniform(0., 10., size=1)
-        alpha0, alpha1 = np.random.uniform(-1., 0., size=2)
+        alpha0, alpha1 = np.random.uniform(-0.9, -0.1, size=2)
         return Schechter(ellStar, alpha0, alpha1)
 
 
@@ -101,6 +101,26 @@ def test_gradients(create_gp):
     """Test all gradients of the full likelihood function"""
     gp = create_gp
     assert(isinstance(gp, PhotozGP))
+
+    v1 = gp.mean_function.alpha.gradient
+
+    def f_alpha(v):
+        gp2 = deepcopy(gp)
+        gp2.mean_function.set_alpha(v)
+        return gp2._log_marginal_likelihood
+    v2 = derivative(f_alpha, gp.mean_function.alpha.values,
+                    dx=0.01*gp.mean_function.alpha.values)
+    assert abs(v1/v2-1) < relative_accuracy
+
+    v1 = gp.mean_function.beta.gradient
+
+    def f_beta(v):
+        gp2 = deepcopy(gp)
+        gp2.mean_function.set_beta(v)
+        return gp2._log_marginal_likelihood
+    v2 = derivative(f_beta, gp.mean_function.beta.values,
+                    dx=0.01*gp.mean_function.beta.values)
+    assert abs(v1/v2-1) < relative_accuracy
 
     v1 = gp.kern.alpha_L.gradient
 
@@ -276,3 +296,5 @@ def test_hmc(create_gp):
 
     hmc = GPy.inference.mcmc.HMC(gp, stepsize=1e-2)
     s = hmc.sample(num_samples=3)
+
+# TODO: test covariance is semi positive definite

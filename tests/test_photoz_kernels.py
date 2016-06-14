@@ -9,7 +9,7 @@ from delight.utils import random_X_bzlt,\
 
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
-size = 4
+size = 6
 NREPEAT = 4
 numBands = 5
 numLines = 10
@@ -152,20 +152,21 @@ def test_meanfunction_gradients_X():
     fcoefs_amp, fcoefs_mu, fcoefs_sig \
         = random_filtercoefs(numBands, numCoefs)
     for i in range(NREPEAT):
-        alpha = np.random.uniform(low=0, high=1e-4, size=1)
+        alpha = np.random.uniform(low=0, high=2e-3, size=1)
         beta = np.random.uniform(low=1, high=3, size=1)
         X = random_X_bzlt(size)
         mf = Photoz_mean_function(alpha, beta,
                                   fcoefs_amp, fcoefs_mu, fcoefs_sig)
-        dL_dK = 1.0
-        mf.update_gradients(dL_dK, X)
+        dL_dm = np.ones((size,))
+        dL_dK = np.ones((size, size))
+        mf.update_gradients(dL_dm, X)
 
         v1 = mf.alpha.gradient
 
         def f_alpha(alpha):
-            mf = Photoz_mean_function(alpha, beta,
-                                      fcoefs_amp, fcoefs_mu, fcoefs_sig)
-            return np.sum(mf.f(X))
+            mf2 = Photoz_mean_function(alpha, beta,
+                                       fcoefs_amp, fcoefs_mu, fcoefs_sig)
+            return np.sum(mf2.f(X))
 
         v2 = derivative(f_alpha, alpha, dx=0.01*alpha)
         assert abs(v1/v2-1) < relative_accuracy
@@ -173,14 +174,15 @@ def test_meanfunction_gradients_X():
         v1 = mf.beta.gradient
 
         def f_beta(beta):
-            mf = Photoz_mean_function(alpha, beta,
-                                      fcoefs_amp, fcoefs_mu, fcoefs_sig)
-            return np.sum(mf.f(X))
+            mf2 = Photoz_mean_function(alpha, beta,
+                                       fcoefs_amp, fcoefs_mu, fcoefs_sig)
+            return np.sum(mf2.f(X))
 
-        v2 = derivative(f_beta, beta, dx=0.01*alpha)
+        v2 = derivative(f_beta, beta, dx=0.01*beta)
         assert abs(v1/v2-1) < relative_accuracy
 
         v1mat = mf.gradients_X(dL_dK, X)
+        print v1mat.shape, X.shape
         v2mat = np.zeros_like(v1mat)
         for dim in [2]:  # Order: b z l t.
             for k1 in range(size):
@@ -202,7 +204,7 @@ def test_meanfunction():
     fcoefs_amp, fcoefs_mu, fcoefs_sig \
         = random_filtercoefs(numBands, numCoefs)
     for i in range(NREPEAT):
-        alpha = np.random.uniform(low=0, high=1e-4, size=1)
+        alpha = np.random.uniform(low=0, high=2e-3, size=1)
         beta = np.random.uniform(low=1., high=3., size=1)
         X = random_X_bzlt(size)
         bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
