@@ -68,7 +68,7 @@ class PhotozGP(Model):
             assert isinstance(kern, Photoz_kernel)
             assert mean_function.g_AB == kern.g_AB
             assert mean_function.DL_z == kern.DL_z
-            
+
         self.mean_function = mean_function
         self.link_parameter(self.mean_function)
 
