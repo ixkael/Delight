@@ -16,6 +16,7 @@ numLines = 10
 numCoefs = 10
 relative_accuracy = 0.05
 # TODO: add tests for diagonal gradients of kernel?
+# TODO: add formal/numerical test for kernel w.r.t. mean fct
 
 
 def test_kernel_gradients():
@@ -37,7 +38,7 @@ def test_kernel_gradients():
         gp = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
                            lines_mu, lines_sig, var_C, var_L,
                            alpha_C, alpha_L, alpha_T)
-        dL_dK = 1.0
+        dL_dK = np.diag(dL_dm)
         gp.update_gradients_full(dL_dK, X, X2)
 
         v1 = gp.alpha_T.gradient
@@ -140,8 +141,7 @@ def test_kernel_gradients():
 
                 v2mat[k1, dim] \
                     = derivative(f_x, X[k1, dim], dx=0.01*X[k1, dim])
-
-            np.allclose(v1mat[:, dim], v2mat[:, dim], rtol=relative_accuracy)
+                np.allclose(v1mat[k1, dim], v2mat[k1, dim])
 
 
 def test_meanfunction_gradients_X():
@@ -158,7 +158,7 @@ def test_meanfunction_gradients_X():
         mf = Photoz_mean_function(alpha, beta,
                                   fcoefs_amp, fcoefs_mu, fcoefs_sig)
         dL_dm = np.ones((size,))
-        dL_dK = np.ones((size, size))
+        dL_dK = np.diag(dL_dm)
         mf.update_gradients(dL_dm, X)
 
         v1 = mf.alpha.gradient
@@ -182,9 +182,9 @@ def test_meanfunction_gradients_X():
         assert abs(v1/v2-1) < relative_accuracy
 
         v1mat = mf.gradients_X(dL_dK, X)
-        print v1mat.shape, X.shape
         v2mat = np.zeros_like(v1mat)
-        for dim in [2]:  # Order: b z l t.
+        for dim in [2, 3]:  # Order: b z l t.
+            print dim
             for k1 in range(size):
                 def f_x(x1):
                     Xb = 1*X
@@ -193,8 +193,7 @@ def test_meanfunction_gradients_X():
 
                 v2mat[k1, dim] \
                     = derivative(f_x, X[k1, dim], dx=0.01*X[k1, dim])
-
-            np.allclose(v1mat[:, dim], v2mat[:, dim], rtol=relative_accuracy)
+                assert abs(v1mat[k1, dim]/v2mat[k1, dim]-1) < relative_accuracy
 
 
 def test_meanfunction():

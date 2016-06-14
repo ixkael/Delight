@@ -13,8 +13,8 @@ from delight.utils import random_X_bzlt,\
 from scipy.misc import derivative
 from copy import deepcopy
 
-NREPEAT = 1
-size = 2
+NREPEAT = 3
+size = 7
 numBands = 5
 numLines = 3
 numCoefs = 3
@@ -130,7 +130,7 @@ def test_gradients(create_gp):
         return gp2._log_marginal_likelihood
     v2 = derivative(f_alpha_L, gp.kern.alpha_L.values,
                     dx=0.01*gp.kern.alpha_L.values)
-    if np.abs(v1) > 1e-12 and np.abs(v2) > 1e-12:
+    if np.abs(v1) > 1e-10 and np.abs(v2) > 1e-10:
         assert abs(v1/v2-1) < relative_accuracy
 
     v1 = gp.kern.alpha_C.gradient
@@ -161,7 +161,7 @@ def test_gradients(create_gp):
         return gp2._log_marginal_likelihood
     v2 = derivative(f_var_L, gp.kern.var_L.values,
                     dx=0.01*gp.kern.var_L.values)
-    if np.abs(v1) > 1e-12 and np.abs(v2) > 1e-12:
+    if np.abs(v1) > 1e-10 and np.abs(v2) > 1e-10:
         assert abs(v1/v2-1) < relative_accuracy
 
     v1 = gp.kern.alpha_T.gradient
@@ -172,7 +172,7 @@ def test_gradients(create_gp):
         return gp2._log_marginal_likelihood
     v2 = derivative(f_alpha_T, gp.kern.alpha_T.values,
                     dx=0.01*gp.kern.alpha_T.values)
-    if np.abs(v1) > 1e-12 and np.abs(v2) > 1e-12:
+    if np.abs(v1) > 1e-10 and np.abs(v2) > 1e-10:
         assert abs(v1/v2-1) < relative_accuracy
 
     if gp.prior_z_t is not None:

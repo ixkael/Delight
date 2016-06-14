@@ -89,20 +89,48 @@ class Photoz_mean_function(Mapping):
         return (fac * thesum).reshape((-1, 1))
 
     def gradients_X(self, dL_dF, X):
+        grad = np.zeros_like(X)
         b = X[:, 0].astype(int)
         z = X[:, 1]
         t = X[:, 3]
         l = X[:, 2]
+        opz = 1 + z
+        fac = opz/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
+        sum_t = np.zeros_like(t)
+        sum_ell = np.zeros_like(t)
+        for i in range(self.numCoefs):
+            amp, mu, sig = self.fcoefs_amp[b, i],\
+                           self.fcoefs_mu[b, i],\
+                           self.fcoefs_sig[b, i]
+            alphat = self.alpha * t**self.beta
+            term1 = (mu * opz - alphat * sig**2) /\
+                (1.41421356237 * sig * opz)
+            term2 = alphat * (self.lambdaRef - mu/opz + alphat*(sig/opz)**2/2)
+            sum_ell += amp * (1 + erf(term1)) * np.exp(term2) *\
+                self.sqrthalfpi * sig
+
+            Dterm1 = (self.alpha*self.beta *
+                      np.exp(-((-self.alpha*sig**2*t**self.beta + mu*opz)**2 /
+                               (2*sig**2*opz**2))) *
+                      self.sqrthalfpi*sig*t**(self.beta-1)) / opz
+            Dterm2 = ((self.alpha**2*self.beta*sig**2*t**(2*self.beta-1)) /
+                      (2*opz**2) +
+                      self.alpha*self.beta*t**(self.beta-1) *
+                      (self.lambdaRef +
+                       (self.alpha*sig**2*t**self.beta)/(2*opz**2) - mu/opz))
+            sum_t += amp * np.exp(term2) * Dterm1 *\
+                self.sqrthalfpi * sig
+            sum_t += amp * (1 + erf(term1)) * np.exp(term2) * Dterm2 *\
+                self.sqrthalfpi * sig
+
+        grad[:, 2] = fac * sum_ell  # ell
+        grad[:, 3] = l * fac * sum_t  # t
         if isinstance(self.DL_z, approx_DL):
             dDLdz = self.DL_z.derivative(z)
-            DLz = self.DL_z(z)
-            grad = np.zeros_like(X)
-            # TODO: implement t gradient
             # TODO: implement z gradient
-            grad[:, 2] = self.f(X).flatten() / l  # ell
-            return np.dot(dL_dF, grad)
         else:
             raise NotImplementedError
+        return np.dot(dL_dF, grad)
 
     def update_gradients(self, dL_dF, X):
         b = X[:, 0].astype(int)
