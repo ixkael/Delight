@@ -7,7 +7,7 @@ import GPy
 from delight.priors import Rayleigh, Schechter, Kumaraswamy
 from delight.photoz_gp import PhotozGP
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
-from delight.utils import random_X_bztl,\
+from delight.utils import random_X_bzlt,\
     random_filtercoefs, random_linecoefs, random_hyperparams
 
 from scipy.misc import derivative
@@ -56,20 +56,21 @@ def create_p_t(request):
 def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
     """Create valid GP with reasonable parameters, kernel, mean fct"""
 
-    X = random_X_bztl(size, numBands=numBands)
+    X = random_X_bzlt(size, numBands=numBands)
     alpha = np.random.uniform(low=0, high=1e-4, size=1)
-    bands, redshifts, types, luminosities = np.split(X, 4, axis=1)
+    beta = np.random.uniform(low=1., high=3., size=1)
+    bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
 
     fcoefs_amp, fcoefs_mu, fcoefs_sig \
         = random_filtercoefs(numBands, numCoefs)
     lines_mu, lines_sig = random_linecoefs(numLines)
-    var_T, alpha_C, alpha_L, alpha_T = random_hyperparams()
+    var_C, var_L, alpha_C, alpha_L, alpha_T = random_hyperparams()
 
     kern = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
-                         lines_mu, lines_sig, var_T,
+                         lines_mu, lines_sig, var_C, var_L,
                          alpha_C, alpha_L, alpha_T)
 
-    mean_function = Photoz_mean_function(alpha,
+    mean_function = Photoz_mean_function(alpha, beta,
                                          fcoefs_amp, fcoefs_mu, fcoefs_sig)
 
     noisy_fluxes = np.random.uniform(low=0., high=1., size=size)
@@ -122,15 +123,26 @@ def test_gradients(create_gp):
                     dx=0.01*gp.kern.alpha_C.values)
     assert abs(v1/v2-1) < relative_accuracy
 
-    v1 = gp.kern.var_T.gradient
+    v1 = gp.kern.var_C.gradient
 
-    def f_var_T(v):
+    def f_var_C(v):
         gp2 = deepcopy(gp)
-        gp2.kern.set_var_T(v)
+        gp2.kern.set_var_C(v)
         return gp2._log_marginal_likelihood
-    v2 = derivative(f_var_T, gp.kern.var_T.values,
-                    dx=0.01*gp.kern.var_T.values)
+    v2 = derivative(f_var_C, gp.kern.var_C.values,
+                    dx=0.01*gp.kern.var_C.values)
     assert abs(v1/v2-1) < relative_accuracy
+
+    v1 = gp.kern.var_L.gradient
+
+    def f_var_L(v):
+        gp2 = deepcopy(gp)
+        gp2.kern.set_var_L(v)
+        return gp2._log_marginal_likelihood
+    v2 = derivative(f_var_L, gp.kern.var_L.values,
+                    dx=0.01*gp.kern.var_L.values)
+    if np.abs(v1) > 1e-12 and np.abs(v2) > 1e-12:
+        assert abs(v1/v2-1) < relative_accuracy
 
     v1 = gp.kern.alpha_T.gradient
 

@@ -35,7 +35,7 @@ def kernelparts_diag(
     for o1 in prange(NO1, nogil=True):
         norm1[o1] = 0
         for i in range(NC):
-            norm1[o1] += fcoefs_amp[b1[o1],i] * sqrt2pi * fcoefs_sig[b1[o1],i] / fz1[o1]
+            norm1[o1] += fcoefs_amp[b1[o1],i] * sqrt2pi * fcoefs_sig[b1[o1],i] #/ fz1[o1]
 
     for o1 in prange(NO1, nogil=True):
         KT[o1] = 1
@@ -115,12 +115,12 @@ def kernelparts(
     for o1 in prange(NO1, nogil=True):
         norm1[o1] = 0
         for i in range(NC):
-            norm1[o1] += fcoefs_amp[b1[o1],i] * sqrt2pi * fcoefs_sig[b1[o1],i] / fz1[o1]
+            norm1[o1] += fcoefs_amp[b1[o1],i] * sqrt2pi * fcoefs_sig[b1[o1],i] #/ fz1[o1]
 
     for o2 in prange(NO2, nogil=True):
         norm2[o2] = 0
         for j in range(NC):
-            norm2[o2] += fcoefs_amp[b2[o2],j] * sqrt2pi * fcoefs_sig[b2[o2],j] / fz2[o2]
+            norm2[o2] += fcoefs_amp[b2[o2],j] * sqrt2pi * fcoefs_sig[b2[o2],j] #/ fz2[o2]
 
     for o1 in prange(NO1, nogil=True):
         for o2 in range(NO2):

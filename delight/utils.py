@@ -20,14 +20,14 @@ class approx_DL():
         return self.__dict__ == other.__dict__
 
 
-def random_X_bztl(size, numTypes=8, numBands=5, redshiftMax=3.0):
+def random_X_bzlt(size, numTypes=8, numBands=5, redshiftMax=3.0):
     """Create random (but reasonable) input space for photo-z GP """
     X = np.zeros((size, 4))
     X[:, 0] = np.random.randint(low=0, high=numBands-1, size=size)
     X[:, 1] = np.random.uniform(low=0, high=redshiftMax, size=size)
-    X[:, 2] = np.random.uniform(low=0, high=numTypes-1, size=size)\
+    X[:, 3] = np.random.uniform(low=0, high=numTypes-1, size=size)\
         / float(numTypes)
-    X[:, 3] = np.random.uniform(low=1.0, high=10.0, size=size)
+    X[:, 2] = np.random.uniform(low=1.0, high=10.0, size=size)
     return X
 
 
@@ -55,6 +55,6 @@ def random_linecoefs(numLines):
 
 def random_hyperparams():
     """Create random (but reasonable) hyperparameters for photo-z GP"""
-    alpha_T, var_T = np.random.uniform(low=0.5, high=2.0, size=2)
+    alpha_T, var_C, var_L = np.random.uniform(low=0.5, high=2.0, size=3)
     alpha_C, alpha_L = np.random.uniform(low=10.0, high=1000.0, size=2)
-    return var_T, alpha_C, alpha_L, alpha_T
+    return var_C, var_L, alpha_C, alpha_L, alpha_T

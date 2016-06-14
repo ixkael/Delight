@@ -3,7 +3,7 @@ import numpy as np
 from delight.priors import *
 from scipy.misc import derivative
 
-NREPEAT = 2
+NREPEAT = 4
 relative_accuracy = 0.05
 size = 1
 
