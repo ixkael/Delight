@@ -148,7 +148,8 @@ class Photoz_mean_function(Mapping):
         self.alpha.gradient = np.dot(dL_dF.T, opz * l * fac * sum_alpha)
         ind = t > 0
         if ind.sum() > 0:
-            self.beta.gradient = np.dot(dL_dF[ind].T, (opz * l * fac * sum_beta)[ind])
+            self.beta.gradient = np.dot(dL_dF[ind].T,
+                                        (opz * l * fac * sum_beta)[ind])
 
 
 class Photoz_kernel(Kern):
