@@ -32,9 +32,12 @@ class Photoz_mean_function(Mapping):
         else:
             self.DL_z = DL_z
         self.g_AB = g_AB
+        assert lambdaRef > 1 and lambdaRef < 1e5
         self.lambdaRef = lambdaRef
         self.fourpi = 4 * np.pi
         self.sqrthalfpi = np.sqrt(np.pi/2)
+        assert fcoefs_amp.shape[0] == fcoefs_mu.shape[0] and\
+            fcoefs_amp.shape[0] == fcoefs_sig.shape[0]
         self.fcoefs_amp = np.array(fcoefs_amp)
         self.fcoefs_mu = np.array(fcoefs_mu)
         self.fcoefs_sig = np.array(fcoefs_sig)
@@ -88,7 +91,7 @@ class Photoz_mean_function(Mapping):
                 self.sqrthalfpi * sig
         return (fac * thesum).reshape((-1, 1))
 
-    def gradients_X(self, dL_dF, X):
+    def gradients_X(self, dL_dm, X):
         grad = np.zeros_like(X)
         b = X[:, 0].astype(int)
         z = X[:, 1]
@@ -130,7 +133,7 @@ class Photoz_mean_function(Mapping):
             # TODO: implement z gradient
         else:
             raise NotImplementedError
-        return np.dot(dL_dF, grad)
+        return dL_dm * grad
 
     def update_gradients(self, dL_dF, X):
         b = X[:, 0].astype(int)
@@ -202,6 +205,8 @@ class Photoz_kernel(Kern):
         self.lines_mu = np.array(lines_mu)
         self.lines_sig = np.array(lines_sig)
         self.numLines = lines_mu.size
+        assert fcoefs_amp.shape[0] == fcoefs_mu.shape[0] and\
+            fcoefs_amp.shape[0] == fcoefs_sig.shape[0]
         self.fcoefs_amp = np.array(fcoefs_amp)
         self.fcoefs_mu = np.array(fcoefs_mu)
         self.fcoefs_sig = np.array(fcoefs_sig)
@@ -458,4 +463,5 @@ class Photoz_kernel(Kern):
         return grad
 
     def gradients_X_diag(self, dL_dKdiag, X):
+        # TODO: speed up diagonal gradients
         return self.gradients_X(dL_dKdiag, X)

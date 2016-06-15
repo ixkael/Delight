@@ -38,7 +38,7 @@ def test_kernel_gradients():
         gp = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
                            lines_mu, lines_sig, var_C, var_L,
                            alpha_C, alpha_L, alpha_T)
-        dL_dK = np.diag(dL_dm)
+        dL_dK = np.eye(X.shape)
         gp.update_gradients_full(dL_dK, X, X2)
 
         v1 = gp.alpha_T.gradient
@@ -123,7 +123,6 @@ def test_kernel_gradients():
         dL_dK = 1.0
         grad_XX = gp.gradients_X(dL_dK, X, X)
         grad_X_diag = gp.gradients_X_diag(dL_dK, X)
-
         np.testing.assert_almost_equal(grad_X_diag, grad_XX)
 
         v1mat = gp.gradients_X(dL_dK, X, X2)
@@ -141,7 +140,11 @@ def test_kernel_gradients():
 
                 v2mat[k1, dim] \
                     = derivative(f_x, X[k1, dim], dx=0.01*X[k1, dim])
-                np.allclose(v1mat[k1, dim], v2mat[k1, dim])
+                if dim == 2:
+                    assert v1mat[k1, dim] == 0 and v2mat[k1, dim] == 0
+                else:
+                    assert abs(v1mat[k1, dim]/v2mat[k1, dim]-1)\
+                        < relative_accuracy
 
 
 def test_meanfunction_gradients_X():
@@ -157,7 +160,7 @@ def test_meanfunction_gradients_X():
         X = random_X_bzlt(size)
         mf = Photoz_mean_function(alpha, beta,
                                   fcoefs_amp, fcoefs_mu, fcoefs_sig)
-        dL_dm = np.ones((size,))
+        dL_dm = np.ones((size, 1))
         dL_dK = np.diag(dL_dm)
         mf.update_gradients(dL_dm, X)
 

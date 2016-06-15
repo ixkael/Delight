@@ -18,9 +18,12 @@ class PhotozGP(Model):
     Default: all parameters are variable except bands and likelihood/noise.
     """
     def __init__(self,
-                 bands, redshifts, luminosities, types,
-                 noisy_fluxes, flux_variances,
-                 kern, mean_function,
+                 redshifts, luminosities, types,
+                 noisy_fluxes, flux_variances, bandsUsed,
+                 fcoefs_amp, fcoefs_mu, fcoefs_sig,
+                 lines_mu, lines_sig,
+                 alpha, beta, var_C, var_L,
+                 alpha_C, alpha_L, alpha_T,
                  prior_z_t=None,
                  prior_ell_t=None,
                  prior_t=None,
@@ -30,16 +33,31 @@ class PhotozGP(Model):
 
         super(PhotozGP, self).__init__(name)
 
-        assert bands.shape[1] == 1
+        self.nbands, self.numCoefs = fcoefs_amp.shape
+        self.num_points, self.numBandsUsed = noisy_fluxes.shape
+        assert self.numBandsUsed == len(bandsUsed)
+        assert np.min(bandsUsed) >= 0 and np.max(bandsUsed) < self.nbands
+        assert fcoefs_amp.shape[0] == self.nbands
+        assert fcoefs_mu.shape[0] == self.nbands
+        assert fcoefs_sig.shape[0] == self.nbands
+        self.bandsUsed = bandsUsed
+        self.Y = ObsAr(noisy_fluxes.T.reshape((-1, 1)))
+        Ny, self.output_dim = self.Y.shape
+
         assert redshifts.shape[1] == 1
         assert luminosities.shape[1] == 1
         assert types.shape[1] == 1
-        assert bands.shape[0] == bands.shape[0] and\
-            bands.shape[0] == redshifts.shape[0] and\
-            bands.shape[0] == luminosities.shape[0] and\
-            bands.shape[0] == types.shape[0]
+        assert self.num_points == redshifts.shape[0] and\
+            self.num_points == luminosities.shape[0] and\
+            self.num_points == types.shape[0]
 
-        self.bands = ObsAr(bands)
+        nd = self.num_points
+        self.X = np.zeros((nd*self.numBandsUsed, 4))
+        for i in range(self.numBandsUsed):
+            self.X[i*nd:(i+1)*nd, 0] = bandsUsed[i]
+            self.X[i*nd:(i+1)*nd, 1] = redshifts.flatten()
+            self.X[i*nd:(i+1)*nd, 2] = luminosities.flatten()
+            self.X[i*nd:(i+1)*nd, 3] = types.flatten()
 
         self.redshifts = Param('redshifts', redshifts)
         self.redshifts.constrain_positive()
@@ -53,26 +71,17 @@ class PhotozGP(Model):
         self.types.constrain_bounded(0, 1)
         self.link_parameter(self.types)
 
-        self.X = np.hstack((self.bands.values, self.redshifts.values,
-                            self.luminosities.values, self.types.values))
-        assert self.X.shape[1] == 4
         self.num_data, self.input_dim = self.X.shape
 
-        assert noisy_fluxes.ndim == 1
-        self.Y = ObsAr(noisy_fluxes[:, None])
-        Ny, self.output_dim = self.Y.shape
-
-        if isinstance(mean_function, Photoz_mean_function) or\
-                isinstance(kern, Photoz_kernel):
-            assert isinstance(mean_function, Photoz_mean_function)
-            assert isinstance(kern, Photoz_kernel)
-            assert mean_function.g_AB == kern.g_AB
-            assert mean_function.DL_z == kern.DL_z
-
-        self.mean_function = mean_function
+        self.mean_function = Photoz_mean_function(alpha, beta,
+                                                  fcoefs_amp,
+                                                  fcoefs_mu,
+                                                  fcoefs_sig)
         self.link_parameter(self.mean_function)
 
-        self.kern = kern
+        self.kern = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
+                                  lines_mu, lines_sig, var_C, var_L,
+                                  alpha_C, alpha_L, alpha_T)
         self.link_parameter(self.kern)
 
         self.Y_metadata = {
@@ -80,7 +89,7 @@ class PhotozGP(Model):
         }
 
         self.likelihood = HeteroscedasticGaussian(self.Y_metadata)
-        self.likelihood.variance.fix(flux_variances[:, None])
+        self.likelihood.variance.fix(flux_variances.T.reshape((-1, 1)))
 
         self.inference_method =\
             exact_gaussian_inference.ExactGaussianInference()
@@ -107,21 +116,10 @@ class PhotozGP(Model):
                 self.Y_inducing.constrain_positive()
                 self.link_parameter(self.Y_inducing)
 
-    def set_bands(self, bands):
-        """Set bands"""
-        assert bands.shape[1] == 1
-        assert bands.shape[0] == self.redshifts.shape[0] and\
-            bands.shape[0] == self.types.shape[0] and\
-            bands.shape[0] == self.luminosities.shape[0]
-        self.update_model(False)
-        self.bands = ObsAr(bands)
-        self.update_model(True)
-
     def set_redshifts(self, redshifts):
         """Set redshifts"""
         assert redshifts.shape[1] == 1
-        assert redshifts.shape[0] == self.bands.shape[0] and\
-            redshifts.shape[0] == self.types.shape[0] and\
+        assert redshifts.shape[0] == self.types.shape[0] and\
             redshifts.shape[0] == self.luminosities.shape[0]
         self.update_model(False)
         index = self.redshifts._parent_index_
@@ -134,8 +132,7 @@ class PhotozGP(Model):
     def set_luminosities(self, luminosities):
         """Set luminosities"""
         assert luminosities.shape[1] == 1
-        assert luminosities.shape[0] == self.bands.shape[0] and\
-            luminosities.shape[0] == self.types.shape[0] and\
+        assert luminosities.shape[0] == self.types.shape[0] and\
             luminosities.shape[0] == self.redshifts.shape[0]
         self.update_model(False)
         index = self.luminosities._parent_index_
@@ -148,8 +145,7 @@ class PhotozGP(Model):
     def set_types(self, types):
         """Set types"""
         assert types.shape[1] == 1
-        assert types.shape[0] == self.bands.shape[0] and\
-            types.shape[0] == self.redshifts.shape[0] and\
+        assert types.shape[0] == self.redshifts.shape[0] and\
             types.shape[0] == self.luminosities.shape[0]
         self.update_model(False)
         index = self.types._parent_index_
@@ -161,9 +157,13 @@ class PhotozGP(Model):
 
     def parameters_changed(self):
         """If parameters changed, compute gradients"""
-        self.X = np.hstack((self.bands.values, self.redshifts.values,
-                            self.luminosities.values, self.types.values))
-        assert self.X.shape[1] == 4
+        nd = self.num_points
+        self.X = np.zeros((nd*self.numBandsUsed, 4))
+        for i in range(self.numBandsUsed):
+            self.X[i*nd:(i+1)*nd, 0] = self.bandsUsed[i]
+            self.X[i*nd:(i+1)*nd, 1] = self.redshifts.values.flatten()
+            self.X[i*nd:(i+1)*nd, 2] = self.luminosities.values.flatten()
+            self.X[i*nd:(i+1)*nd, 3] = self.types.values.flatten()
 
         self.posterior, self._log_marginal_likelihood, self.grad_dict\
             = self.inference_method.inference(self.kern, self.X,
@@ -188,10 +188,9 @@ class PhotozGP(Model):
 
         self.kern.update_gradients_full(self.grad_dict['dL_dK'], self.X)
 
-        gradX = self.mean_function.gradients_X(self.grad_dict['dL_dm'].T,
-                                               self.X)\
-            + self.kern.gradients_X_diag(self.grad_dict['dL_dK'],
-                                         self.X)
+        wm = self.mean_function.gradients_X(self.grad_dict['dL_dm'], self.X)
+        wk = self.kern.gradients_X_diag(self.grad_dict['dL_dK'], self.X)
+        gradX = wm + wk
 
         if not self.redshifts.is_fixed:
             self.redshifts.gradient[:] = 0
@@ -201,7 +200,8 @@ class PhotozGP(Model):
             self.types.gradient[:] = 0
 
         if not self.redshifts.is_fixed:
-            self.redshifts.gradient[:, 0] += 2*gradX[:, 1]
+            for i in range(self.numBandsUsed):
+                self.redshifts.gradient[:, 0] += gradX[i*nd:(i+1)*nd, 1]
             if self.prior_z_t is not None:
                 self._log_marginal_likelihood += np.sum(
                     self.prior_z_t.lnpdf(self.redshifts, self.types))
@@ -213,7 +213,8 @@ class PhotozGP(Model):
                         self.prior_z_t.lnpdf_grad_t(self.redshifts, self.types)
 
         if not self.luminosities.is_fixed:
-            self.luminosities.gradient[:, 0] += 2*gradX[:, 2]
+            for i in range(self.numBandsUsed):
+                self.luminosities.gradient[:, 0] += gradX[i*nd:(i+1)*nd, 2]
             if self.prior_ell_t is not None:
                 self._log_marginal_likelihood += np.sum(
                     self.prior_ell_t.lnpdf(self.luminosities, self.types))
@@ -228,7 +229,8 @@ class PhotozGP(Model):
                                                       self.types)
 
         if not self.types.is_fixed:
-            self.types.gradient[:, 0] += 2*gradX[:, 3]
+            for i in range(self.numBandsUsed):
+                self.types.gradient[:, 0] += gradX[i*nd:(i+1)*nd, 3]
             if self.prior_t is not None:
                 self._log_marginal_likelihood += np.sum(
                     self.prior_t.lnpdf(self.types))

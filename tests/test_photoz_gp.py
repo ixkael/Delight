@@ -14,11 +14,13 @@ from scipy.misc import derivative
 from copy import deepcopy
 
 NREPEAT = 3
-size = 7
-numBands = 5
-numLines = 3
-numCoefs = 3
+nObj = 2
+numBands = 3
+numLines = 5
+numCoefs = 5
 relative_accuracy = 0.05
+size = numBands * nObj
+bandsUsed = range(numBands)
 
 
 @pytest.fixture(params=[False, True])
@@ -56,7 +58,7 @@ def create_p_t(request):
 def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
     """Create valid GP with reasonable parameters, kernel, mean fct"""
 
-    X = random_X_bzlt(size, numBands=numBands)
+    X = random_X_bzlt(nObj)
     alpha = np.random.uniform(low=0, high=1e-4, size=1)
     beta = np.random.uniform(low=1., high=3., size=1)
     bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
@@ -66,15 +68,10 @@ def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
     lines_mu, lines_sig = random_linecoefs(numLines)
     var_C, var_L, alpha_C, alpha_L, alpha_T = random_hyperparams()
 
-    kern = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
-                         lines_mu, lines_sig, var_C, var_L,
-                         alpha_C, alpha_L, alpha_T)
-
-    mean_function = Photoz_mean_function(alpha, beta,
-                                         fcoefs_amp, fcoefs_mu, fcoefs_sig)
-
-    noisy_fluxes = np.random.uniform(low=0., high=1., size=size)
-    flux_variances = np.random.uniform(low=0., high=1., size=size)
+    noisy_fluxes = np.random.uniform(low=0., high=1., size=size)\
+        .reshape((nObj, numBands))
+    flux_variances = np.random.uniform(low=0., high=1., size=size)\
+        .reshape((nObj, numBands))
 
     prior_ell_t = create_p_ell_t
     assert(prior_ell_t is None or isinstance(prior_ell_t, Schechter))
@@ -84,9 +81,12 @@ def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
     assert(prior_t is None or isinstance(prior_t, Kumaraswamy))
 
     gp = PhotozGP(
-        bands, redshifts, luminosities, types,
-        noisy_fluxes, flux_variances,
-        kern, mean_function,
+        redshifts, luminosities, types,
+        noisy_fluxes, flux_variances, bandsUsed,
+        fcoefs_amp, fcoefs_mu, fcoefs_sig,
+        lines_mu, lines_sig,
+        alpha, beta, var_C, var_L,
+        alpha_C, alpha_L, alpha_T,
         prior_z_t=prior_z_t,
         prior_ell_t=prior_ell_t,
         prior_t=prior_t,
@@ -161,7 +161,7 @@ def test_gradients(create_gp):
         return gp2._log_marginal_likelihood
     v2 = derivative(f_var_L, gp.kern.var_L.values,
                     dx=0.01*gp.kern.var_L.values)
-    if np.abs(v1) > 1e-10 and np.abs(v2) > 1e-10:
+    if np.abs(v1) > 1e-7 and np.abs(v2) > 1e-7:
         assert abs(v1/v2-1) < relative_accuracy
 
     v1 = gp.kern.alpha_T.gradient
@@ -241,20 +241,19 @@ def test_gradients(create_gp):
                         dx=0.01*gp.prior_t.alpha1.values)
         assert abs(v1/v2-1) < relative_accuracy
 
-    for dim in range(size):
+    for dim in range(nObj):
 
-        if False:  # TODO: reactivate when d mf / dt works
-            v1 = gp.types.gradient[dim]
+        v1 = gp.types.gradient[dim]
 
-            def f_t(t):
-                gp2 = deepcopy(gp)
-                v = gp2.types.values
-                v[dim] = t
-                gp2.set_types(v)
-                return gp2._log_marginal_likelihood
-            v2 = derivative(f_t, gp.types.values[dim],
-                            dx=0.01*gp.types.values[dim])
-            assert abs(v1/v2-1) < relative_accuracy
+        def f_t(t):
+            gp2 = deepcopy(gp)
+            v = gp2.types.values
+            v[dim] = t
+            gp2.set_types(v)
+            return gp2._log_marginal_likelihood
+        v2 = derivative(f_t, gp.types.values[dim],
+                        dx=0.01*gp.types.values[dim])
+        assert abs(v1/v2-1) < relative_accuracy
 
         v1 = gp.luminosities.gradient[dim]
 
