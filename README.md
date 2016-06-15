@@ -3,6 +3,7 @@
 
 ![alt tag](https://travis-ci.org/ixkael/Delight.svg?branch=master)
 ![alt tag](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)
+[![Coverage Status](https://coveralls.io/repos/github/ixkael/Delight/badge.svg?branch=master)](https://coveralls.io/github/ixkael/Delight?branch=master)
 
 **Tests**: pytest for unit tests, PEP8 and Pylint for static checks and code style.
 
