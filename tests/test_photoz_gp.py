@@ -13,12 +13,12 @@ from delight.utils import random_X_bzlt,\
 from scipy.misc import derivative
 from copy import deepcopy
 
-NREPEAT = 3
-nObj = 2
+NREPEAT = 5
+nObj = 4
 numBands = 3
-numLines = 5
+numLines = 2
 numCoefs = 5
-relative_accuracy = 0.05
+relative_accuracy = 0.1
 size = numBands * nObj
 bandsUsed = range(numBands)
 
@@ -29,7 +29,7 @@ def create_p_z_t(request):
     if request.param is False:
         return None
     else:
-        alpha0, alpha1 = np.random.uniform(0., 2., size=2)
+        alpha0, alpha1 = np.random.uniform(0.2, 2., size=2)
         return Rayleigh(alpha0, alpha1)
 
 
@@ -40,7 +40,7 @@ def create_p_ell_t(request):
         return None
     else:
         ellStar = np.random.uniform(0., 10., size=1)
-        alpha0, alpha1 = np.random.uniform(-0.9, -0.1, size=2)
+        alpha0, alpha1 = np.random.uniform(-0.4, -0.3, size=2)
         return Schechter(ellStar, alpha0, alpha1)
 
 
@@ -50,7 +50,7 @@ def create_p_t(request):
     if request.param is False:
         return None
     else:
-        alpha0, alpha1 = np.random.uniform(0., 2., size=2)
+        alpha0, alpha1 = np.random.uniform(0.2, 2., size=2)
         return Kumaraswamy(alpha0, alpha1)
 
 
@@ -59,8 +59,8 @@ def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
     """Create valid GP with reasonable parameters, kernel, mean fct"""
 
     X = random_X_bzlt(nObj)
-    alpha = np.random.uniform(low=0, high=1e-4, size=1)
-    beta = np.random.uniform(low=1., high=3., size=1)
+    alpha = np.random.uniform(low=1e-3, high=2e-3, size=1)
+    beta = np.random.uniform(low=1., high=1.5, size=1)
     bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
 
     fcoefs_amp, fcoefs_mu, fcoefs_sig \
