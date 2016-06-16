@@ -18,6 +18,7 @@ relative_accuracy = 0.05
 # TODO: add tests for diagonal gradients of kernel?
 # TODO: add formal/numerical test for kernel w.r.t. mean fct
 
+
 def test_kernel():
 
     for i in range(NREPEAT):
