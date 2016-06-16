@@ -1,3 +1,4 @@
-py.test
+coverage run --source delight -m py.test
 pep8 delight/*py
 pep8 tests/*py
+coverage report

@@ -18,6 +18,26 @@ relative_accuracy = 0.05
 # TODO: add tests for diagonal gradients of kernel?
 # TODO: add formal/numerical test for kernel w.r.t. mean fct
 
+def test_kernel():
+
+    for i in range(NREPEAT):
+        X = random_X_bzlt(size, numBands=numBands)
+
+        fcoefs_amp, fcoefs_mu, fcoefs_sig \
+            = random_filtercoefs(numBands, numCoefs)
+        lines_mu, lines_sig = random_linecoefs(numLines)
+        var_C, var_L, alpha_C, alpha_L, alpha_T = random_hyperparams()
+        print 'Failed with params:', var_C, var_L, alpha_C, alpha_L, alpha_T
+
+        gp = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
+                           lines_mu, lines_sig, var_C, var_L,
+                           alpha_C, alpha_L, alpha_T)
+
+        v1 = np.diag(gp.K(X))
+        v2 = gp.Kdiag(X)
+
+        assert np.allclose(v1, v2)
+
 
 def test_kernel_gradients():
     """
@@ -140,11 +160,8 @@ def test_kernel_gradients():
 
                 v2mat[k1, dim] \
                     = derivative(f_x, X[k1, dim], dx=0.01*X[k1, dim])
-                if dim == 2:
-                    assert v1mat[k1, dim] == 0 and v2mat[k1, dim] == 0
-                else:
-                    assert abs(v1mat[k1, dim]/v2mat[k1, dim]-1)\
-                        < relative_accuracy
+                assert abs(v1mat[k1, dim]/v2mat[k1, dim]-1)\
+                    < relative_accuracy
 
 
 def test_meanfunction_gradients_X():

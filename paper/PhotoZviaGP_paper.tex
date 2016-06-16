@@ -151,25 +151,25 @@ We design a Gaussian Process with mean and covariance that capture the known phy
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Spectral energy distribution of galaxies and photometric fluxes}
 
-For a galaxy of type $t$ of luminosity $\ell$, the energy density of the luminosity is assumed to be $\ell \exp\Bigl(-\alpha(t)\ (\lambda_\mathrm{obs}-\lambda^\mathrm{ref})\Bigr)  + R_\nu(\lambda_\mathrm{em},t)$, where $R_\nu(\lambda_\mathrm{em},t)$ is a generic template for the relative luminosity density of galaxies as a function of emitted wavelength $\lambda_\mathrm{em}$ and type $t$.
+For a galaxy of type $t$ of luminosity $\ell$, the energy density of the luminosity is assumed to be $\ell \exp\bigl(-\alpha(t)\ (\lambda_\mathrm{obs}-\lambda^\mathrm{ref})\bigr)  + \ell R_\nu(\lambda_\mathrm{em},t)$, where $R_\nu(\lambda_\mathrm{em},t)$ is a generic template for the relative luminosity density of galaxies as a function of emitted wavelength $\lambda_\mathrm{em}$ and type $t$.
 
 \todo{Add units}
 
 We make two important remarks.
 First, we use type as a generic variable to label galaxies on a one-dimensional axis. 
-Second, our definition of luminosity is a constant background value $l$ since it makes many of the computations below tractable.
+Second, our definition of luminosity is a constant background value $\ell$ since it makes many of the computations below tractable.
 
 For the same galaxy at redshift $z$, the observed energy density of the flux measured at a wavelength $\lambda_\mathrm{obs}$ reads
 \equ{
-	\mathrm{SED}(\lambda_\mathrm{obs}, z, t, \ell) = \frac{1+z}{4\pi D^2(z)} \left(\ell\ \exp\Bigl(-\alpha(t)\ (\lambda_\mathrm{obs}-\lambda^\mathrm{ref})\Bigr) + R_\nu\Bigl(\frac{\lambda_\mathrm{obs}}{1+z},t\Bigr) \right)
+	\mathrm{SED}(\lambda_\mathrm{obs}, z, t, \ell) = \frac{(1+z) \ \ell}{4\pi D^2(z)} \left( \exp\Bigl(-\alpha(t)\ (\frac{\lambda_\mathrm{obs}}{1+z}-\lambda^\mathrm{ref})\Bigr) + R_\nu\Bigl(\frac{\lambda_\mathrm{obs}}{1+z},t\Bigr) \right)
 }
 where $D(z)$ is the luminosity distance.
 
 The photometric flux mesured in a band indexed by $b$ and described by a the response of the filter $W_b(\lambda)$ is
 \eqn{
 	f(b, z, t, \ell) &=&\frac{ \int \mathrm{SED}(\lambda_\mathrm{obs}, z, t, \ell) \ W_b(\lambda_\mathrm{obs}) \frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}} }{ \int g^\mathrm{AB}\ W_b(\lambda_\mathrm{obs}) \frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}}  } \\ 
-	&=& \frac{1+z}{4\pi D^2(z)} \frac{1}{g^\mathrm{AB} C_b} \int\frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}} \left( \ \ell \exp\Bigl(-\alpha(t)\ (\lambda_\mathrm{obs}-\lambda^\mathrm{ref})\Bigr) \ + \ R_\nu\Bigl(\frac{\lambda_\mathrm{obs}}{1+z},t\Bigr) \ W_b(\lambda_\mathrm{obs}) \right)   \\ 
-	&=& \frac{(1+z)^2}{4\pi D^2(z) g^\mathrm{AB} C_b}  \int{\d\lambda_\mathrm{em}} \left( \ \ell \exp\Bigl(-\alpha(t)\ \left((1+z)\lambda_\mathrm{em}-\lambda^\mathrm{ref}\right)\Bigr) \ + \ R_\nu\Bigl({\lambda_\mathrm{em}},t\Bigr) \ V_b\Bigl((1+z)\lambda_\mathrm{em}\Bigr) \right) 
+	&=& \frac{1+z}{4\pi D^2(z)} \frac{\ell}{g^\mathrm{AB} C_b} \int\frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}} \left( \exp\Bigl(-\alpha(t)\ (\frac{\lambda_\mathrm{obs}}{1+z}-\lambda^\mathrm{ref})\Bigr) \ + \ R_\nu\Bigl(\frac{\lambda_\mathrm{obs}}{1+z},t\Bigr) \right) \ W_b(\lambda_\mathrm{obs})   \\ 
+	&=& \frac{(1+z)^2 \ \ell}{4\pi D^2(z) g^\mathrm{AB} C_b}  \int{\d\lambda_\mathrm{em}} \left( \exp\bigl(-\alpha(t)\ \left(\lambda_\mathrm{em}-\lambda^\mathrm{ref}\right)\bigr) \ + \ R_\nu\bigl({\lambda_\mathrm{em}},t\bigr)  \right) \ V_b\bigl((1+z)\lambda_\mathrm{em}\bigr)
 }
 
 where we have defined the rescale filter response $V_b(\lambda) = W_b(\lambda)/\lambda$ and the normalization constant $C_b = \int W_b(\lambda) \d\lambda / \lambda$.
@@ -184,15 +184,15 @@ We now assume that the relative energy density of the luminosity is modeled as a
 	
 Since the previous equations connecting fluxes to SEDs are deterministic, the photometric fluxes are also modelled as a Gaussian Process 
 \eqn{
-	f  \sim \mathcal{GP}\Bigl( m(b,z,\ell,t), \ k(b,b',z,z',t,t') \Bigr)
+	f  \sim \mathcal{GP}\Bigl( m(b,z,\ell,t), \ k(b,b',z,z',\ell,\ell',t,t') \Bigr)
 }
 It is straightforward to show that the mean function is
 \eqn{
-	m(b,z,\ell,t) = \frac{(1+z)^2}{4\pi D^2(z)g^\mathrm{AB} C_b}  \int{\d\lambda}  \ \ell \exp\Bigl(-\alpha(t)\ \left((1+z)\lambda-\lambda^\mathrm{ref}\right)\Bigr)
+	m(b,z,\ell,t) = \frac{(1+z)^2\ \ell}{4\pi D^2(z)g^\mathrm{AB} C_b}  \int{\d\lambda}  \exp\Bigl(-\alpha(t)\ \left(\lambda-\lambda^\mathrm{ref}\right)\Bigr) \ V_b\Bigl((1+z)\lambda\Bigr)
 }
 and does not depend on type or photometric band, while the covariance function or kernel is
 \eqn{
-	k(b,b',z,z',t,t') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2  \frac{1}{C_bC_{b'}} \int \ k^\lambda\Bigl(t,t',\lambda,\lambda'\Bigr) \ V_b\Bigl((1+z)\lambda\Bigr) \ V_{b'}\Bigl((1+z')\lambda'\Bigr) \ \d\lambda\d\lambda' 
+	k(b,b',z,z',\ell,\ell',t,t') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2  \frac{\ell\ell'}{C_bC_{b'}} \int \ k^\lambda\Bigl(t,t',\lambda,\lambda'\Bigr) \ V_b\Bigl((1+z)\lambda\Bigr) \ V_{b'}\Bigl((1+z')\lambda'\Bigr) \ \d\lambda\d\lambda' 
 }
 and does not depend on luminosity.
 
@@ -339,12 +339,12 @@ We approximate the filters are a sum of Gaussian distributions,
 We drop the secondary $b$ dependency below, but it should be understood that the $i$ and $j$ indices below depend on each band.
 In this case, one can derive an exact expression for the Gaussian Process mean function kernel in flux space. The former is
 \eqn{
-	m(b,z,\ell,t) = \frac{\ell\  (1+z)}{8\pi D^2(z)g^\mathrm{AB} C_b} \sum_{i} a_i \left( 1 + \mathrm{erf}\ \frac{\mu_i(1+z)-\alpha(t)\sigma_i^2}{\sqrt{2}\sigma_i(1+z)} \ \right) \exp\left( \alpha(t)\Bigl( \frac{\alpha(t)\sigma_i^2}{2(1+z)^2} - \frac{\mu_i}{1+z} + \lambda^\mathrm{ref}\Bigr)\right)
+	m(b,z,\ell,t) = \frac{\ell\  (1+z)}{4\pi D^2(z)g^\mathrm{AB} C_b} \sum_{i} a_i \sigma_i\frac{\pi}{2}  \left( 1 + \mathrm{erf}\ \frac{\mu_i(1+z)-\alpha(t)\sigma_i^2}{\sqrt{2}\sigma_i(1+z)} \ \right) \exp\left( \alpha(t)\Bigl( \frac{\alpha(t)\sigma_i^2}{2(1+z)^2} - \frac{\mu_i}{1+z} + \lambda^\mathrm{ref}\Bigr)\right)
 }
 The kernel is
 \eqn{
-	k(b,b',z,z',t,t') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2  \nonumber \\
-	  \times \ \sum_{i}\sum_{i'} \frac{a_{i} a_{i'}}{C_bC_{b'}}&&\hspace*{-5mm} \left( 2\pi\sigma_{i}\sigma_{i'} V_C\ K_C(z,z',b,b',i,i') + V_L \ \sum_{l}\sum_{\ell'} K_L(z,z',b,b',i,i',\ell,\ell')\right)
+	k(b,b',z,z',\ell,\ell',t,t') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2 \frac{\ell \ell'}{C_bC_{b'}} \nonumber \\
+	  \times \ \sum_{i}\sum_{i'} a_{i} a_{i'} &&\hspace*{-5mm} \left( 2\pi\sigma_{i}\sigma_{i'} V_C\ K_C(z,z',b,b',i,i') + V_L \ \sum_{l}\sum_{\ell'} K_L(z,z',b,b',i,i',\ell,\ell')\right)
 }
 where the continuum kernel is
 \eqn{
@@ -442,12 +442,6 @@ where we have defined
 }
 
 
-\eqn{
-	\frac{\partial (-\ln p(\hat{\vec{y}}|\vec{y},\mat{X},\hat{\mat{X}},\bm{\alpha}) )}{\partial \alpha_k} &=& - \frac{1}{2} \tr\left( (\hat{\vec{v}}\hat{\vec{v}}^T - \hat{\mat{K}}^{-1} ) \ \frac{\partial \hat{\mat{K}}}{\partial \alpha_k} \right) \quad \mathrm{with} \ \hat{\vec{v}} = \hat{\mat{K}}^{-1} (\hat{\vec{y}}-\hat{\vec{m}}) \\ 
-	\frac{\partial (-\ln p(\vec{y}|\mat{X},\bm{\alpha}))}{\partial \alpha_k} &=& - \frac{1}{2} \tr\left( (\vec{v}\vec{v}^T - \mat{K}_y^{-1} ) \ \frac{\partial \mat{K}_y}{\partial \alpha_k} \right) \quad \mathrm{with} \ \vec{v} = \mat{K}_y^{-1} (\vec{y}-m({\mat{X}}))
-}
-
-\todo{Add derivatives of GP with respect to inputs $t,z,l$}
 
 The total derivatives of $\mathcal{U}$ can be obtained by adding the various components.
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

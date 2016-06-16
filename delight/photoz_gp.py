@@ -116,6 +116,13 @@ class PhotozGP(Model):
                 self.Y_inducing.constrain_positive()
                 self.link_parameter(self.Y_inducing)
 
+    def set_unfixed_parameters(self, params):
+        """Set unfixed parameters all at once"""
+        for i, nm in enumerate(self.parameter_names_flat()):
+            self[nm[9:]] = params[i]
+            # TODO: make sure no updates are triggered before!
+        self.parameters_changed()
+
     def set_redshifts(self, redshifts):
         """Set redshifts"""
         assert redshifts.shape[1] == 1

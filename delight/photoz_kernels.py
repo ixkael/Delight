@@ -57,8 +57,8 @@ class Photoz_mean_function(Mapping):
         index = self.alpha._parent_index_
         self.unlink_parameter(self.alpha)
         self.alpha = Param('alpha', float(alpha))
-        self.link_parameter(self.alpha, index=index)
         self.alpha.constrain_positive()
+        self.link_parameter(self.alpha, index=index)
         self.update_model(True)
 
     def set_beta(self, beta):
@@ -67,8 +67,8 @@ class Photoz_mean_function(Mapping):
         index = self.beta._parent_index_
         self.unlink_parameter(self.beta)
         self.beta = Param('beta', float(beta))
-        self.link_parameter(self.beta, index=index)
         self.beta.constrain_positive()
+        self.link_parameter(self.beta, index=index)
         self.update_model(True)
 
     def f(self, X):
@@ -220,16 +220,13 @@ class Photoz_kernel(Kern):
         self.alpha_C = Param('alpha_C', float(alpha_C))
         self.alpha_L = Param('alpha_L', float(alpha_L))
         self.alpha_T = Param('alpha_T', float(alpha_T))
-        self.link_parameter(self.var_C)
-        self.link_parameter(self.var_L)
-        self.link_parameter(self.alpha_C)
-        self.link_parameter(self.alpha_L)
-        self.link_parameter(self.alpha_T)
         self.var_C.constrain_positive()
         self.var_L.constrain_positive()
         self.alpha_C.constrain_positive()
         self.alpha_L.constrain_positive()
         self.alpha_T.constrain_positive()
+        self.link_parameters(self.var_C, self.var_L,
+                             self.alpha_C, self.alpha_L, self.alpha_T)
         # TODO: addd more realistic constraints?
 
     def set_alpha_C(self, alpha_C):
@@ -238,8 +235,8 @@ class Photoz_kernel(Kern):
         index = self.alpha_C._parent_index_
         self.unlink_parameter(self.alpha_C)
         self.alpha_C = Param('alpha_C', float(alpha_C))
-        self.link_parameter(self.alpha_C, index=index)
         self.alpha_C.constrain_positive()
+        self.link_parameter(self.alpha_C, index=index)
         self.update_model(True)
 
     def set_alpha_L(self, alpha_L):
@@ -248,8 +245,8 @@ class Photoz_kernel(Kern):
         index = self.alpha_L._parent_index_
         self.unlink_parameter(self.alpha_L)
         self.alpha_L = Param('alpha_L', float(alpha_L))
-        self.link_parameter(self.alpha_L, index=index)
         self.alpha_L.constrain_positive()
+        self.link_parameter(self.alpha_L, index=index)
         self.update_model(True)
 
     def set_var_C(self, var_C):
@@ -258,8 +255,8 @@ class Photoz_kernel(Kern):
         index = self.var_C._parent_index_
         self.unlink_parameter(self.var_C)
         self.var_C = Param('var_C', float(var_C))
-        self.link_parameter(self.var_C, index=index)
         self.var_C.constrain_positive()
+        self.link_parameter(self.var_C, index=index)
         self.update_model(True)
 
     def set_var_L(self, var_L):
@@ -268,8 +265,8 @@ class Photoz_kernel(Kern):
         index = self.var_L._parent_index_
         self.unlink_parameter(self.var_L)
         self.var_L = Param('var_L', float(var_L))
-        self.link_parameter(self.var_L, index=index)
         self.var_L.constrain_positive()
+        self.link_parameter(self.var_L, index=index)
         self.update_model(True)
 
     def set_alpha_T(self, alpha_T):
@@ -278,8 +275,8 @@ class Photoz_kernel(Kern):
         index = self.alpha_T._parent_index_
         self.unlink_parameter(self.alpha_T)
         self.alpha_T = Param('alpha_T', float(alpha_T))
-        self.link_parameter(self.alpha_T, index=index)
         self.alpha_T.constrain_positive()
+        self.link_parameter(self.alpha_T, index=index)
         self.update_model(True)
 
     def change_numlines(self, num):
@@ -317,7 +314,7 @@ class Photoz_kernel(Kern):
                          norm1, KL, KC, KT, D_alpha_C, D_alpha_L)
         prefac = (fz1 * fz1 /
                   (self.fourpi * self.g_AB * self.DL_z(X[:, 1]) *
-                   self.DL_z(X2[:, 1])))**2
+                   self.DL_z(X2[:, 1])))**2 * l1**2
         self.var_C.gradient = np.sum(dL_dKdiag * KT * prefac * KC)
         self.var_L.gradient = np.sum(dL_dKdiag * KT * prefac * KL)
         self.alpha_C.gradient = np.sum(dL_dKdiag * self.var_C *
@@ -352,7 +349,8 @@ class Photoz_kernel(Kern):
                     KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
         prefac = (fz1[:, None] * fz2[None, :] /
                   (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
-                   self.DL_z(X2[:, 1])[None, :]))**2
+                   self.DL_z(X2[:, 1])[None, :]))**2 \
+            * l1[:, None] * l2[None, :]
         self.var_C.gradient = np.sum(dL_dK * KT * prefac * KC)
         self.var_L.gradient = np.sum(dL_dK * KT * prefac * KL)
         self.alpha_C.gradient\
@@ -379,7 +377,8 @@ class Photoz_kernel(Kern):
                          self.lines_sig[:self.numLines],
                          t1, b1, fz1, False, norm1, KL, KC, KT,
                          D_alpha_C, D_alpha_L)
-        prefac = fz1**2 / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])**2)
+        prefac = l1 * fz1**2 \
+            / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])**2)
         return KT * prefac**2 * (self.var_C*KC + self.var_L*KL)
 
     def K(self, X, X2=None):
@@ -406,10 +405,11 @@ class Photoz_kernel(Kern):
                     self.lines_sig[:self.numLines],
                     t1, b1, fz1, t2, b2, fz2, False, norm1, norm2,
                     KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
-        prefac = fz1[:, None] * fz2[None, :]\
-            / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
-               self.DL_z(X2[:, 1])[None, :])
-        return KT * prefac**2 * (self.var_C*KC + self.var_L*KL)
+        prefac = (fz1[:, None] * fz2[None, :] /
+                  (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
+                      self.DL_z(X2[:, 1])[None, :]))**2\
+            * l1[:, None] * l2[None, :]
+        return KT * prefac * (self.var_C*KC + self.var_L*KL)
 
     def gradients_X(self, dL_dK, X, X2=None):
         if X2 is None:
@@ -437,12 +437,16 @@ class Photoz_kernel(Kern):
                     norm1, norm2, KL, KC, KT,
                     D_alpha_C, D_alpha_L, D_alpha_z)
 
-        prefac = fz1[:, None] * fz2[None, :]\
-            / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
-               self.DL_z(X2[:, 1])[None, :])
+        prefac = (fz1[:, None] * fz2[None, :] /
+                  (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
+                      self.DL_z(X2[:, 1])[None, :]))**2\
+            * l1[:, None] * l2[None, :]
 
-        tmp = dL_dK * KT * prefac**2 * (self.var_C*KC + self.var_L*KL)
+        tmp = dL_dK * KT * prefac * (self.var_C*KC + self.var_L*KL)
+
         grad = np.zeros(X.shape, dtype=np.float64)
+
+        np.sum(tmp / l1[:, None], axis=1, out=grad[:, 2])  # ell
 
         tempfull = - tmp * (t1[:, None] - t2[None, :])\
             / self.alpha_T**2
