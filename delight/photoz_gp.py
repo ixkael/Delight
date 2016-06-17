@@ -8,8 +8,10 @@ from GPy.inference.latent_function_inference import exact_gaussian_inference
 from GPy.core.parameterization.param import Param
 from GPy.plotting.gpy_plot.gp_plots import plot
 from paramz import ObsAr
+import re
 
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
+# TODO: add tests for prediction routines
 
 
 class PhotozGP(Model):
@@ -33,6 +35,7 @@ class PhotozGP(Model):
 
         super(PhotozGP, self).__init__(name)
 
+        assert flux_variances.shape == noisy_fluxes.shape
         self.nbands, self.numCoefs = fcoefs_amp.shape
         self.num_points, self.numBandsUsed = noisy_fluxes.shape
         assert self.numBandsUsed == len(bandsUsed)
@@ -118,10 +121,18 @@ class PhotozGP(Model):
 
     def set_unfixed_parameters(self, params):
         """Set unfixed parameters all at once"""
+        # TODO: speed this up!!
+        self.update_model(False)
         for i, nm in enumerate(self.parameter_names_flat()):
-            self[nm[9:]] = params[i]
-            # TODO: make sure no updates are triggered before!
-        self.parameters_changed()
+            nmb = nm[9:]
+            if '[[' in nmb and ']]' in nmb:
+                i1, i2 = np.array(re.findall("\[\[(.*?)\]\]", nmb)[0]
+                                  .split(), dtype=int)
+                nmb = nmb.split('[[')[0]
+                self[nmb][i1, i2] = params[i]
+            else:
+                self[nmb] = params[i]
+        self.update_model(True)  # self.parameters_changed()
 
     def set_redshifts(self, redshifts):
         """Set redshifts"""

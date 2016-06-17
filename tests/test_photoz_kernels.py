@@ -3,6 +3,7 @@
 
 import numpy as np
 from scipy.misc import derivative
+from copy import deepcopy as copy
 
 from delight.utils import random_X_bzlt,\
     random_filtercoefs, random_linecoefs, random_hyperparams
@@ -37,7 +38,7 @@ def test_kernel():
         v1 = np.diag(gp.K(X))
         v2 = gp.Kdiag(X)
 
-        assert np.allclose(v1, v2)
+        np.testing.assert_almost_equal(v1, v2)
 
 
 def test_kernel_gradients():
@@ -59,16 +60,15 @@ def test_kernel_gradients():
         gp = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
                            lines_mu, lines_sig, var_C, var_L,
                            alpha_C, alpha_L, alpha_T)
-        dL_dK = np.eye(X.shape)
+        dL_dK = 1
         gp.update_gradients_full(dL_dK, X, X2)
 
         v1 = gp.alpha_T.gradient
 
         def f_alpha_T(alpha_T):
-            gp = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu,
-                               lines_sig, var_C, var_L,
-                               alpha_C, alpha_L, alpha_T)
-            return np.sum(gp.K(X, X2))
+            gp2 = copy(gp)
+            gp2.set_alpha_T(alpha_T)
+            return np.sum(gp2.K(X, X2))
 
         v2 = derivative(f_alpha_T, alpha_T, dx=0.01*alpha_T)
         if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
@@ -77,10 +77,9 @@ def test_kernel_gradients():
         v1 = gp.alpha_L.gradient
 
         def f_alpha_L(alpha_L):
-            gp = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu,
-                               lines_sig, var_C, var_L,
-                               alpha_C, alpha_L, alpha_T)
-            return np.sum(gp.K(X, X2))
+            gp2 = copy(gp)
+            gp2.set_alpha_L(alpha_L)
+            return np.sum(gp2.K(X, X2))
 
         v2 = derivative(f_alpha_L, alpha_L, dx=0.01*alpha_L)
         if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
@@ -89,10 +88,9 @@ def test_kernel_gradients():
         v1 = gp.alpha_C.gradient
 
         def f_alpha_C(alpha_C):
-            gp = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig, lines_mu,
-                               lines_sig, var_C, var_L,
-                               alpha_C, alpha_L, alpha_T)
-            return np.sum(gp.K(X, X2))
+            gp2 = copy(gp)
+            gp2.set_alpha_C(alpha_C)
+            return np.sum(gp2.K(X, X2))
 
         v2 = derivative(f_alpha_C, alpha_C, dx=0.01*alpha_C)
         if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
@@ -123,7 +121,7 @@ def test_kernel_gradients():
             assert abs(v1/v2-1) < relative_accuracy
 
 
-def test_kernel_gradients():
+def test_kernel_Xgradients():
     """
     Numerically test the gradients of the kernel with respect to the inputs
      using random inputs and hyperparameters.

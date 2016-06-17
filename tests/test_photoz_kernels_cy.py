@@ -27,30 +27,28 @@ def test_diagonalOfKernels():
     fz2 = 1 + X2[:, 1]
     t1 = X[:, 2]
     t2 = X2[:, 2]
-    norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
-    KT, KC, KL \
-        = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
+    KC, KL \
+        = np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
     D_alpha_C, D_alpha_L, D_alpha_z \
         = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
     kernelparts(NO1, NO2, numCoefs, numLines,
-                alpha_C, alpha_L, alpha_T,
+                alpha_C, alpha_L,
                 fcoefs_amp, fcoefs_mu, fcoefs_sig,
-                lines_mu[:numLines], lines_sig[:numLines],
-                t1, b1, fz1, t2, b2, fz2, True,
-                norm1, norm2, KL, KC, KT,
+                lines_mu[:numLines], lines_sig[:numLines], norms,
+                b1, fz1, b2, fz2, True,
+                KL, KC,
                 D_alpha_C, D_alpha_L, D_alpha_z)
 
-    KT_diag, KC_diag, KL_diag\
-        = np.zeros((NO1,)), np.zeros((NO1,)), np.zeros((NO1,))
+    KC_diag, KL_diag\
+        = np.zeros((NO1,)), np.zeros((NO1,))
     D_alpha_C_diag, D_alpha_L_diag = np.zeros((NO1,)), np.zeros((NO1,))
     kernelparts_diag(NO1, numCoefs, numLines,
-                     alpha_C, alpha_L, alpha_T,
+                     alpha_C, alpha_L,
                      fcoefs_amp, fcoefs_mu, fcoefs_sig,
-                     lines_mu[:numLines], lines_sig[:numLines],
-                     t1, b1, fz1, True, norm1, KL_diag, KC_diag, KT_diag,
+                     lines_mu[:numLines], lines_sig[:numLines], norms,
+                     b1, fz1, True, KL_diag, KC_diag,
                      D_alpha_C_diag, D_alpha_L_diag)
 
-    np.testing.assert_almost_equal(KT_diag, np.diag(KT))
     np.testing.assert_almost_equal(KL_diag, np.diag(KL))
     np.testing.assert_almost_equal(KC_diag, np.diag(KC))
     np.testing.assert_almost_equal(D_alpha_C_diag, np.diag(D_alpha_C))

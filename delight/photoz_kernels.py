@@ -22,7 +22,7 @@ class Photoz_mean_function(Mapping):
     Mean function of photoz GP
     """
     def __init__(self, alpha, beta, fcoefs_amp, fcoefs_mu, fcoefs_sig,
-                 g_AB=1.0, lambdaRef=4.5e3, DL_z=None, name='photoz'):
+                 g_AB=1.0, lambdaRef=4.5e3, DL_z=None, name='photoz_mf'):
         """ Constructor."""
         # Call standard Kern constructor with 2 dimensions (z and l).
         super(Photoz_mean_function, self).__init__(4, 1, name)
@@ -190,7 +190,7 @@ class Photoz_kernel(Kern):
     def __init__(self, fcoefs_amp, fcoefs_mu, fcoefs_sig,
                  lines_mu, lines_sig,
                  var_C, var_L, alpha_C, alpha_L, alpha_T,
-                 g_AB=1.0, DL_z=None, name='photoz'):
+                 g_AB=1.0, DL_z=None, name='photoz_kern'):
         """ Constructor."""
         # Call standard Kern constructor with 3 dimensions (t, b and z).
         super(Photoz_kernel, self).__init__(4, None, name)
@@ -227,6 +227,12 @@ class Photoz_kernel(Kern):
         self.alpha_T.constrain_positive()
         self.link_parameters(self.var_C, self.var_L,
                              self.alpha_C, self.alpha_L, self.alpha_T)
+        self.Thashd = 0
+        self.Zhashd = 0
+        self.Thash = 0
+        self.T2hash = 0
+        self.Zhash = 0
+        self.Z2hash = 0
         # TODO: addd more realistic constraints?
 
     def set_alpha_C(self, alpha_C):
@@ -298,174 +304,143 @@ class Photoz_kernel(Kern):
         return b
 
     def update_gradients_diag(self, dL_dKdiag, X):
-        NO1 = X.shape[0]
-        b1 = self.roundband(X[:, 0])
-        fz1 = (1.+X[:, 1])
-        t1 = X[:, 3]
         l1 = X[:, 2]
-        norm1 = np.zeros((NO1,))
-        KT, KC, KL = np.zeros((NO1,)), np.zeros((NO1,)), np.zeros((NO1,))
-        D_alpha_C, D_alpha_L = np.zeros((NO1,)), np.zeros((NO1,))
-        kernelparts_diag(NO1, self.numCoefs, self.numLines,
-                         self.alpha_C, self.alpha_L, self.alpha_T,
-                         self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
-                         self.lines_mu[:self.numLines],
-                         self.lines_sig[:self.numLines], t1, b1, fz1, True,
-                         norm1, KL, KC, KT, D_alpha_C, D_alpha_L)
-        prefac = (fz1 * fz1 /
-                  (self.fourpi * self.g_AB * self.DL_z(X[:, 1]) *
-                   self.DL_z(X2[:, 1])))**2 * l1**2
-        self.var_C.gradient = np.sum(dL_dKdiag * KT * prefac * KC)
-        self.var_L.gradient = np.sum(dL_dKdiag * KT * prefac * KL)
+        self.update_kernelparts_diag(X)
+        prefac = self.Zprefac**2 * l1**2
+        self.var_C.gradient = np.sum(dL_dKdiag * self.KTd * prefac * self.KCd)
+        self.var_L.gradient = np.sum(dL_dKdiag * self.KTd * prefac * self.KLd)
         self.alpha_C.gradient = np.sum(dL_dKdiag * self.var_C *
-                                       KT * prefac * D_alpha_C)
+                                       self.KTd * prefac * self.D_alpha_Cd)
         self.alpha_L.gradient = np.sum(dL_dKdiag * self.var_L *
-                                       KT * prefac * D_alpha_L)
+                                       self.KTd * prefac * self.D_alpha_Ld)
         self.alpha_T.gradient = 0
 
     def update_gradients_full(self, dL_dK, X, X2=None):
         if X2 is None:
             X2 = X
-        NO1, NO2 = X.shape[0], X2.shape[0]
-        b1 = self.roundband(X[:, 0])
-        fz1 = (1.+X[:, 1])
         t1 = X[:, 3]
         l1 = X[:, 2]
-        b2 = self.roundband(X2[:, 0])
-        fz2 = (1.+X2[:, 1])
         t2 = X2[:, 3]
         l2 = X2[:, 2]
-        norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
-        KT, KC, KL\
-            = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        D_alpha_C, D_alpha_L, D_alpha_z\
-            = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        kernelparts(NO1, NO2, self.numCoefs, self.numLines,
-                    self.alpha_C, self.alpha_L, self.alpha_T,
-                    self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
-                    self.lines_mu[:self.numLines],
-                    self.lines_sig[:self.numLines],
-                    t1, b1, fz1, t2, b2, fz2, True, norm1, norm2,
-                    KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
-        prefac = (fz1[:, None] * fz2[None, :] /
-                  (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
-                   self.DL_z(X2[:, 1])[None, :]))**2 \
-            * l1[:, None] * l2[None, :]
-        self.var_C.gradient = np.sum(dL_dK * KT * prefac * KC)
-        self.var_L.gradient = np.sum(dL_dK * KT * prefac * KL)
+        self.update_kernelparts(X, X2)
+        prefac = self.Zprefac**2 * l1[:, None] * l2[None, :]
+        self.var_C.gradient = np.sum(dL_dK * self.KT * prefac * self.KC)
+        self.var_L.gradient = np.sum(dL_dK * self.KT * prefac * self.KL)
         self.alpha_C.gradient\
-            = np.sum(dL_dK * self.var_C * KT * prefac * D_alpha_C)
+            = np.sum(dL_dK * self.var_C * self.KT * prefac * self.D_alpha_C)
         self.alpha_L.gradient\
-            = np.sum(dL_dK * self.var_L * KT * prefac * D_alpha_L)
+            = np.sum(dL_dK * self.var_L * self.KT * prefac * self.D_alpha_L)
         self.alpha_T.gradient\
             = np.sum(dL_dK * (t1[:, None]-t2[None, :])**2 / self.alpha_T**3 *
-                     KT * prefac * (self.var_C*KC + self.var_L*KL))
+                     self.KT * prefac *
+                     (self.var_C * self.KC + self.var_L * self.KL))
 
     def Kdiag(self, X):
-        NO1 = X.shape[0]
-        b1 = self.roundband(X[:, 0])
-        fz1 = (1.+X[:, 1])
-        t1 = X[:, 3]
         l1 = X[:, 2]
-        norm1 = np.zeros((NO1,))
-        KT, KC, KL = np.zeros((NO1,)), np.zeros((NO1,)), np.zeros((NO1,))
-        D_alpha_C, D_alpha_L = np.zeros((NO1,)), np.zeros((NO1,))
-        kernelparts_diag(NO1, self.numCoefs, self.numLines,
-                         self.alpha_C, self.alpha_L, self.alpha_T,
-                         self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
-                         self.lines_mu[:self.numLines],
-                         self.lines_sig[:self.numLines],
-                         t1, b1, fz1, False, norm1, KL, KC, KT,
-                         D_alpha_C, D_alpha_L)
-        prefac = l1 * fz1**2 \
-            / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])**2)
-        return KT * prefac**2 * (self.var_C*KC + self.var_L*KL)
+        self.update_kernelparts_diag(X)
+        return self.KTd * self.Zprefacd**2 * l1 * l1 *\
+            (self.var_C*self.KCd + self.var_L*self.KLd)
 
     def K(self, X, X2=None):
         if X2 is None:
             X2 = X
-        NO1, NO2 = X.shape[0], X2.shape[0]
-        b1 = self.roundband(X[:, 0])
-        fz1 = (1.+X[:, 1])
         t1 = X[:, 3]
         l1 = X[:, 2]
-        b2 = self.roundband(X2[:, 0])
-        fz2 = (1.+X2[:, 1])
         t2 = X2[:, 3]
         l2 = X2[:, 2]
-        norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
-        KT, KC, KL\
-            = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        D_alpha_C, D_alpha_L, D_alpha_z\
-            = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        kernelparts(NO1, NO2, self.numCoefs, self.numLines,
-                    self.alpha_C, self.alpha_L, self.alpha_T,
-                    self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
-                    self.lines_mu[:self.numLines],
-                    self.lines_sig[:self.numLines],
-                    t1, b1, fz1, t2, b2, fz2, False, norm1, norm2,
-                    KL, KC, KT, D_alpha_C, D_alpha_L, D_alpha_z)
-        prefac = (fz1[:, None] * fz2[None, :] /
-                  (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
-                      self.DL_z(X2[:, 1])[None, :]))**2\
-            * l1[:, None] * l2[None, :]
-        return KT * prefac * (self.var_C*KC + self.var_L*KL)
+        self.update_kernelparts(X, X2)
+        return self.KT * self.Zprefac**2 * l1[:, None] * l2[None, :] *\
+            (self.var_C * self.KC + self.var_L * self.KL)
 
     def gradients_X(self, dL_dK, X, X2=None):
         if X2 is None:
             X2 = X
-        NO1, NO2 = X.shape[0], X2.shape[0]
-        b1 = self.roundband(X[:, 0])
-        fz1 = (1.+X[:, 1])
         t1 = X[:, 3]
         l1 = X[:, 2]
-        b2 = self.roundband(X2[:, 0])
-        fz2 = (1.+X2[:, 1])
         t2 = X2[:, 3]
         l2 = X2[:, 2]
-        norm1, norm2 = np.zeros((NO1,)), np.zeros((NO2,))
-        KT, KC, KL\
-            = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        D_alpha_C, D_alpha_L, D_alpha_z\
-            = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-        kernelparts(NO1, NO2, self.numCoefs, self.numLines,
-                    self.alpha_C, self.alpha_L, self.alpha_T,
-                    self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
-                    self.lines_mu[:self.numLines],
-                    self.lines_sig[:self.numLines],
-                    t1, b1, fz1, t2, b2, fz2, False,
-                    norm1, norm2, KL, KC, KT,
-                    D_alpha_C, D_alpha_L, D_alpha_z)
-
-        prefac = (fz1[:, None] * fz2[None, :] /
-                  (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
-                      self.DL_z(X2[:, 1])[None, :]))**2\
-            * l1[:, None] * l2[None, :]
-
-        tmp = dL_dK * KT * prefac * (self.var_C*KC + self.var_L*KL)
-
+        self.update_kernelparts(X, X2)
+        tmp = dL_dK * self.KT * self.Zprefac**2 * l1[:, None] * l2[None, :] *\
+            (self.var_C*self.KC + self.var_L*self.KL)
         grad = np.zeros(X.shape, dtype=np.float64)
-
-        np.sum(tmp / l1[:, None], axis=1, out=grad[:, 2])  # ell
-
-        tempfull = - tmp * (t1[:, None] - t2[None, :])\
-            / self.alpha_T**2
-        np.sum(tempfull, axis=1, out=grad[:, 3])  # t
-
+        grad[:, 2] = np.sum(tmp / l1[:, None], axis=1)  # ell
+        tempfull = - tmp * (t1[:, None] - t2[None, :]) / self.alpha_T**2
+        grad[:, 3] = np.sum(tempfull, axis=1)  # t
         # TODO: add kernel derivatives with respect to redshift
-        if False:
-            prefac = fz2[None, :]\
-                / (self.fourpi * self.g_AB * self.DL_z(X[:, 1])[:, None] *
-                   self.DL_z(X2[:, 1])[None, :])
-            cst = dL_dK * KT * prefac
-            tempfull = (2 * fz1[:, None] - 2 * fz1[:, None]**2 *
-                        self.DL_z.derivative(X[:, 1])[:, None]) *\
-                (self.var_C*KC + self.var_L*KL)\
-                + D_alpha_z * fz1[:, None]**2
-            np.sum(cst * tempfull, axis=1, out=grad[:, 1])  # z
-
         return grad
 
     def gradients_X_diag(self, dL_dKdiag, X):
         # TODO: speed up diagonal gradients
         return self.gradients_X(dL_dKdiag, X)
+
+    def cThash(self, X):
+        return hash(X[:, 3].tostring()) + hash(self.alpha_T.tostring())
+
+    def cZhash(self, X):
+        return hash(X[:, 1].tostring())\
+            + hash(self.alpha_C.tostring()) + hash(self.alpha_L.tostring())
+
+    def update_kernelparts(self, X, X2=None):
+        b1 = self.roundband(X[:, 0])
+        z1 = X[:, 1]
+        fz1 = (1.+X[:, 1])
+        t1 = X[:, 3]
+        l1 = X[:, 2]
+        b2 = self.roundband(X2[:, 0])
+        z2 = X2[:, 1]
+        fz2 = (1.+X2[:, 1])
+        t2 = X2[:, 3]
+        l2 = X2[:, 2]
+        if self.Zhash != self.cZhash(X) or self.Z2hash != self.cZhash(X2):
+            NO1, NO2 = X.shape[0], X2.shape[0]
+            self.KC, self.KL = np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
+            self.D_alpha_C, self.D_alpha_L, self.D_alpha_z\
+                = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)),\
+                np.zeros((NO1, NO2))
+            kernelparts(NO1, NO2, self.numCoefs, self.numLines,
+                        self.alpha_C, self.alpha_L,
+                        self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
+                        self.lines_mu[:self.numLines],
+                        self.lines_sig[:self.numLines],
+                        self.norms,
+                        b1, fz1, b2, fz2, True,
+                        self.KL, self.KC, self.D_alpha_C,
+                        self.D_alpha_L, self.D_alpha_z)
+            self.Zprefac = fz1[:, None] * fz2[None, :] /\
+                (self.fourpi * self.g_AB * self.DL_z(z1)[:, None] *
+                 self.DL_z(z2)[None, :])
+            self.Zhash = self.cZhash(X)
+            self.Z2hash = self.cZhash(X2)
+
+        if self.Thash != self.cThash(X) or self.T2hash != self.cThash(X2):
+            self.KT = np.exp(-0.5*pow((t1[:, None]-t2[None, :]) /
+                                      self.alpha_T, 2))
+            self.Thash = self.cThash(X)
+            self.T2hash = self.cThash(X2)
+
+    def update_kernelparts_diag(self, X):
+        b1 = self.roundband(X[:, 0])
+        z1 = X[:, 1]
+        fz1 = (1.+X[:, 1])
+        t1 = X[:, 3]
+        l1 = X[:, 2]
+        if self.Zhashd != self.cZhash(X):
+            NO1 = X.shape[0]
+            self.KCd, self.KLd = np.zeros((NO1,)), np.zeros((NO1,))
+            self.D_alpha_Cd = np.zeros((NO1,))
+            self.D_alpha_Ld = np.zeros((NO1,))
+            kernelparts_diag(NO1, self.numCoefs, self.numLines,
+                             self.alpha_C, self.alpha_L,
+                             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
+                             self.lines_mu[:self.numLines],
+                             self.lines_sig[:self.numLines], self.norms,
+                             b1, fz1, True,
+                             self.KLd, self.KCd,
+                             self.D_alpha_Cd, self.D_alpha_Ld)
+            self.Zprefacd = fz1**2 /\
+                (self.fourpi * self.g_AB * self.DL_z(z1)**2)
+            self.Zhashd = self.cZhash(X)
+
+        if self.Thashd != self.cThash(X):
+            self.KTd = np.ones((X.shape[0],))
+            self.Thashd = self.cThash(X)
