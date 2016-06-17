@@ -50,6 +50,7 @@ class Photoz_mean_function(Mapping):
         self.beta = Param('beta', float(beta))
         self.beta.constrain_positive()
         self.link_parameter(self.beta)
+        self.hash = 0
 
     def set_alpha(self, alpha):
         """Set alpha"""
@@ -71,25 +72,89 @@ class Photoz_mean_function(Mapping):
         self.link_parameter(self.beta, index=index)
         self.update_model(True)
 
+    def chash(self, X):
+        return hash(X.tostring())\
+            + hash(self.alpha.tostring()) + hash(self.beta.tostring())
+
+    def update_parts(self, X):
+        b = X[:, 0].astype(int)
+        z = X[:, 1]
+        t = X[:, 3]
+        l = X[:, 2]
+        opz = 1. + z
+        if self.hash != self.chash(X):
+            self.sum_mf = np.zeros_like(t)
+            self.sum_beta = np.zeros_like(t)
+            self.sum_alpha = np.zeros_like(t)
+            self.sum_t = np.zeros_like(t)
+            self.sum_ell = np.zeros_like(t)
+            for i in range(self.numCoefs):
+                amp, mu, sig = self.fcoefs_amp[b, i],\
+                               self.fcoefs_mu[b, i],\
+                               self.fcoefs_sig[b, i]
+                alphat = self.alpha * t**self.beta
+                term1 = (mu * opz - alphat * sig**2) /\
+                    (1.41421356237 * sig * opz)
+                term2 = alphat * (self.lambdaRef - mu/opz +
+                                  alphat*(sig/opz)**2/2)
+
+                self.sum_mf += amp * (1 + erf(term1)) * np.exp(term2) *\
+                    self.sqrthalfpi * sig
+                self.sum_ell += amp * (1 + erf(term1)) * np.exp(term2) *\
+                    self.sqrthalfpi * sig
+
+                Dterm1 = (self.alpha*self.beta *
+                          np.exp(-((-self.alpha*sig**2*t**self.beta +
+                                    mu*opz)**2 /
+                                   (2*sig**2*opz**2))) *
+                          self.sqrthalfpi*sig*t**(self.beta-1)) / opz
+                Dterm2 = ((self.alpha**2*self.beta*sig**2*t**(2*self.beta-1)) /
+                          (2*opz**2) +
+                          self.alpha*self.beta*t**(self.beta-1) *
+                          (self.lambdaRef +
+                           (self.alpha*sig**2*t**self.beta) /
+                           (2*opz**2) - mu/opz))
+                self.sum_t += amp * np.exp(term2) * Dterm1 *\
+                    self.sqrthalfpi * sig
+                self.sum_t += amp * (1 + erf(term1)) * np.exp(term2) *\
+                    Dterm2 * self.sqrthalfpi * sig
+
+                Dterm1 = np.sqrt(2/np.pi) * sig * t**self.beta / opz *\
+                    np.exp(-0.5*((mu*opz - alphat * sig**2 * t**self.beta) /
+                           sig / opz)**2)
+                Dterm2 = t**self.beta * (self.lambdaRef - mu/opz +
+                                         alphat*(sig/opz)**2/2)\
+                    + alphat*(t**self.beta*sig/opz)**2/2
+                self.sum_alpha += amp * np.exp(term2) * Dterm1 *\
+                    self.sqrthalfpi * sig
+                self.sum_alpha += amp * (1 + erf(term1)) * np.exp(term2) *\
+                    Dterm2 * self.sqrthalfpi * sig
+
+                Dterm1 = - np.sqrt(2/np.pi) * sig * t**self.beta * np.log(t) /\
+                    (1 + z) * np.exp(-((-self.alpha * sig**2 * t**self.beta +
+                                     mu*(1 + z))**2 / (2*sig**2 * (1 + z)**2)))
+                Dterm2 = ((self.alpha**2 * sig**2 * t**(2*self.beta) *
+                           np.log(t)) / (2*(1 + z)**2) +
+                          self.alpha*t**self.beta *
+                          (self.lambdaRef +
+                           (self.alpha * sig**2 * t**self.beta) /
+                          (2*(1 + z)**2) - mu/(1 + z)) * np.log(t))
+                self.sum_beta += amp * np.exp(term2) * Dterm1 *\
+                    self.sqrthalfpi * sig
+                self.sum_beta += amp * (1 + erf(term1)) * np.exp(term2) *\
+                    Dterm2 * self.sqrthalfpi * sig
+
+            self.hash = self.chash(X)
+
     def f(self, X):
         b = X[:, 0].astype(int)
         z = X[:, 1]
         t = X[:, 3]
         l = X[:, 2]
         opz = 1. + z
+        self.update_parts(X)
         fac = l*opz/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
-        thesum = np.zeros_like(t)
-        for i in range(self.numCoefs):
-            amp, mu, sig = self.fcoefs_amp[b, i],\
-                           self.fcoefs_mu[b, i],\
-                           self.fcoefs_sig[b, i]
-            alphat = self.alpha * t**self.beta
-            term1 = (mu * opz - alphat * sig**2) /\
-                (1.41421356237 * sig * opz)
-            term2 = alphat * (self.lambdaRef - mu/opz + alphat*(sig/opz)**2/2)
-            thesum += amp * (1 + erf(term1)) * np.exp(term2) *\
-                self.sqrthalfpi * sig
-        return (fac * thesum).reshape((-1, 1))
+        return (fac * self.sum_mf).reshape((-1, 1))
 
     def gradients_X(self, dL_dm, X):
         grad = np.zeros_like(X)
@@ -98,41 +163,11 @@ class Photoz_mean_function(Mapping):
         t = X[:, 3]
         l = X[:, 2]
         opz = 1 + z
+        self.update_parts(X)
         fac = opz/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
-        sum_t = np.zeros_like(t)
-        sum_ell = np.zeros_like(t)
-        for i in range(self.numCoefs):
-            amp, mu, sig = self.fcoefs_amp[b, i],\
-                           self.fcoefs_mu[b, i],\
-                           self.fcoefs_sig[b, i]
-            alphat = self.alpha * t**self.beta
-            term1 = (mu * opz - alphat * sig**2) /\
-                (1.41421356237 * sig * opz)
-            term2 = alphat * (self.lambdaRef - mu/opz + alphat*(sig/opz)**2/2)
-            sum_ell += amp * (1 + erf(term1)) * np.exp(term2) *\
-                self.sqrthalfpi * sig
-
-            Dterm1 = (self.alpha*self.beta *
-                      np.exp(-((-self.alpha*sig**2*t**self.beta + mu*opz)**2 /
-                               (2*sig**2*opz**2))) *
-                      self.sqrthalfpi*sig*t**(self.beta-1)) / opz
-            Dterm2 = ((self.alpha**2*self.beta*sig**2*t**(2*self.beta-1)) /
-                      (2*opz**2) +
-                      self.alpha*self.beta*t**(self.beta-1) *
-                      (self.lambdaRef +
-                       (self.alpha*sig**2*t**self.beta)/(2*opz**2) - mu/opz))
-            sum_t += amp * np.exp(term2) * Dterm1 *\
-                self.sqrthalfpi * sig
-            sum_t += amp * (1 + erf(term1)) * np.exp(term2) * Dterm2 *\
-                self.sqrthalfpi * sig
-
-        grad[:, 2] = fac * sum_ell  # ell
-        grad[:, 3] = l * fac * sum_t  # t
-        if isinstance(self.DL_z, approx_DL):
-            dDLdz = self.DL_z.derivative(z)
-            # TODO: implement z gradient
-        else:
-            raise NotImplementedError
+        grad[:, 2] = fac * self.sum_ell  # ell
+        grad[:, 3] = l * fac * self.sum_t  # t
+        # TODO: implement z gradient
         return dL_dm * grad
 
     def update_gradients(self, dL_dF, X):
@@ -141,46 +176,13 @@ class Photoz_mean_function(Mapping):
         t = X[:, 3]
         l = X[:, 2]
         opz = 1 + z
+        self.update_parts(X)
         fac = 1. / self.fourpi / self.DL_z(z)**2.0 / self.g_AB / self.norms[b]
-        sum_alpha = np.zeros_like(t)
-        sum_beta = np.zeros_like(t)
-        for i in range(self.numCoefs):
-            amp, mu, sig = self.fcoefs_amp[b, i],\
-                           self.fcoefs_mu[b, i],\
-                           self.fcoefs_sig[b, i]
-            alphat = self.alpha * t**self.beta
-            term1 = (mu * opz - alphat * sig**2) /\
-                (1.41421356237 * sig * opz)
-            term2 = alphat * (self.lambdaRef - mu/opz + alphat*(sig/opz)**2/2)
-
-            Dterm1 = np.sqrt(2/np.pi) * sig * t**self.beta / opz *\
-                np.exp(-0.5*((mu*opz - alphat * sig**2 * t**self.beta) /
-                       sig / opz)**2)
-            Dterm2 = t**self.beta * (self.lambdaRef - mu/opz +
-                                     alphat*(sig/opz)**2/2)\
-                + alphat*(t**self.beta*sig/opz)**2/2
-            sum_alpha += amp * np.exp(term2) * Dterm1 *\
-                self.sqrthalfpi * sig
-            sum_alpha += amp * (1 + erf(term1)) * np.exp(term2) * Dterm2 *\
-                self.sqrthalfpi * sig
-
-            Dterm1 = - np.sqrt(2/np.pi) * sig * t**self.beta * np.log(t) /\
-                (1 + z) * np.exp(-((-self.alpha * sig**2 * t**self.beta +
-                                 mu*(1 + z))**2 / (2*sig**2 * (1 + z)**2)))
-            Dterm2 = ((self.alpha**2 * sig**2 * t**(2*self.beta) * np.log(t)) /
-                      (2*(1 + z)**2) + self.alpha*t**self.beta *
-                      (self.lambdaRef + (self.alpha * sig**2 * t**self.beta) /
-                      (2*(1 + z)**2) - mu/(1 + z)) * np.log(t))
-            sum_beta += amp * np.exp(term2) * Dterm1 *\
-                self.sqrthalfpi * sig
-            sum_beta += amp * (1 + erf(term1)) * np.exp(term2) * Dterm2 *\
-                self.sqrthalfpi * sig
-
-        self.alpha.gradient = np.dot(dL_dF.T, opz * l * fac * sum_alpha)
+        self.alpha.gradient = np.dot(dL_dF.T, opz * l * fac * self.sum_alpha)
         ind = t > 0
         if ind.sum() > 0:
             self.beta.gradient = np.dot(dL_dF[ind].T,
-                                        (opz * l * fac * sum_beta)[ind])
+                                        (opz * l * fac * self.sum_beta)[ind])
 
 
 class Photoz_kernel(Kern):
@@ -306,13 +308,13 @@ class Photoz_kernel(Kern):
     def update_gradients_diag(self, dL_dKdiag, X):
         l1 = X[:, 2]
         self.update_kernelparts_diag(X)
-        prefac = self.Zprefac**2 * l1**2
-        self.var_C.gradient = np.sum(dL_dKdiag * self.KTd * prefac * self.KCd)
-        self.var_L.gradient = np.sum(dL_dKdiag * self.KTd * prefac * self.KLd)
+        prefac = self.KTd * self.Zprefac**2 * l1**2
+        self.var_C.gradient = np.sum(dL_dKdiag * prefac * self.KCd)
+        self.var_L.gradient = np.sum(dL_dKdiag * prefac * self.KLd)
         self.alpha_C.gradient = np.sum(dL_dKdiag * self.var_C *
-                                       self.KTd * prefac * self.D_alpha_Cd)
+                                       prefac * self.D_alpha_Cd)
         self.alpha_L.gradient = np.sum(dL_dKdiag * self.var_L *
-                                       self.KTd * prefac * self.D_alpha_Ld)
+                                       prefac * self.D_alpha_Ld)
         self.alpha_T.gradient = 0
 
     def update_gradients_full(self, dL_dK, X, X2=None):
@@ -323,17 +325,16 @@ class Photoz_kernel(Kern):
         t2 = X2[:, 3]
         l2 = X2[:, 2]
         self.update_kernelparts(X, X2)
-        prefac = self.Zprefac**2 * l1[:, None] * l2[None, :]
-        self.var_C.gradient = np.sum(dL_dK * self.KT * prefac * self.KC)
-        self.var_L.gradient = np.sum(dL_dK * self.KT * prefac * self.KL)
+        prefac = self.KT * self.Zprefac**2 * l1[:, None] * l2[None, :]
+        self.var_C.gradient = np.sum(dL_dK * prefac * self.KC)
+        self.var_L.gradient = np.sum(dL_dK * prefac * self.KL)
         self.alpha_C.gradient\
-            = np.sum(dL_dK * self.var_C * self.KT * prefac * self.D_alpha_C)
+            = np.sum(dL_dK * self.var_C * prefac * self.D_alpha_C)
         self.alpha_L.gradient\
-            = np.sum(dL_dK * self.var_L * self.KT * prefac * self.D_alpha_L)
+            = np.sum(dL_dK * self.var_L * prefac * self.D_alpha_L)
         self.alpha_T.gradient\
             = np.sum(dL_dK * (t1[:, None]-t2[None, :])**2 / self.alpha_T**3 *
-                     self.KT * prefac *
-                     (self.var_C * self.KC + self.var_L * self.KL))
+                     prefac * (self.var_C * self.KC + self.var_L * self.KL))
 
     def Kdiag(self, X):
         l1 = X[:, 2]

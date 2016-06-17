@@ -18,6 +18,7 @@ numCoefs = 10
 relative_accuracy = 0.05
 # TODO: add tests for diagonal gradients of kernel?
 # TODO: add formal/numerical test for kernel w.r.t. mean fct
+# TODO: add tests for with and without caching! fixture for random X
 
 
 def test_kernel():
@@ -183,8 +184,8 @@ def test_meanfunction_gradients_X():
         v1 = mf.alpha.gradient
 
         def f_alpha(alpha):
-            mf2 = Photoz_mean_function(alpha, beta,
-                                       fcoefs_amp, fcoefs_mu, fcoefs_sig)
+            mf2 = copy(mf)
+            mf2.set_alpha(alpha)
             return np.sum(mf2.f(X))
 
         v2 = derivative(f_alpha, alpha, dx=0.01*alpha)
@@ -193,8 +194,8 @@ def test_meanfunction_gradients_X():
         v1 = mf.beta.gradient
 
         def f_beta(beta):
-            mf2 = Photoz_mean_function(alpha, beta,
-                                       fcoefs_amp, fcoefs_mu, fcoefs_sig)
+            mf2 = copy(mf)
+            mf2.set_beta(beta)
             return np.sum(mf2.f(X))
 
         v2 = derivative(f_beta, beta, dx=0.01*beta)
