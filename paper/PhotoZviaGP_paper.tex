@@ -344,7 +344,7 @@ In this case, one can derive an exact expression for the Gaussian Process mean f
 The kernel is
 \eqn{
 	k(b,b',z,z',\ell,\ell',t,t') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2 \frac{\ell \ell'}{C_bC_{b'}} \nonumber \\
-	  \times \ \sum_{i}\sum_{i'} a_{i} a_{i'} &&\hspace*{-5mm} \left( 2\pi\sigma_{i}\sigma_{i'} V_C\ K_C(z,z',b,b',i,i') + V_L \ \sum_{l}\sum_{\ell'} K_L(z,z',b,b',i,i',\ell,\ell')\right)
+	  \times \ \sum_{i}\sum_{i'} a_{i} a_{i'} &&\hspace*{-5mm} \left( 2\pi\sigma_{i}\sigma_{i'} V_C\ K_C(z,z',b,b',i,i') + V_L \ \sum_{l}\sum_{l'} K_L(z,z',b,b',i,i',l,l')\right)
 }
 where the continuum kernel is
 \eqn{
@@ -356,7 +356,7 @@ with
 }
 and the line kernel is
 \eqn{
-	K_L(z,z',b,b',i,i',\ell,\ell') \ = \  \mathcal{N}\left( \mu_{i}, \mu_{\ell}(1+z), \sigma_{i}\right) \ \mathcal{N}\left( \mu_{i'}, \mu_{\ell'}(1+z'), \sigma_{i}\right) \ \mathcal{N}\left( \mu_{\ell}, \mu_{\ell'}, {\alpha_L}\right)
+	K_L(z,z',b,b',i,i',l,l') \ = \  \mathcal{N}\left( \mu_{i}, \mu_{l}(1+z), \sigma_{i}\right) \ \mathcal{N}\left( \mu_{i'}, \mu_{l'}(1+z'), \sigma_{i}\right) \ \mathcal{N}\left( \mu_{l}, \mu_{l'}, {\alpha_L}\right)
 }	
 
 Finally, for the type dependence of the mean function, we set $\alpha(t) = \alpha_0 \ t$. \todo{Explain rationale}.
