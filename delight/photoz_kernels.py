@@ -79,8 +79,8 @@ class Photoz_mean_function(Mapping):
     def update_parts(self, X):
         b = X[:, 0].astype(int)
         z = X[:, 1]
-        t = X[:, 3]
         l = X[:, 2]
+        t = X[:, 3]
         opz = 1. + z
         if self.hash != self.chash(X):
             self.sum_mf = np.zeros_like(t)
@@ -149,8 +149,8 @@ class Photoz_mean_function(Mapping):
     def f(self, X):
         b = X[:, 0].astype(int)
         z = X[:, 1]
-        t = X[:, 3]
         l = X[:, 2]
+        t = X[:, 3]
         opz = 1. + z
         self.update_parts(X)
         fac = l*opz/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
@@ -160,8 +160,8 @@ class Photoz_mean_function(Mapping):
         grad = np.zeros_like(X)
         b = X[:, 0].astype(int)
         z = X[:, 1]
-        t = X[:, 3]
         l = X[:, 2]
+        t = X[:, 3]
         opz = 1 + z
         self.update_parts(X)
         fac = opz/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
@@ -173,8 +173,8 @@ class Photoz_mean_function(Mapping):
     def update_gradients(self, dL_dF, X):
         b = X[:, 0].astype(int)
         z = X[:, 1]
-        t = X[:, 3]
         l = X[:, 2]
+        t = X[:, 3]
         opz = 1 + z
         self.update_parts(X)
         fac = 1. / self.fourpi / self.DL_z(z)**2.0 / self.g_AB / self.norms[b]
@@ -230,10 +230,10 @@ class Photoz_kernel(Kern):
         self.link_parameters(self.var_C, self.var_L,
                              self.alpha_C, self.alpha_L, self.alpha_T)
         self.Thashd = 0
-        self.Zhashd = 0
+        self.BZhashd = 0
         self.Thash = 0
         self.T2hash = 0
-        self.Zhash = 0
+        self.BZhash = 0
         self.Z2hash = 0
         # TODO: addd more realistic constraints?
 
@@ -308,7 +308,7 @@ class Photoz_kernel(Kern):
     def update_gradients_diag(self, dL_dKdiag, X):
         l1 = X[:, 2]
         self.update_kernelparts_diag(X)
-        prefac = self.KTd * self.Zprefac**2 * l1**2
+        prefac = self.KTd * self.Zprefacd**2 * l1**2
         self.var_C.gradient = np.sum(dL_dKdiag * prefac * self.KCd)
         self.var_L.gradient = np.sum(dL_dKdiag * prefac * self.KLd)
         self.alpha_C.gradient = np.sum(dL_dKdiag * self.var_C *
@@ -320,10 +320,10 @@ class Photoz_kernel(Kern):
     def update_gradients_full(self, dL_dK, X, X2=None):
         if X2 is None:
             X2 = X
-        t1 = X[:, 3]
         l1 = X[:, 2]
-        t2 = X2[:, 3]
+        t1 = X[:, 3]
         l2 = X2[:, 2]
+        t2 = X2[:, 3]
         self.update_kernelparts(X, X2)
         prefac = self.KT * self.Zprefac**2 * l1[:, None] * l2[None, :]
         self.var_C.gradient = np.sum(dL_dK * prefac * self.KC)
@@ -339,16 +339,16 @@ class Photoz_kernel(Kern):
     def Kdiag(self, X):
         l1 = X[:, 2]
         self.update_kernelparts_diag(X)
-        return self.KTd * self.Zprefacd**2 * l1 * l1 *\
-            (self.var_C*self.KCd + self.var_L*self.KLd)
+        return self.KTd * self.Zprefacd**2 * l1**2 *\
+            (self.var_C * self.KCd + self.var_L * self.KLd)
 
     def K(self, X, X2=None):
         if X2 is None:
             X2 = X
-        t1 = X[:, 3]
         l1 = X[:, 2]
-        t2 = X2[:, 3]
+        t1 = X[:, 3]
         l2 = X2[:, 2]
+        t2 = X2[:, 3]
         self.update_kernelparts(X, X2)
         return self.KT * self.Zprefac**2 * l1[:, None] * l2[None, :] *\
             (self.var_C * self.KC + self.var_L * self.KL)
@@ -356,10 +356,10 @@ class Photoz_kernel(Kern):
     def gradients_X(self, dL_dK, X, X2=None):
         if X2 is None:
             X2 = X
-        t1 = X[:, 3]
         l1 = X[:, 2]
-        t2 = X2[:, 3]
+        t1 = X[:, 3]
         l2 = X2[:, 2]
+        t2 = X2[:, 3]
         self.update_kernelparts(X, X2)
         tmp = dL_dK * self.KT * self.Zprefac**2 * l1[:, None] * l2[None, :] *\
             (self.var_C*self.KC + self.var_L*self.KL)
@@ -377,22 +377,24 @@ class Photoz_kernel(Kern):
     def cThash(self, X):
         return hash(X[:, 3].tostring()) + hash(self.alpha_T.tostring())
 
-    def cZhash(self, X):
-        return hash(X[:, 1].tostring())\
+    def cBZhash(self, X):
+        return hash(X[:, 0:1].tostring())\
             + hash(self.alpha_C.tostring()) + hash(self.alpha_L.tostring())
 
     def update_kernelparts(self, X, X2=None):
+        if X2 is None:
+            X2 = X
         b1 = self.roundband(X[:, 0])
         z1 = X[:, 1]
         fz1 = (1.+X[:, 1])
-        t1 = X[:, 3]
         l1 = X[:, 2]
+        t1 = X[:, 3]
         b2 = self.roundband(X2[:, 0])
         z2 = X2[:, 1]
         fz2 = (1.+X2[:, 1])
-        t2 = X2[:, 3]
         l2 = X2[:, 2]
-        if self.Zhash != self.cZhash(X) or self.Z2hash != self.cZhash(X2):
+        t2 = X2[:, 3]
+        if self.BZhash != self.cBZhash(X) or self.Z2hash != self.cBZhash(X2):
             NO1, NO2 = X.shape[0], X2.shape[0]
             self.KC, self.KL = np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
             self.D_alpha_C, self.D_alpha_L, self.D_alpha_z\
@@ -410,8 +412,8 @@ class Photoz_kernel(Kern):
             self.Zprefac = fz1[:, None] * fz2[None, :] /\
                 (self.fourpi * self.g_AB * self.DL_z(z1)[:, None] *
                  self.DL_z(z2)[None, :])
-            self.Zhash = self.cZhash(X)
-            self.Z2hash = self.cZhash(X2)
+            self.BZhash = self.cBZhash(X)
+            self.Z2hash = self.cBZhash(X2)
 
         if self.Thash != self.cThash(X) or self.T2hash != self.cThash(X2):
             self.KT = np.exp(-0.5*pow((t1[:, None]-t2[None, :]) /
@@ -423,9 +425,9 @@ class Photoz_kernel(Kern):
         b1 = self.roundband(X[:, 0])
         z1 = X[:, 1]
         fz1 = (1.+X[:, 1])
-        t1 = X[:, 3]
         l1 = X[:, 2]
-        if self.Zhashd != self.cZhash(X):
+        t1 = X[:, 3]
+        if self.BZhashd != self.cBZhash(X):
             NO1 = X.shape[0]
             self.KCd, self.KLd = np.zeros((NO1,)), np.zeros((NO1,))
             self.D_alpha_Cd = np.zeros((NO1,))
@@ -440,7 +442,7 @@ class Photoz_kernel(Kern):
                              self.D_alpha_Cd, self.D_alpha_Ld)
             self.Zprefacd = fz1**2 /\
                 (self.fourpi * self.g_AB * self.DL_z(z1)**2)
-            self.Zhashd = self.cZhash(X)
+            self.BZhashd = self.cBZhash(X)
 
         if self.Thashd != self.cThash(X):
             self.KTd = np.ones((X.shape[0],))
