@@ -119,20 +119,35 @@ class PhotozGP(Model):
                 self.Y_inducing.constrain_positive()
                 self.link_parameter(self.Y_inducing)
 
-    def set_unfixed_parameters(self, params):
-        """Set unfixed parameters all at once"""
-        # TODO: speed this up!!
-        self.update_model(False)
+    def get_param_names_and_indices(self):
+        scalar_params, array_params = {}, {}
         for i, nm in enumerate(self.parameter_names_flat()):
             nmb = nm[9:]
             if '[[' in nmb and ']]' in nmb:
                 i1, i2 = np.array(re.findall("\[\[(.*?)\]\]", nmb)[0]
                                   .split(), dtype=int)
                 nmb = nmb.split('[[')[0]
-                self[nmb][i1, i2] = params[i]
+                if nmb not in array_params:
+                    array_params[nmb] = ([[i1, i2]], [i])
+                else:
+                    idx1, idx2 = array_params[nmb]
+                    idx1.append([i1, i2])
+                    idx2.append(i)
+                    array_params[nmb] = (idx1, idx2)
             else:
-                self[nmb] = params[i]
-        self.update_model(True)  # self.parameters_changed()
+                scalar_params[nmb] = i
+        for nmb, (idx1, idx2) in array_params.iteritems():
+            array_params[nmb] = (np.array(idx1), np.array(idx2))
+        return scalar_params, array_params
+
+    def set_unfixed_parameters(self, params, scalar_params, array_params):
+        """Set unfixed parameters all at once"""
+        self.update_model(False)
+        for nmb, (idx1, idx2) in array_params.iteritems():
+            self[nmb][idx1[:, 0], idx1[:, 1]] = params[idx2]
+        for nmb, i in scalar_params.iteritems():
+            self[nmb] = params[i]
+        self.update_model(True)
 
     def set_redshifts(self, redshifts):
         """Set redshifts"""
@@ -140,12 +155,12 @@ class PhotozGP(Model):
         assert redshifts.shape[0] == self.types.shape[0] and\
             redshifts.shape[0] == self.luminosities.shape[0]
         self.update_model(False)
-        #index = self.redshifts._parent_index_
-        #self.unlink_parameter(self.redshifts)
-        #self.redshifts = Param('redshifts', redshifts)
-        #self.redshifts.constrain_positive()
+        # index = self.redshifts._parent_index_
+        # self.unlink_parameter(self.redshifts)
+        # self.redshifts = Param('redshifts', redshifts)
+        # self.redshifts.constrain_positive()
         self.redshifts.values[:, 0] = redshifts[:, 0]
-        #self.link_parameter(self.redshifts, index=index)
+        # self.link_parameter(self.redshifts, index=index)
         self.update_model(True)
 
     def set_luminosities(self, luminosities):
@@ -153,13 +168,13 @@ class PhotozGP(Model):
         assert luminosities.shape[1] == 1
         assert luminosities.shape[0] == self.types.shape[0] and\
             luminosities.shape[0] == self.redshifts.shape[0]
-        #self.update_model(False)
-        #index = self.luminosities._parent_index_
-        #self.unlink_parameter(self.luminosities)
-        #self.luminosities = Param('luminosities', luminosities)
+        # self.update_model(False)
+        # index = self.luminosities._parent_index_
+        # self.unlink_parameter(self.luminosities)
+        # self.luminosities = Param('luminosities', luminosities)
         self.luminosities.values[:, 0] = luminosities[:, 0]
-        #self.luminosities.constrain_positive()
-        #self.link_parameter(self.luminosities, index=index)
+        # self.luminosities.constrain_positive()
+        # self.link_parameter(self.luminosities, index=index)
         self.update_model(True)
 
     def set_types(self, types):
@@ -168,12 +183,12 @@ class PhotozGP(Model):
         assert types.shape[0] == self.redshifts.shape[0] and\
             types.shape[0] == self.luminosities.shape[0]
         self.update_model(False)
-        #index = self.types._parent_index_
-        #self.unlink_parameter(self.types)
-        #self.types = Param('types', types)
-        #self.types.constrain_bounded(0, 1)
+        # index = self.types._parent_index_
+        # self.unlink_parameter(self.types)
+        # self.types = Param('types', types)
+        # self.types.constrain_bounded(0, 1)
         self.types.values[:, 0] = types[:, 0]
-        #self.link_parameter(self.types, index=index)
+        # self.link_parameter(self.types, index=index)
         self.update_model(True)
 
     def parameters_changed(self):
