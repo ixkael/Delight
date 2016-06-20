@@ -1,6 +1,8 @@
 # Delight
 **Photometric redshift via Gaussian processes with physical kernels.**
 
+*Warning: this code is still in active development and is not quite ready to be blindly applied to arbitrary photometric galaxy surveys. But this day will come.*
+
 ![alt tag](https://travis-ci.org/ixkael/Delight.svg?branch=master)
 ![alt tag](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)
 [![Coverage Status](https://coveralls.io/repos/github/ixkael/Delight/badge.svg?branch=master)](https://coveralls.io/github/ixkael/Delight?branch=master)
