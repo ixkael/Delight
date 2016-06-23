@@ -2,6 +2,7 @@
 import numpy as np
 from copy import copy
 from scipy.special import erf
+from scipy.interpolate import interp1d, interp2d, RectBivariateSpline
 
 import GPy
 
@@ -15,6 +16,8 @@ from photoz_kernels_cy import kernelparts
 from photoz_kernels_cy import kernelparts_diag
 
 from delight.utils import approx_DL
+
+kind = "linear"
 
 
 class Photoz_mean_function(Mapping):
@@ -192,7 +195,8 @@ class Photoz_kernel(Kern):
     def __init__(self, fcoefs_amp, fcoefs_mu, fcoefs_sig,
                  lines_mu, lines_sig,
                  var_C, var_L, alpha_C, alpha_L, alpha_T,
-                 g_AB=1.0, DL_z=None, name='photoz_kern'):
+                 g_AB=1.0, DL_z=None, name='photoz_kern',
+                 redshiftGrid=np.linspace(0, 3, num=120)):
         """ Constructor."""
         # Call standard Kern constructor with 3 dimensions (t, b and z).
         super(Photoz_kernel, self).__init__(4, None, name)
@@ -234,7 +238,10 @@ class Photoz_kernel(Kern):
         self.Thash = 0
         self.T2hash = 0
         self.BZhash = 0
-        self.Z2hash = 0
+        self.BZ2hash = 0
+        self.CLhash = 0
+        self.redshiftGrid = redshiftGrid
+        self.nz = redshiftGrid.size
         # TODO: addd more realistic constraints?
 
     def set_alpha_C(self, alpha_C):
@@ -369,37 +376,181 @@ class Photoz_kernel(Kern):
     def cThash(self, X):
         return hash(X[:, 3].tostring()) + hash(self.alpha_T.tostring())
 
+    def cCLhash(self):
+        return hash(self.alpha_C.tostring()) + hash(self.alpha_L.tostring())
+
     def cBZhash(self, X):
-        return hash(X[:, 0:2].tostring())\
-            + hash(self.alpha_C.tostring()) + hash(self.alpha_L.tostring())
+        return hash(X[:, 0:2].tostring())
+
+    def construct_interpolators(self):
+        bands = np.arange(self.numBands).astype(int)
+        fzgrid = 1 + self.redshiftGrid
+        size = self.numBands*self.numBands
+        self.KL_interp = np.empty(size, dtype=interp2d)
+        self.KC_interp = np.empty(size, dtype=interp2d)
+        self.D_alpha_C_interp = np.empty(size, dtype=interp2d)
+        self.D_alpha_L_interp = np.empty(size, dtype=interp2d)
+        self.D_alpha_z_interp = np.empty(size, dtype=interp2d)
+        for b1 in range(self.numBands):
+            for b2 in range(b1+1):
+                ts = (self.nz, self.nz)
+                KC_grid, KL_grid = np.zeros(ts), np.zeros(ts)
+                D_alpha_C_grid, D_alpha_L_grid, D_alpha_z_grid\
+                    = np.zeros(ts), np.zeros(ts), np.zeros(ts)
+                b1_grid = np.repeat(b1, self.nz).astype(int)
+                b2_grid = np.repeat(b2, self.nz).astype(int)
+                kernelparts(self.nz, self.nz, self.numCoefs, self.numLines,
+                            self.alpha_C, self.alpha_L,
+                            self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
+                            self.lines_mu[:self.numLines],
+                            self.lines_sig[:self.numLines],
+                            self.norms,
+                            b1_grid, fzgrid, b2_grid, fzgrid,
+                            True,
+                            KL_grid[:, :],
+                            KC_grid[:, :],
+                            D_alpha_C_grid[:, :],
+                            D_alpha_L_grid[:, :],
+                            D_alpha_z_grid[:, :])
+                ij = b1*self.numBands + b2
+                k = 1
+                self.KL_interp[ij] =\
+                    RectBivariateSpline(fzgrid, fzgrid,
+                                        KL_grid, kx=k, ky=k)
+                self.KC_interp[ij] =\
+                    RectBivariateSpline(fzgrid, fzgrid,
+                                        KC_grid, kx=k, ky=k)
+                self.D_alpha_C_interp[ij] =\
+                    RectBivariateSpline(fzgrid, fzgrid,
+                                        D_alpha_C_grid,
+                                        kx=k, ky=k)
+                self.D_alpha_L_interp[ij] =\
+                    RectBivariateSpline(fzgrid, fzgrid,
+                                        D_alpha_L_grid,
+                                        kx=k, ky=k)
+                self.D_alpha_z_interp[ij] =\
+                    RectBivariateSpline(fzgrid, fzgrid,
+                                        D_alpha_z_grid,
+                                        kx=k, ky=k)
+
+                ji = b2*self.numBands + b1
+                self.KL_interp[ji] =\
+                    RectBivariateSpline(fzgrid, fzgrid,
+                                        KL_grid,
+                                        kx=k, ky=k)
+                self.KC_interp[ji] =\
+                    RectBivariateSpline(fzgrid.T, fzgrid,
+                                        KC_grid.T,
+                                        kx=k, ky=k)
+                self.D_alpha_C_interp[ji] =\
+                    RectBivariateSpline(fzgrid, fzgrid,
+                                        D_alpha_C_grid.T,
+                                        kx=k, ky=k)
+                self.D_alpha_L_interp[ji] =\
+                    RectBivariateSpline(fzgrid, fzgrid,
+                                        D_alpha_L_grid.T,
+                                        kx=k, ky=k)
+                self.D_alpha_z_interp[ji] =\
+                    RectBivariateSpline(fzgrid, fzgrid,
+                                        D_alpha_z_grid.T,
+                                        kx=k, ky=k)
+
+        bands = np.arange(self.numBands).astype(int)
+        fzgrid = 1 + self.redshiftGrid
+        self.KL_diag_interp = np.empty(self.numBands, dtype=interp1d)
+        self.KC_diag_interp = np.empty(self.numBands, dtype=interp1d)
+        self.D_alpha_C_diag_interp = np.empty(self.numBands, dtype=interp1d)
+        self.D_alpha_L_diag_interp = np.empty(self.numBands, dtype=interp1d)
+        for b1 in range(self.numBands):
+            ts = (self.nz, )
+            KC_grid, KL_grid = np.zeros(ts), np.zeros(ts)
+            D_alpha_C_grid, D_alpha_L_grid, D_alpha_z_grid\
+                = np.zeros(ts), np.zeros(ts), np.zeros(ts)
+            b1_grid = np.repeat(b1, self.nz).astype(int)
+            kernelparts_diag(self.nz, self.numCoefs, self.numLines,
+                             self.alpha_C, self.alpha_L,
+                             self.fcoefs_amp, self.fcoefs_mu,
+                             self.fcoefs_sig,
+                             self.lines_mu[:self.numLines],
+                             self.lines_sig[:self.numLines],
+                             self.norms,
+                             b1_grid, fzgrid,
+                             True,
+                             KL_grid,
+                             KC_grid,
+                             D_alpha_C_grid,
+                             D_alpha_L_grid)
+            self.KL_diag_interp[b1] = interp1d(fzgrid, KL_grid,
+                                               kind=kind,
+                                               assume_sorted=True)
+            self.KC_diag_interp[b1] = interp1d(fzgrid, KC_grid,
+                                               kind=kind,
+                                               assume_sorted=True)
+            self.D_alpha_C_diag_interp[b1] = interp1d(fzgrid, D_alpha_C_grid,
+                                                      kind=kind,
+                                                      assume_sorted=True)
+            self.D_alpha_L_diag_interp[b1] = interp1d(fzgrid, D_alpha_L_grid,
+                                                      kind=kind,
+                                                      assume_sorted=True)
+
+        self.CLhash = self.cCLhash()
 
     def update_kernelparts(self, X, X2=None):
         if X2 is None:
             X2 = X
+        NO1, NO2 = X.shape[0], X2.shape[0]
         b1 = self.roundband(X[:, 0])
-        fz1 = (1.+X[:, 1])
         b2 = self.roundband(X2[:, 0])
-        fz2 = (1.+X2[:, 1])
-        if self.BZhash != self.cBZhash(X) or self.Z2hash != self.cBZhash(X2):
-            NO1, NO2 = X.shape[0], X2.shape[0]
-            self.KC, self.KL = np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
-            self.D_alpha_C, self.D_alpha_L, self.D_alpha_z\
-                = np.zeros((NO1, NO2)), np.zeros((NO1, NO2)),\
+
+        if self.BZhash != self.cBZhash(X)\
+            or self.BZ2hash != self.cBZhash(X2)\
+                or self.CLhash != self.cCLhash():
+
+            if self.CLhash != self.cCLhash():
+                self.construct_interpolators()
+                self.CLhash = self.cCLhash()
+
+            #  Compute kernelparts from interpolators
+            self.KL, self.KC, self.D_alpha_C, self.D_alpha_L, self.D_alpha_z =\
+                np.zeros((NO1, NO2)), np.zeros((NO1, NO2)),\
+                np.zeros((NO1, NO2)), np.zeros((NO1, NO2)),\
                 np.zeros((NO1, NO2))
-            kernelparts(NO1, NO2, self.numCoefs, self.numLines,
-                        self.alpha_C, self.alpha_L,
-                        self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
-                        self.lines_mu[:self.numLines],
-                        self.lines_sig[:self.numLines],
-                        self.norms,
-                        b1, fz1, b2, fz2, True,
-                        self.KL, self.KC, self.D_alpha_C,
-                        self.D_alpha_L, self.D_alpha_z)
-            self.Zprefac = fz1[:, None] * fz2[None, :] /\
+            for i1 in range(self.numBands):
+                ind1 = np.where(b1 == i1)[0]
+                fz1 = 1 + X[ind1, 1]
+                is1 = np.argsort(fz1)
+                if ind1.size > 0:
+                    for i2 in range(self.numBands):
+                        ind2 = np.where(b2 == i2)[0]
+                        if ind2.size > 0:
+                            fz2 = 1 + X2[ind2, 1]
+                            is2 = np.argsort(fz2)
+                            ii = i1*self.numBands + i2
+                            loc = np.ix_(ind1[is1], ind2[is2])
+                            b1g, b2g = np.meshgrid(b1, b2, indexing='ij')
+                            ts = (loc[0].size, loc[1].size)
+                            grid = (fz2[is2], fz1[is1])
+                            self.KL[loc] =\
+                                self.KL_interp[ii](*grid)\
+                                .reshape(ts)
+                            self.KC[loc] =\
+                                self.KC_interp[ii](*grid)\
+                                .reshape(ts)
+                            self.D_alpha_C[loc] =\
+                                self.D_alpha_C_interp[ii](*grid)\
+                                .reshape(ts)
+                            self.D_alpha_L[loc] =\
+                                self.D_alpha_L_interp[ii](*grid)\
+                                .reshape(ts)
+                            self.D_alpha_z[loc] =\
+                                self.D_alpha_z_interp[ii](*grid)\
+                                .reshape(ts)
+
+            self.Zprefac = (1+X[:, 1:2]) * (1+X2[None, :, 1]) /\
                 (self.fourpi * self.g_AB * self.DL_z(X[:, 1:2]) *
                  self.DL_z(X2[None, :, 1]))
             self.BZhash = self.cBZhash(X)
-            self.Z2hash = self.cBZhash(X2)
+            self.BZ2hash = self.cBZhash(X2)
 
         if self.Thash != self.cThash(X) or self.T2hash != self.cThash(X2):
             self.KT = np.exp(-0.5*pow((X[:, 3:4]-X2[None, :, 3]) /
@@ -408,22 +559,33 @@ class Photoz_kernel(Kern):
             self.T2hash = self.cThash(X2)
 
     def update_kernelparts_diag(self, X):
-        b1 = self.roundband(X[:, 0])
+        NO1 = X.shape[0]
+        b1 = X[:, 0].astype(int)
         fz1 = (1.+X[:, 1])
         if self.BZhashd != self.cBZhash(X):
-            NO1 = X.shape[0]
-            self.KCd, self.KLd = np.zeros((NO1,)), np.zeros((NO1,))
-            self.D_alpha_Cd = np.zeros((NO1,))
-            self.D_alpha_Ld = np.zeros((NO1,))
-            kernelparts_diag(NO1, self.numCoefs, self.numLines,
-                             self.alpha_C, self.alpha_L,
-                             self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
-                             self.lines_mu[:self.numLines],
-                             self.lines_sig[:self.numLines], self.norms,
-                             b1, fz1, True,
-                             self.KLd, self.KCd,
-                             self.D_alpha_Cd, self.D_alpha_Ld)
-            self.Zprefacd = fz1**2 /\
+            if self.CLhash != self.cCLhash():
+                self.construct_interpolators()
+                self.CLhash = self.cCLhash()
+
+            # TODO: parallelize that over objects? or bands?
+            self.KLd, self.KCd = np.zeros((NO1,)), np.zeros((NO1,))
+            self.D_alpha_Cd, self.D_alpha_Ld =\
+                np.zeros((NO1,)), np.zeros((NO1,))
+            for i1 in range(self.numBands):
+                ind1 = np.where(b1 == i1)[0]
+                fz1 = 1 + X[ind1, 1]
+                is1 = np.argsort(fz1)
+                if ind1.size > 0:
+                    self.KLd[ind1[is1]] =\
+                        self.KL_diag_interp[i1](fz1[is1])
+                    self.KCd[ind1[is1]] =\
+                        self.KC_diag_interp[i1](fz1[is1])
+                    self.D_alpha_Cd[ind1[is1]] =\
+                        self.D_alpha_C_diag_interp[i1](fz1[is1])
+                    self.D_alpha_Ld[ind1[is1]] =\
+                        self.D_alpha_L_diag_interp[i1](fz1[is1])
+
+            self.Zprefacd = (1.+X[:, 1])**2 /\
                 (self.fourpi * self.g_AB * self.DL_z(X[:, 1])**2)
             self.BZhashd = self.cBZhash(X)
 

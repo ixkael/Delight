@@ -34,13 +34,13 @@ def random_filtercoefs(numBands, numCoefs):
     """Create random (but reasonable) coefficients describing
     numBands photometric filters as sum of gaussians"""
     fcoefs_amp\
-        = np.random.uniform(low=0.5, high=1, size=numBands*numCoefs)\
+        = np.random.uniform(low=0., high=1., size=numBands*numCoefs)\
         .reshape((numBands, numCoefs))
     fcoefs_mu\
-        = np.random.uniform(low=2e3, high=8e3, size=numBands*numCoefs)\
+        = np.random.uniform(low=3e3, high=1e4, size=numBands*numCoefs)\
         .reshape((numBands, numCoefs))
     fcoefs_sig\
-        = np.random.uniform(low=100, high=500, size=numBands*numCoefs)\
+        = np.random.uniform(low=30, high=500, size=numBands*numCoefs)\
         .reshape((numBands, numCoefs))
     return fcoefs_amp, fcoefs_mu, fcoefs_sig
 

@@ -8,13 +8,14 @@ from copy import deepcopy as copy
 from delight.utils import random_X_bzlt,\
     random_filtercoefs, random_linecoefs, random_hyperparams
 
+from delight.photoz_kernels_cy import kernelparts, kernelparts_diag
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 size = 6
 NREPEAT = 4
 numBands = 5
-numLines = 10
-numCoefs = 10
+numLines = 4
+numCoefs = 4
 relative_accuracy = 0.05
 # TODO: add tests for diagonal gradients of kernel?
 # TODO: add formal/numerical test for kernel w.r.t. mean fct
@@ -39,7 +40,7 @@ def test_kernel():
         v1 = np.diag(gp.K(X))
         v2 = gp.Kdiag(X)
 
-        np.testing.assert_almost_equal(v1, v2)
+        np.allclose(v1, v2, rtol=relative_accuracy)
 
 
 def test_kernel_gradients():
@@ -72,7 +73,7 @@ def test_kernel_gradients():
             return np.sum(gp2.K(X, X2))
 
         v2 = derivative(f_alpha_T, alpha_T, dx=0.01*alpha_T)
-        if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
+        if np.abs(v1) > 1e-11 or np.abs(v2) > 1e-11:
             assert abs(v1/v2-1) < relative_accuracy
 
         v1 = gp.alpha_L.gradient
@@ -83,7 +84,7 @@ def test_kernel_gradients():
             return np.sum(gp2.K(X, X2))
 
         v2 = derivative(f_alpha_L, alpha_L, dx=0.01*alpha_L)
-        if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
+        if np.abs(v1) > 1e-11 or np.abs(v2) > 1e-11:
             assert abs(v1/v2-1) < relative_accuracy
 
         v1 = gp.alpha_C.gradient
@@ -94,7 +95,7 @@ def test_kernel_gradients():
             return np.sum(gp2.K(X, X2))
 
         v2 = derivative(f_alpha_C, alpha_C, dx=0.01*alpha_C)
-        if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
+        if np.abs(v1) > 1e-11 or np.abs(v2) > 1e-11:
             assert abs(v1/v2-1) < relative_accuracy
 
         v1 = gp.var_C.gradient
@@ -106,7 +107,7 @@ def test_kernel_gradients():
             return np.sum(gp.K(X, X2))
 
         v2 = derivative(f_var_C, var_C, dx=0.01*var_C)
-        if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
+        if np.abs(v1) > 1e-11 or np.abs(v2) > 1e-11:
             assert abs(v1/v2-1) < relative_accuracy
 
         v1 = gp.var_L.gradient
@@ -118,7 +119,7 @@ def test_kernel_gradients():
             return np.sum(gp.K(X, X2))
 
         v2 = derivative(f_var_L, var_L, dx=0.01*var_L)
-        if np.abs(v1) > 1e-13 or np.abs(v2) > 1e-13:
+        if np.abs(v1) > 1e-11 or np.abs(v2) > 1e-11:
             assert abs(v1/v2-1) < relative_accuracy
 
 
@@ -251,3 +252,68 @@ def test_meanfunction():
 
         f_mod2 = mf.f(X).ravel()
         np.allclose(f_mod, f_mod2, rtol=relative_accuracy)
+
+
+def test_interpolation():
+
+    for i in range(NREPEAT):
+
+        fcoefs_amp, fcoefs_mu, fcoefs_sig \
+            = random_filtercoefs(numBands, numCoefs)
+        lines_mu, lines_sig = random_linecoefs(numLines)
+        var_C, var_L, alpha_C, alpha_L, alpha_T = random_hyperparams()
+        norms = np.sqrt(2*np.pi) * np.sum(fcoefs_amp * fcoefs_sig, axis=1)
+        print 'Failed with params:', var_C, var_L, alpha_C, alpha_L, alpha_T
+
+        kern = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
+                             lines_mu, lines_sig, var_C, var_L,
+                             alpha_C, alpha_L, alpha_T)
+
+        for j in range(numBands):
+
+            X = np.vstack((np.repeat(j, kern.nz),
+                           kern.redshiftGrid,
+                           np.repeat(1, kern.nz),
+                           np.repeat(0, kern.nz))).T
+            assert X.shape[0] == kern.nz
+            assert X.shape[1] == 4
+
+            b1 = kern.roundband(X[:, 0])
+            fz1 = (1. + X[:, 1])
+
+            kern.construct_interpolators()
+            kern.update_kernelparts(X)
+
+            ts = (kern.nz, kern.nz)
+            KC, KL = np.zeros(ts), np.zeros(ts)
+            D_alpha_C, D_alpha_L, D_alpha_z\
+                = np.zeros(ts), np.zeros(ts), np.zeros(ts)
+            kernelparts(kern.nz, kern.nz, numCoefs, numLines,
+                        alpha_C, alpha_L,
+                        fcoefs_amp, fcoefs_mu, fcoefs_sig,
+                        lines_mu, lines_sig,
+                        norms, b1, fz1, b1, fz1,
+                        True, KL, KC,
+                        D_alpha_C, D_alpha_L, D_alpha_z)
+
+            np.allclose(KL, kern.KL, rtol=relative_accuracy)
+            np.allclose(KC, kern.KC, rtol=relative_accuracy)
+            np.allclose(D_alpha_C, kern.D_alpha_C, rtol=relative_accuracy)
+            np.allclose(D_alpha_L, kern.D_alpha_L, rtol=relative_accuracy)
+
+            kern.update_kernelparts_diag(X)
+            ts = (kern.nz, )
+            KC, KL = np.zeros(ts), np.zeros(ts)
+            D_alpha_C, D_alpha_L = np.zeros(ts), np.zeros(ts)
+            kernelparts_diag(kern.nz, numCoefs, numLines,
+                             alpha_C, alpha_L,
+                             fcoefs_amp, fcoefs_mu, fcoefs_sig,
+                             lines_mu, lines_sig,
+                             norms, b1, fz1,
+                             True, KL, KC,
+                             D_alpha_C, D_alpha_L)
+
+            np.allclose(KL, kern.KLd, rtol=relative_accuracy)
+            np.allclose(KC, kern.KCd, rtol=relative_accuracy)
+            np.allclose(D_alpha_C, kern.D_alpha_Cd, rtol=relative_accuracy)
+            np.allclose(D_alpha_L, kern.D_alpha_Ld, rtol=relative_accuracy)
