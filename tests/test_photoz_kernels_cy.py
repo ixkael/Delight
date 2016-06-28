@@ -68,6 +68,7 @@ def test_find_positions():
     find_positions(b.size, a.size, b, pos, a)
     np.testing.assert_almost_equal(pos, [0, 2, 3])
 
+
 def test_kernel_parts_interp():
 
     fcoefs_amp, fcoefs_mu, fcoefs_sig = random_filtercoefs(numBands, numCoefs)
@@ -157,5 +158,7 @@ def test_kernel_parts_interp():
                         b2, fz2, p2s,
                         opzgrid, D_alpha_C_grid)
     print np.abs(D_alpha_C_interp/D_alpha_C_rand - 1)
-    assert np.mean(np.abs(D_alpha_C_interp/D_alpha_C_rand - 1)) < relative_accuracy
-    assert np.max(np.abs(D_alpha_C_interp/D_alpha_C_rand - 1)) < relative_accuracy
+    assert np.mean(np.abs(D_alpha_C_interp/D_alpha_C_rand - 1))\
+        < relative_accuracy
+    assert np.max(np.abs(D_alpha_C_interp/D_alpha_C_rand - 1))\
+        < relative_accuracy
