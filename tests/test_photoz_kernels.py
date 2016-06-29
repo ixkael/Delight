@@ -11,12 +11,12 @@ from delight.utils import random_X_bzlt,\
 from delight.photoz_kernels_cy import kernelparts, kernelparts_diag
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
-size = 6
-NREPEAT = 4
+size = 4
+NREPEAT = 2
 numBands = 5
 numLines = 4
 numCoefs = 4
-relative_accuracy = 0.05
+relative_accuracy = 0.1
 # TODO: add tests for diagonal gradients of kernel?
 # TODO: add formal/numerical test for kernel w.r.t. mean fct
 # TODO: add tests for with and without caching! fixture for random X
@@ -174,7 +174,7 @@ def test_meanfunction_gradients_X():
         = random_filtercoefs(numBands, numCoefs)
     for i in range(NREPEAT):
         alpha = np.random.uniform(low=0, high=2e-3, size=1)
-        beta = np.random.uniform(low=1, high=3, size=1)
+        beta = np.random.uniform(low=0, high=1, size=1)
         X = random_X_bzlt(size)
         mf = Photoz_mean_function(alpha, beta,
                                   fcoefs_amp, fcoefs_mu, fcoefs_sig)
@@ -225,7 +225,7 @@ def test_meanfunction():
         = random_filtercoefs(numBands, numCoefs)
     for i in range(NREPEAT):
         alpha = np.random.uniform(low=0, high=2e-3, size=1)
-        beta = np.random.uniform(low=1., high=3., size=1)
+        beta = np.random.uniform(low=0, high=1, size=1)
         X = random_X_bzlt(size)
         bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
         bands = bands.astype(int)

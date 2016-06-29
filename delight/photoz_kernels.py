@@ -51,7 +51,7 @@ class Photoz_mean_function(Mapping):
         self.alpha.constrain_positive()
         self.link_parameter(self.alpha)
         self.beta = Param('beta', float(beta))
-        self.beta.constrain_positive()
+        self.beta.constrain_bounded(0, 1)
         self.link_parameter(self.beta)
         self.hash = 0
 
@@ -71,7 +71,7 @@ class Photoz_mean_function(Mapping):
         index = self.beta._parent_index_
         self.unlink_parameter(self.beta)
         self.beta = Param('beta', float(beta))
-        self.beta.constrain_positive()
+        self.beta.constrain_bounded(0, 1)
         self.link_parameter(self.beta, index=index)
         self.update_model(True)
 
@@ -95,56 +95,54 @@ class Photoz_mean_function(Mapping):
                 amp, mu, sig = self.fcoefs_amp[b, i],\
                                self.fcoefs_mu[b, i],\
                                self.fcoefs_sig[b, i]
-                alphat = self.alpha * t**self.beta
+                alphat = self.alpha * (t - self.beta)
                 term1 = (mu * opz - alphat * sig**2) /\
                     (1.41421356237 * sig * opz)
                 term2 = alphat * (self.lambdaRef - mu/opz +
                                   alphat*(sig/opz)**2/2)
+                expterm = np.exp(term2)
+                erfterm = (1 + erf(term1))
 
-                self.sum_mf += amp * (1 + erf(term1)) * np.exp(term2) *\
+                self.sum_mf += amp * erfterm * expterm *\
                     self.sqrthalfpi * sig
-                self.sum_ell += amp * (1 + erf(term1)) * np.exp(term2) *\
+                self.sum_ell += amp * erfterm * expterm *\
                     self.sqrthalfpi * sig
 
-                Dterm1 = (self.alpha*self.beta *
-                          np.exp(-((-self.alpha*sig**2*t**self.beta +
+                Dterm1 = (self.alpha *
+                          np.exp(-((-self.alpha*sig**2*(t - self.beta) +
                                     mu*opz)**2 /
                                    (2*sig**2*opz**2))) *
-                          self.sqrthalfpi*sig*t**(self.beta-1)) / opz
-                Dterm2 = ((self.alpha**2*self.beta*sig**2*t**(2*self.beta-1)) /
+                          self.sqrthalfpi*sig) / opz
+                Dterm2 = (self.alpha**2*self.beta*sig**2*(t-self.beta)**2 /
                           (2*opz**2) +
-                          self.alpha*self.beta*t**(self.beta-1) *
-                          (self.lambdaRef +
-                           (self.alpha*sig**2*t**self.beta) /
+                          self.alpha * (self.lambdaRef +
+                          (self.alpha*sig**2*(t-self.beta)) /
                            (2*opz**2) - mu/opz))
-                self.sum_t += amp * np.exp(term2) * Dterm1 *\
+                self.sum_t += amp * expterm * Dterm1 *\
                     self.sqrthalfpi * sig
-                self.sum_t += amp * (1 + erf(term1)) * np.exp(term2) *\
+                self.sum_t += amp * erfterm * expterm *\
                     Dterm2 * self.sqrthalfpi * sig
 
-                Dterm1 = np.sqrt(2/np.pi) * sig * t**self.beta / opz *\
-                    np.exp(-0.5*((mu*opz - alphat * sig**2 * t**self.beta) /
+                Dterm1 = np.sqrt(2/np.pi) * sig * (t-self.beta) / opz *\
+                    np.exp(-0.5*((mu*opz - alphat * sig**2 * (t-self.beta)) /
                            sig / opz)**2)
-                Dterm2 = t**self.beta * (self.lambdaRef - mu/opz +
-                                         alphat*(sig/opz)**2/2)\
-                    + alphat*(t**self.beta*sig/opz)**2/2
-                self.sum_alpha += amp * np.exp(term2) * Dterm1 *\
+                Dterm2 = (t-self.beta) * (self.lambdaRef - mu/opz +
+                                          alphat*(sig/opz)**2/2)\
+                    + self.alpha*((t-self.beta)*sig/opz)**2/2
+                self.sum_alpha += amp * expterm * Dterm1 *\
                     self.sqrthalfpi * sig
-                self.sum_alpha += amp * (1 + erf(term1)) * np.exp(term2) *\
+                self.sum_alpha += amp * erfterm * expterm *\
                     Dterm2 * self.sqrthalfpi * sig
 
-                Dterm1 = - np.sqrt(2/np.pi) * sig * t**self.beta * np.log(t) /\
-                    (1 + z) * np.exp(-((-self.alpha * sig**2 * t**self.beta +
-                                     mu*(1 + z))**2 / (2*sig**2 * (1 + z)**2)))
-                Dterm2 = ((self.alpha**2 * sig**2 * t**(2*self.beta) *
-                           np.log(t)) / (2*(1 + z)**2) +
-                          self.alpha*t**self.beta *
-                          (self.lambdaRef +
-                           (self.alpha * sig**2 * t**self.beta) /
-                          (2*(1 + z)**2) - mu/(1 + z)) * np.log(t))
-                self.sum_beta += amp * np.exp(term2) * Dterm1 *\
+                Dterm1 = np.sqrt(2/np.pi) * sig * self.alpha / opz *\
+                    np.exp(-0.5*((mu*opz - alphat * sig**2 * (t-self.beta)) /
+                           sig / opz)**2)
+                Dterm2 = - self.alpha * (self.lambdaRef - mu/opz +
+                                         alphat*(sig/opz)**2/2)\
+                    - self.alpha**2*((t-self.beta)*sig/opz)**2/2
+                self.sum_beta += amp * expterm * Dterm1 *\
                     self.sqrthalfpi * sig
-                self.sum_beta += amp * (1 + erf(term1)) * np.exp(term2) *\
+                self.sum_beta += amp * erfterm * expterm *\
                     Dterm2 * self.sqrthalfpi * sig
 
             self.hash = self.chash(X)

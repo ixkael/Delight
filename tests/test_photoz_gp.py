@@ -13,11 +13,11 @@ from delight.utils import random_X_bzlt,\
 from scipy.misc import derivative
 from copy import deepcopy
 
-NREPEAT = 5
-nObj = 4
+NREPEAT = 1
+nObj = 3
 numBands = 3
 numLines = 2
-numCoefs = 5
+numCoefs = 2
 relative_accuracy = 0.1
 size = numBands * nObj
 bandsUsed = range(numBands)
@@ -60,7 +60,7 @@ def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
 
     X = random_X_bzlt(nObj)
     alpha = np.random.uniform(low=1e-3, high=2e-3, size=1)
-    beta = np.random.uniform(low=1., high=1.5, size=1)
+    beta = np.random.uniform(low=0, high=1, size=1)
     bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
 
     fcoefs_amp, fcoefs_mu, fcoefs_sig \

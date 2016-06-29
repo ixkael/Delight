@@ -5,12 +5,12 @@ from delight.photoz_kernels_cy import \
     kernelparts, kernelparts_diag,\
     find_positions, kernel_parts_interp
 
-size = 240
-nz = 240
+size = 40
+nz = 40
 numBands = 5
-numLines = 0
+numLines = 5
 numCoefs = 10
-relative_accuracy = 0.05
+relative_accuracy = 0.1
 
 
 def test_diagonalOfKernels():
