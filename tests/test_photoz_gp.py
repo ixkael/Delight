@@ -14,10 +14,11 @@ from scipy.misc import derivative
 from copy import deepcopy
 
 NREPEAT = 1
-nObj = 3
+nObj = 10
+nObjUnfixed = 5
 numBands = 3
-numLines = 2
-numCoefs = 2
+numLines = 4
+numCoefs = 4
 relative_accuracy = 0.1
 size = numBands * nObj
 bandsUsed = range(numBands)
@@ -80,8 +81,12 @@ def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
     prior_t = create_p_t
     assert(prior_t is None or isinstance(prior_t, Kumaraswamy))
 
+    unfixed_indices = np.random.choice(np.arange(nObj),
+                                       nObjUnfixed,
+                                       replace=False)
+
     gp = PhotozGP(
-        redshifts, luminosities, types,
+        redshifts, luminosities, types, unfixed_indices,
         noisy_fluxes, flux_variances, bandsUsed,
         fcoefs_amp, fcoefs_mu, fcoefs_sig,
         lines_mu, lines_sig,
@@ -241,30 +246,30 @@ def test_gradients(create_gp):
                         dx=0.01*gp.prior_t.alpha1.values)
         assert abs(v1/v2-1) < relative_accuracy
 
-    for dim in range(nObj):
+    for dim in range(nObjUnfixed):
 
-        v1 = gp.types.gradient[dim]
+        v1 = gp.unfixed_types.gradient[dim]
 
         def f_t(t):
             gp2 = deepcopy(gp)
-            v = gp2.types.values
-            v[dim] = t
-            gp2.set_types(v)
+            gp2.update_model(False)
+            gp2.unfixed_types.values[dim] = t
+            gp2.update_model(True)
             return gp2._log_marginal_likelihood
-        v2 = derivative(f_t, gp.types.values[dim],
-                        dx=0.01*gp.types.values[dim])
+        v2 = derivative(f_t, gp.unfixed_types.values[dim],
+                        dx=0.01*gp.unfixed_types.values[dim])
         assert abs(v1/v2-1) < relative_accuracy
 
-        v1 = gp.luminosities.gradient[dim]
+        v1 = gp.unfixed_luminosities.gradient[dim]
 
         def f_ell(t):
             gp2 = deepcopy(gp)
-            v = gp2.luminosities.values
-            v[dim] = t
-            gp2.set_luminosities(v)
+            gp2.update_model(False)
+            gp2.unfixed_luminosities.values[dim] = t
+            gp2.update_model(True)
             return gp2._log_marginal_likelihood
-        v2 = derivative(f_ell, gp.luminosities.values[dim],
-                        dx=0.01*gp.luminosities.values[dim])
+        v2 = derivative(f_ell, gp.unfixed_luminosities.values[dim],
+                        dx=0.01*gp.unfixed_luminosities.values[dim])
         assert abs(v1/v2-1)
 
         #  TODO: add tests for redshift gradients
@@ -276,8 +281,8 @@ def test_optimize(create_gp):
     assert(isinstance(gp, PhotozGP))
 
     #  TODO: let types and redshifts free
-    gp.types.fix()
-    gp.redshifts.fix()
+    gp.unfixed_types.fix()
+    gp.unfixed_redshifts.fix()
 
     gp.optimize()
 
@@ -288,12 +293,12 @@ def test_hmc(create_gp):
     assert(isinstance(gp, PhotozGP))
 
     #  TODO: let types and redshifts free
-    gp.types.fix()
-    gp.redshifts.fix()
+    gp.unfixed_types.fix()
+    gp.unfixed_redshifts.fix()
     print gp.parameter_names_flat()
     print gp.optimizer_array
 
     hmc = GPy.inference.mcmc.HMC(gp, stepsize=1e-2)
-    s = hmc.sample(num_samples=3)
+    s = hmc.sample(num_samples=3, hmc_iters=2)
 
 # TODO: test covariance is semi positive definite
