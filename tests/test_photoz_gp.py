@@ -14,9 +14,9 @@ from scipy.misc import derivative
 from copy import deepcopy
 
 NREPEAT = 1
-nObj = 10
-nObjUnfixed = 5
-numBands = 3
+nObj = 5
+nObjUnfixed = 4
+numBands = 2
 numLines = 4
 numCoefs = 4
 relative_accuracy = 0.1
