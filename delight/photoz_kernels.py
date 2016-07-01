@@ -194,7 +194,7 @@ class Photoz_kernel(Kern):
                  lines_mu, lines_sig,
                  var_C, var_L, alpha_C, alpha_L, alpha_T,
                  g_AB=1.0, DL_z=None, name='photoz_kern',
-                 redshiftGrid=np.linspace(0, 3, num=60)):
+                 redshiftGrid=np.linspace(0, 3, num=120)):
         """ Constructor."""
         # Call standard Kern constructor with 3 dimensions (t, b and z).
         super(Photoz_kernel, self).__init__(4, None, name)
