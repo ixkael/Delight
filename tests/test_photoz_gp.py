@@ -18,10 +18,29 @@ nObj = 10
 nObjUnfixed = 8
 numBands = 2
 numLines = 3
-numCoefs = 6
+numCoefs = 8
 relative_accuracy = 0.20
 size = numBands * nObj
 bandsUsed = range(numBands)
+
+X = random_X_bzlt(nObj, numBands=numBands)
+alpha = np.random.uniform(low=1e-4, high=1e-3, size=1)
+beta = np.random.uniform(low=0.3, high=0.7, size=1)
+bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
+
+fcoefs_amp, fcoefs_mu, fcoefs_sig \
+    = random_filtercoefs(numBands, numCoefs)
+lines_mu, lines_sig = random_linecoefs(numLines)
+var_C, var_L, alpha_C, alpha_L, alpha_T = random_hyperparams()
+
+noisy_fluxes = np.random.uniform(low=0.5, high=1., size=size)\
+    .reshape((nObj, numBands))
+flux_variances = np.random.uniform(low=0.05, high=0.1, size=size)\
+    .reshape((nObj, numBands))
+
+unfixed_indices = np.random.choice(np.arange(nObj),
+                                   nObjUnfixed,
+                                   replace=False)
 
 
 @pytest.fixture(params=[False, True])
@@ -64,31 +83,12 @@ def use_interpolators(request):
 def create_gp(use_interpolators, create_p_ell_t, create_p_z_t, create_p_t):
     """Create valid GP with reasonable parameters, kernel, mean fct"""
 
-    X = random_X_bzlt(nObj, numBands=numBands)
-    alpha = np.random.uniform(low=1e-4, high=1e-3, size=1)
-    beta = np.random.uniform(low=0.3, high=0.7, size=1)
-    bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
-
-    fcoefs_amp, fcoefs_mu, fcoefs_sig \
-        = random_filtercoefs(numBands, numCoefs)
-    lines_mu, lines_sig = random_linecoefs(numLines)
-    var_C, var_L, alpha_C, alpha_L, alpha_T = random_hyperparams()
-
-    noisy_fluxes = np.random.uniform(low=0., high=1., size=size)\
-        .reshape((nObj, numBands))
-    flux_variances = np.random.uniform(low=0., high=1., size=size)\
-        .reshape((nObj, numBands))
-
     prior_ell_t = create_p_ell_t
     assert(prior_ell_t is None or isinstance(prior_ell_t, Schechter))
     prior_z_t = create_p_z_t
     assert(prior_z_t is None or isinstance(prior_z_t, Rayleigh))
     prior_t = create_p_t
     assert(prior_t is None or isinstance(prior_t, Kumaraswamy))
-
-    unfixed_indices = np.random.choice(np.arange(nObj),
-                                       nObjUnfixed,
-                                       replace=False)
 
     gp = PhotozGP(
         redshifts, luminosities, types, unfixed_indices,
@@ -101,7 +101,7 @@ def create_gp(use_interpolators, create_p_ell_t, create_p_z_t, create_p_t):
         prior_ell_t=prior_ell_t,
         prior_t=prior_t,
         X_inducing=None,
-        redshiftGrid=np.linspace(0, 3, num=30),
+        redshiftGrid=np.linspace(0, 3, num=60),
         fix_inducing_to_mean_prediction=True,
         use_interpolators=use_interpolators
         )

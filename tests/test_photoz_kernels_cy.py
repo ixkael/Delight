@@ -5,9 +5,9 @@ from delight.photoz_kernels_cy import \
     kernelparts, kernelparts_diag,\
     find_positions, kernel_parts_interp
 
-size = 40
-nz = 40
-numBands = 5
+size = 50
+nz = 150
+numBands = 2
 numLines = 5
 numCoefs = 10
 relative_accuracy = 0.1
