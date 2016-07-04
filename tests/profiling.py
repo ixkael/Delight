@@ -11,14 +11,18 @@ import GPy
 from delight.photoz_gp import PhotozGP
 from delight.utils import random_X_bzlt,\
     random_filtercoefs, random_linecoefs, random_hyperparams
+from delight.hmc import HMC
 
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 
 NREPEAT = 4
 nObj = 100
+nInducing = 5
 numBands = 4
 size = numBands * nObj
+redshiftGrid = np.linspace(0, 3, num=60)
+use_interpolators = True
 
 numLines = 3
 numCoefs = 10
@@ -105,6 +109,7 @@ class Timer(object):
 
 
 X = random_X_bzlt(size, numBands=numBands)
+X_inducing = random_X_bzlt(nInducing, numBands=numBands)
 fcoefs_amp, fcoefs_mu, fcoefs_sig \
     = random_filtercoefs(numBands, numCoefs)
 lines_mu, lines_sig = random_linecoefs(numLines)
@@ -247,7 +252,10 @@ with Timer() as t:
         fcoefs_amp, fcoefs_mu, fcoefs_sig,
         lines_mu, lines_sig,
         alpha, beta, var_C, var_L,
-        alpha_C, alpha_L, alpha_T
+        alpha_C, alpha_L, alpha_T,
+        X_inducing=X_inducing,
+        redshiftGrid=redshiftGrid,
+        use_interpolators=use_interpolators
         )
 print "Created GP in %s s" % (t.secs / NREPEAT)
 
@@ -300,10 +308,18 @@ gp.unfixed_redshifts.fix()
 gp.unfixed_types.constrain_bounded(0, 1)
 gp.unfixed_luminosities.constrain_bounded(0, 10)
 
-hmc = GPy.inference.mcmc.HMC(gp, stepsize=1e-4)
+hmc = HMC(gp, stepsize=1e-2)
 with Timer() as t:
-    hmc_samples = hmc.sample(num_samples=NREPEAT, hmc_iters=1)
+    hmc_samples, derived_params = hmc.sample(num_samples=NREPEAT, hmc_iters=1)
 print "=> HMC iterations (CL and z not varying): %s s" % (t.secs / NREPEAT)
 
+gp.unfixed_redshifts.fix()
+gp.unfixed_types.fix()
+gp.unfixed_luminosities.fix()
+
+hmc = HMC(gp, stepsize=1e-2)
+with Timer() as t:
+    hmc_samples, derived_params = hmc.sample(num_samples=NREPEAT, hmc_iters=1)
+print "=> HMC iterations (CL and ztl not varying): %s s" % (t.secs / NREPEAT)
 
 print '--------'

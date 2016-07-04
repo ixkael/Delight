@@ -9,16 +9,18 @@ from delight.photoz_gp import PhotozGP
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 from delight.utils import random_X_bzlt,\
     random_filtercoefs, random_linecoefs, random_hyperparams
+from delight.hmc import HMC
 
 from scipy.misc import derivative
 from copy import deepcopy
 
 NREPEAT = 1
-nObj = 10
-nObjUnfixed = 8
+nObj = 5
+nInducing = 3
+nObjUnfixed = 4
 numBands = 2
 numLines = 3
-numCoefs = 8
+numCoefs = 10
 relative_accuracy = 0.20
 size = numBands * nObj
 bandsUsed = range(numBands)
@@ -43,7 +45,7 @@ unfixed_indices = np.random.choice(np.arange(nObj),
                                    replace=False)
 
 
-@pytest.fixture(params=[False, True])
+@pytest.fixture(params=[True])
 def create_p_z_t(request):
     """Create valid p(z|t) prior with reasonable parameters"""
     if request.param is False:
@@ -53,7 +55,7 @@ def create_p_z_t(request):
         return Rayleigh(alpha0, alpha1)
 
 
-@pytest.fixture(params=[False, True])
+@pytest.fixture(params=[True])
 def create_p_ell_t(request):
     """Create valid p(ell|t) prior with reasonable parameters"""
     if request.param is False:
@@ -64,7 +66,7 @@ def create_p_ell_t(request):
         return Schechter(ellStar, alpha0, alpha1)
 
 
-@pytest.fixture(params=[False, True])
+@pytest.fixture(params=[True])
 def create_p_t(request):
     """Create valid p(t) prior with reasonable parameters"""
     if request.param is False:
@@ -75,14 +77,25 @@ def create_p_t(request):
 
 
 @pytest.fixture(params=[False, True])
+def use_inducing(request):
+    if request.param is False:
+        return None
+    else:
+        return random_X_bzlt(nInducing, numBands=numBands)
+
+
+@pytest.fixture(params=[True])
 def use_interpolators(request):
     return request.param
 
 
 @pytest.fixture()
-def create_gp(use_interpolators, create_p_ell_t, create_p_z_t, create_p_t):
+def create_gp(use_inducing, use_interpolators,
+              create_p_ell_t, create_p_z_t, create_p_t):
     """Create valid GP with reasonable parameters, kernel, mean fct"""
 
+    X_inducing = use_inducing
+    print X_inducing
     prior_ell_t = create_p_ell_t
     assert(prior_ell_t is None or isinstance(prior_ell_t, Schechter))
     prior_z_t = create_p_z_t
@@ -100,9 +113,8 @@ def create_gp(use_interpolators, create_p_ell_t, create_p_z_t, create_p_t):
         prior_z_t=prior_z_t,
         prior_ell_t=prior_ell_t,
         prior_t=prior_t,
-        X_inducing=None,
+        X_inducing=X_inducing,
         redshiftGrid=np.linspace(0, 3, num=60),
-        fix_inducing_to_mean_prediction=True,
         use_interpolators=use_interpolators
         )
 
@@ -305,7 +317,7 @@ def test_hmc(create_gp):
     print gp.parameter_names_flat()
     print gp.optimizer_array
 
-    hmc = GPy.inference.mcmc.HMC(gp, stepsize=1e-2)
+    hmc = HMC(gp, stepsize=1e-2)
     s = hmc.sample(num_samples=3, hmc_iters=2)
 
 # TODO: test covariance is semi positive definite

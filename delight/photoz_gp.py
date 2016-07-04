@@ -32,7 +32,6 @@ class PhotozGP(Model):
                  prior_ell_t=None,
                  prior_t=None,
                  X_inducing=None,
-                 fix_inducing_to_mean_prediction=True,
                  redshiftGrid=None,
                  use_interpolators=True,
                  name='photozgp'):
@@ -125,15 +124,17 @@ class PhotozGP(Model):
         if prior_t is not None:
             self.link_parameter(self.prior_t)
 
-        self.X_inducing = None
-        if X_inducing is not None:
-            assert X_inducing.shape[1] == self.input_dim
-            self.X_inducing = X_inducing
-            self.Y_inducing = np.zeros((X_inducing.shape[0], 1))
-            if not fix_inducing_to_mean_prediction:  # also sample Y_inducing!
-                # Otherwise Y_inducing will be set to mean GP prediction
-                self.Y_inducing.constrain_positive()
-                self.link_parameter(self.Y_inducing)
+        self.X_inducing = X_inducing
+        self.derived_params = []
+        self.derived_param_names = []
+        if self.X_inducing is not None:
+            assert self.X_inducing.shape[1] == self.input_dim
+            self.Y_inducing_mean = np.zeros((self.X_inducing.shape[0], 1))
+            self.Y_inducing_std = np.zeros((self.X_inducing.shape[0], 1))
+            self.derived_params.append(self.Y_inducing_mean)
+            self.derived_param_names.append('Y_inducing_mean')
+            self.derived_params.append(self.Y_inducing_std)
+            self.derived_param_names.append('Y_inducing_std')
 
     def get_param_names_and_indices(self):
         scalar_params, array_params = {}, {}
@@ -220,15 +221,9 @@ class PhotozGP(Model):
                                               self.Y_metadata)
 
         if self.X_inducing is not None:
-            if fix_inducing_to_mean_prediction:
-                mu, var = self._raw_predict(X_inducing, full_cov=False)
-                self.Y_inducing = mu
-            else:
-                self._log_marginal_likelihood +=\
-                    self.log_predictive_density(X_inducing, Y_inducing)
-                raise NotImplementedError("Uncertain inducing not implemented")
-                #  TODO : update gradients of inducting points
-                #  self.Y_inducing.gradient =
+            mu, var = self._raw_predict(self.X_inducing, full_cov=False)
+            self.Y_inducing_mean[:, 0] = mu[:, 0]
+            self.Y_inducing_std[:, 0] = np.sqrt(var[:, 0])
 
         self.likelihood.update_gradients(self.grad_dict['dL_dthetaL'])
 
