@@ -17,9 +17,9 @@ NREPEAT = 1
 nObj = 10
 nObjUnfixed = 8
 numBands = 2
-numLines = 4
-numCoefs = 4
-relative_accuracy = 0.1
+numLines = 3
+numCoefs = 6
+relative_accuracy = 0.20
 size = numBands * nObj
 bandsUsed = range(numBands)
 
@@ -55,13 +55,18 @@ def create_p_t(request):
         return Kumaraswamy(alpha0, alpha1)
 
 
+@pytest.fixture(params=[False, True])
+def use_interpolators(request):
+    return request.param
+
+
 @pytest.fixture()
-def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
+def create_gp(use_interpolators, create_p_ell_t, create_p_z_t, create_p_t):
     """Create valid GP with reasonable parameters, kernel, mean fct"""
 
-    X = random_X_bzlt(nObj)
-    alpha = np.random.uniform(low=1e-3, high=2e-3, size=1)
-    beta = np.random.uniform(low=0, high=1, size=1)
+    X = random_X_bzlt(nObj, numBands=numBands)
+    alpha = np.random.uniform(low=1e-4, high=1e-3, size=1)
+    beta = np.random.uniform(low=0.3, high=0.7, size=1)
     bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
 
     fcoefs_amp, fcoefs_mu, fcoefs_sig \
@@ -96,7 +101,9 @@ def create_gp(create_p_ell_t, create_p_z_t, create_p_t):
         prior_ell_t=prior_ell_t,
         prior_t=prior_t,
         X_inducing=None,
-        fix_inducing_to_mean_prediction=True
+        redshiftGrid=np.linspace(0, 3, num=30),
+        fix_inducing_to_mean_prediction=True,
+        use_interpolators=use_interpolators
         )
 
     return gp

@@ -33,10 +33,13 @@ class PhotozGP(Model):
                  prior_t=None,
                  X_inducing=None,
                  fix_inducing_to_mean_prediction=True,
+                 redshiftGrid=None,
+                 use_interpolators=True,
                  name='photozgp'):
 
         super(PhotozGP, self).__init__(name)
 
+        self.use_interpolators = use_interpolators
         assert flux_variances.shape == noisy_fluxes.shape
         self.nbands, self.numCoefs = fcoefs_amp.shape
         self.num_points, self.numBandsUsed = noisy_fluxes.shape
@@ -45,7 +48,7 @@ class PhotozGP(Model):
         assert fcoefs_amp.shape[0] == self.nbands
         assert fcoefs_mu.shape[0] == self.nbands
         assert fcoefs_sig.shape[0] == self.nbands
-        self.bandsUsed = bandsUsed
+        self.bandsUsed = copy(bandsUsed)
         self.Y = ObsAr(noisy_fluxes.T.reshape((-1, 1)))
         Ny, self.output_dim = self.Y.shape
 
@@ -65,7 +68,7 @@ class PhotozGP(Model):
             self.X[i*nd:(i+1)*nd, 3] = types.flatten()
 
         assert np.min(unfixed_indices) >= 0 and np.max(unfixed_indices) < nd
-        self.unfixed_indices = unfixed_indices
+        self.unfixed_indices = copy(unfixed_indices)
 
         self.redshifts = copy(redshifts)
         self.unfixed_redshifts\
@@ -95,7 +98,9 @@ class PhotozGP(Model):
 
         self.kern = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
                                   lines_mu, lines_sig, var_C, var_L,
-                                  alpha_C, alpha_L, alpha_T)
+                                  alpha_C, alpha_L, alpha_T,
+                                  redshiftGrid=redshiftGrid,
+                                  use_interpolators=self.use_interpolators)
         self.link_parameter(self.kern)
 
         self.Y_metadata = {

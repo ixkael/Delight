@@ -194,7 +194,8 @@ class Photoz_kernel(Kern):
                  lines_mu, lines_sig,
                  var_C, var_L, alpha_C, alpha_L, alpha_T,
                  g_AB=1.0, DL_z=None, name='photoz_kern',
-                 redshiftGrid=np.linspace(0, 3, num=120)):
+                 redshiftGrid=None,
+                 use_interpolators=True):
         """ Constructor."""
         # Call standard Kern constructor with 3 dimensions (t, b and z).
         super(Photoz_kernel, self).__init__(4, None, name)
@@ -204,16 +205,22 @@ class Photoz_kernel(Kern):
         else:
             self.DL_z = DL_z
         # Store arrays of coefficients.
+        if redshiftGrid is None:
+            self.redshiftGrid = np.linspace(0, 3, num=120)
+        else:
+            self.redshiftGrid = redshiftGrid
+        self.nz = self.redshiftGrid.size
+        self.use_interpolators = use_interpolators
         self.g_AB = g_AB
         self.fourpi = 4 * np.pi
-        self.lines_mu = np.array(lines_mu)
-        self.lines_sig = np.array(lines_sig)
+        self.lines_mu = copy(np.array(lines_mu))
+        self.lines_sig = copy(np.array(lines_sig))
         self.numLines = lines_mu.size
         assert fcoefs_amp.shape[0] == fcoefs_mu.shape[0] and\
             fcoefs_amp.shape[0] == fcoefs_sig.shape[0]
-        self.fcoefs_amp = np.array(fcoefs_amp)
-        self.fcoefs_mu = np.array(fcoefs_mu)
-        self.fcoefs_sig = np.array(fcoefs_sig)
+        self.fcoefs_amp = copy(np.array(fcoefs_amp))
+        self.fcoefs_mu = copy(np.array(fcoefs_mu))
+        self.fcoefs_sig = copy(np.array(fcoefs_sig))
         self.numCoefs = fcoefs_amp.shape[1]
         self.numBands = fcoefs_amp.shape[0]
         self.norms = np.sqrt(2*np.pi)\
@@ -238,8 +245,6 @@ class Photoz_kernel(Kern):
         self.BZhash = 0
         self.BZ2hash = 0
         self.CLhash = 0
-        self.redshiftGrid = redshiftGrid
-        self.nz = redshiftGrid.size
         # TODO: addd more realistic constraints?
 
     def set_alpha_C(self, alpha_C):
@@ -459,43 +464,55 @@ class Photoz_kernel(Kern):
             or self.BZ2hash != self.cBZhash(X2)\
                 or self.CLhash != self.cCLhash():
 
-            if self.CLhash != self.cCLhash():
-                self.construct_interpolators()
-                self.CLhash = self.cCLhash()
-
-            p1s = np.zeros(NO1, dtype=int)
-            p2s = np.zeros(NO2, dtype=int)
-            find_positions(NO1, self.nz, fz1, p1s, fzgrid)
-            find_positions(NO2, self.nz, fz2, p2s, fzgrid)
-
-            #  Compute kernelparts from interpolators
             self.KL, self.KC, self.D_alpha_C, self.D_alpha_L, self.D_alpha_z =\
                 np.zeros((NO1, NO2)), np.zeros((NO1, NO2)),\
                 np.zeros((NO1, NO2)), np.zeros((NO1, NO2)),\
                 np.zeros((NO1, NO2))
 
-            kernel_parts_interp(NO1, NO2,
-                                self.KC,
-                                b1, fz1, p1s,
-                                b2, fz2, p2s,
-                                fzgrid, self.KC_grid)
-            kernel_parts_interp(NO1, NO2,
-                                self.D_alpha_C,
-                                b1, fz1, p1s,
-                                b2, fz2, p2s,
-                                fzgrid, self.D_alpha_C_grid)
+            if self.use_interpolators:
 
-            if self.numLines > 0:
+                if self.CLhash != self.cCLhash():
+                    self.construct_interpolators()
+                    self.CLhash = self.cCLhash()
+
+                p1s = np.zeros(NO1, dtype=int)
+                p2s = np.zeros(NO2, dtype=int)
+                find_positions(NO1, self.nz, fz1, p1s, fzgrid)
+                find_positions(NO2, self.nz, fz2, p2s, fzgrid)
+
                 kernel_parts_interp(NO1, NO2,
-                                    self.KL,
+                                    self.KC,
                                     b1, fz1, p1s,
                                     b2, fz2, p2s,
-                                    fzgrid, self.KL_grid)
+                                    fzgrid, self.KC_grid)
                 kernel_parts_interp(NO1, NO2,
-                                    self.D_alpha_L,
+                                    self.D_alpha_C,
                                     b1, fz1, p1s,
                                     b2, fz2, p2s,
-                                    fzgrid, self.D_alpha_L_grid)
+                                    fzgrid, self.D_alpha_C_grid)
+
+                if self.numLines > 0:
+                    kernel_parts_interp(NO1, NO2,
+                                        self.KL,
+                                        b1, fz1, p1s,
+                                        b2, fz2, p2s,
+                                        fzgrid, self.KL_grid)
+                    kernel_parts_interp(NO1, NO2,
+                                        self.D_alpha_L,
+                                        b1, fz1, p1s,
+                                        b2, fz2, p2s,
+                                        fzgrid, self.D_alpha_L_grid)
+
+            else:  # not use interpolators
+
+                kernelparts(NO1, NO2, self.numCoefs, self.numLines,
+                            self.alpha_C, self.alpha_L,
+                            self.fcoefs_amp, self.fcoefs_mu, self.fcoefs_sig,
+                            self.lines_mu[:self.numLines],
+                            self.lines_sig[:self.numLines],
+                            self.norms, b1, fz1, b2, fz2,
+                            True, self.KL, self.KC,
+                            self.D_alpha_C, self.D_alpha_L, self.D_alpha_z)
 
             self.Zprefac = (1+X[:, 1:2]) * (1+X2[None, :, 1]) /\
                 (self.fourpi * self.g_AB * self.DL_z(X[:, 1:2]) *
@@ -514,27 +531,42 @@ class Photoz_kernel(Kern):
         b1 = X[:, 0].astype(int)
         fz1 = (1.+X[:, 1])
         if self.BZhashd != self.cBZhash(X):
-            if self.CLhash != self.cCLhash():
-                self.construct_interpolators()
-                self.CLhash = self.cCLhash()
 
-            # TODO: parallelize that over objects? or bands?
             self.KLd, self.KCd = np.zeros((NO1,)), np.zeros((NO1,))
             self.D_alpha_Cd, self.D_alpha_Ld =\
                 np.zeros((NO1,)), np.zeros((NO1,))
-            for i1 in range(self.numBands):
-                ind1 = np.where(b1 == i1)[0]
-                fz1 = 1 + X[ind1, 1]
-                is1 = np.argsort(fz1)
-                if ind1.size > 0:
-                    self.KLd[ind1[is1]] =\
-                        self.KL_diag_interp[i1](fz1[is1])
-                    self.KCd[ind1[is1]] =\
-                        self.KC_diag_interp[i1](fz1[is1])
-                    self.D_alpha_Cd[ind1[is1]] =\
-                        self.D_alpha_C_diag_interp[i1](fz1[is1])
-                    self.D_alpha_Ld[ind1[is1]] =\
-                        self.D_alpha_L_diag_interp[i1](fz1[is1])
+
+            if self.use_interpolators:
+
+                if self.CLhash != self.cCLhash():
+                    self.construct_interpolators()
+                    self.CLhash = self.cCLhash()
+
+                for i1 in range(self.numBands):
+                    ind1 = np.where(b1 == i1)[0]
+                    fz1 = 1 + X[ind1, 1]
+                    is1 = np.argsort(fz1)
+                    if ind1.size > 0:
+                        self.KLd[ind1[is1]] =\
+                            self.KL_diag_interp[i1](fz1[is1])
+                        self.KCd[ind1[is1]] =\
+                            self.KC_diag_interp[i1](fz1[is1])
+                        self.D_alpha_Cd[ind1[is1]] =\
+                            self.D_alpha_C_diag_interp[i1](fz1[is1])
+                        self.D_alpha_Ld[ind1[is1]] =\
+                            self.D_alpha_L_diag_interp[i1](fz1[is1])
+
+            else:  # not use interpolators
+                fz1 = 1 + X[:, 1]
+                kernelparts_diag(self.nz, self.numCoefs, self.numLines,
+                                 self.alpha_C, self.alpha_L,
+                                 self.fcoefs_amp, self.fcoefs_mu,
+                                 self.fcoefs_sig,
+                                 self.lines_mu[:self.numLines],
+                                 self.lines_sig[:self.numLines],
+                                 self.norms, b1, fz1,
+                                 True, self.KLd, self.KCd,
+                                 self.D_alpha_Cd, self.D_alpha_Ld)
 
             self.Zprefacd = (1.+X[:, 1])**2 /\
                 (self.fourpi * self.g_AB * self.DL_z(X[:, 1])**2)

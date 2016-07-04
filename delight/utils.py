@@ -25,8 +25,8 @@ def random_X_bzlt(size, numBands=5, redshiftMax=3.0):
     X = np.zeros((size, 4))
     X[:, 0] = np.random.randint(low=0, high=numBands-1, size=size)
     X[:, 1] = np.random.uniform(low=0.1, high=redshiftMax, size=size)
-    X[:, 3] = np.random.uniform(low=0.1, high=0.9, size=size)
     X[:, 2] = np.random.uniform(low=0.5, high=10.0, size=size)
+    X[:, 3] = np.random.uniform(low=0.1, high=0.9, size=size)
     return X
 
 
