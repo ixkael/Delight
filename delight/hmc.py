@@ -16,14 +16,13 @@ class HMC:
         self.Minv = np.linalg.inv(self.M)
 
     def sample(self, num_samples=1000, hmc_iters=20):
-        params = np.empty((num_samples, self.p.size))
+        params = []
         derived_params = []
         for i in range(num_samples):
             self.p[:] = np.random.multivariate_normal(
                 np.zeros(self.p.size), self.M)
             H_old = self._computeH()
             theta_old = self.model.optimizer_array.copy()
-            params[i] = self.model.unfixed_param_array
             self._update(hmc_iters)
             H_new = self._computeH()
             if H_old > H_new:
@@ -31,7 +30,7 @@ class HMC:
             else:
                 k = np.exp(H_old-H_new)
             if np.random.rand() < k:
-                params[i] = self.model.unfixed_param_array
+                params.append(copy(self.model.unfixed_param_array))
                 derived_params.append(copy(self.model.derived_params))
             else:
                 self.model.optimizer_array = theta_old
