@@ -5,15 +5,17 @@ import GPy
 from GPy.core.model import Model
 from GPy.likelihoods.gaussian import HeteroscedasticGaussian
 from GPy.inference.latent_function_inference import exact_gaussian_inference
+from GPy.util.linalg import pdinv, dpotrs, tdot, dtrtrs
 from GPy.core.parameterization.param import Param
 from GPy.plotting.gpy_plot.gp_plots import plot
 from paramz import ObsAr
 import re
-
 from copy import copy
 
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 # TODO: add tests for prediction routines
+
+log_2_pi = np.log(2*np.pi)
 
 
 class PhotozGP(Model):
@@ -220,20 +222,19 @@ class PhotozGP(Model):
                                               self.Y, self.mean_function,
                                               self.Y_metadata)
 
-        if self.X_inducing is not None:
-            mu, var = self._raw_predict(self.X_inducing, full_cov=False)
-            self.Y_inducing_mean[:, 0] = mu[:, 0]
-            self.Y_inducing_std[:, 0] = np.sqrt(var[:, 0])
-
         self.likelihood.update_gradients(self.grad_dict['dL_dthetaL'])
-
         self.mean_function.update_gradients(self.grad_dict['dL_dm'], self.X)
-
         self.kern.update_gradients_full(self.grad_dict['dL_dK'], self.X)
-
         wm = self.mean_function.gradients_X(self.grad_dict['dL_dm'], self.X)
         wk = self.kern.gradients_X_diag(self.grad_dict['dL_dK'], self.X)
         gradX = wm + wk
+
+        if self.X_inducing is not None:
+            mu, var, marglike, dL_dKnn, V = self._raw_predict(
+                self.X_inducing, full_cov=True, marglike=True)
+            #  self._log_marginal_likelihood += marglike
+            self.Y_inducing_mean[:, 0] = mu[:, 0]
+            self.Y_inducing_std[:, 0] = np.sqrt(var[:, 0])
 
         if not self.unfixed_redshifts.is_fixed:
             self.unfixed_redshifts.gradient[:] = 0
@@ -293,15 +294,47 @@ class PhotozGP(Model):
     def log_likelihood(self):
         return self._log_marginal_likelihood
 
-    def _raw_predict(self, Xnew, full_cov=False, kern=None):
-        """
-        For making predictions, without normalization or likelihood
-        """
-        mu, var = self.posterior._raw_predict(
-            kern=self.kern if kern is None else kern,
-            Xnew=Xnew, pred_var=self.X, full_cov=full_cov)
+    def _raw_predict(self, Xnew, full_cov=False, marglike=False):
+        kern = self.kern
+        Kx = kern.K(self.X, Xnew)
+        mu = np.dot(Kx.T, self.posterior.woodbury_vector)
+        if len(mu.shape) == 1:
+            mu = mu.reshape(-1, 1)
+        if full_cov:
+            Kxx = kern.K(Xnew)
+            if self.posterior._woodbury_chol.ndim == 2:
+                tmp = dtrtrs(self.posterior._woodbury_chol, Kx)[0]
+                var = Kxx - tdot(tmp.T)
+            elif self.posterior._woodbury_chol.ndim == 3:  # Missing data
+                var = np.empty((Kxx.shape[0],
+                                Kxx.shape[1],
+                                self.posterior._woodbury_chol.shape[2]))
+                for i in range(var.shape[2]):
+                    tmp = dtrtrs(self.posterior._woodbury_chol[:, :, i], Kx)[0]
+                    var[:, :, i] = (Kxx - tdot(tmp.T))
+            var = var
+        else:
+            Kxx = kern.Kdiag(Xnew)
+            if self.posterior._woodbury_chol.ndim == 2:
+                tmp = dtrtrs(self._woodbury_chol, Kx)[0]
+                var = (Kxx - np.square(tmp).sum(0))[:, None]
+            elif self.posterior._woodbury_chol.ndim == 3:  # Missing data
+                var = np.empty((Kxx.shape[0],
+                                self.posterior._woodbury_chol.shape[2]))
+                for i in range(var.shape[1]):
+                    tmp = dtrtrs(self.posterior._woodbury_chol[:, :, i], Kx)[0]
+                    var[:, i] = (Kxx - np.square(tmp).sum(0))
+            var = var
         mu += self.mean_function.f(Xnew)
-        return mu, var
+        if marglike is True and full_cov is True:
+            Wi, LW, LWi, W_logdet = pdinv(var)
+            log_marginal = 0.5*(-mu.size * log_2_pi -
+                                mu.shape[1] * W_logdet)
+            dL_dKnn = - 0.5 * mu.shape[1] * Wi
+            V = np.dot(self.posterior.woodbury_inv, Kx)
+            return mu, var, log_marginal, dL_dKnn, V
+        else:
+            return mu, var
 
     def log_predictive_density(self, x_test, y_test, Y_metadata=None):
         """

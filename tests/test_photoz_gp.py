@@ -15,8 +15,8 @@ from scipy.misc import derivative
 from copy import deepcopy
 
 NREPEAT = 1
-nObj = 5
-nInducing = 3
+nObj = 10
+nInducing = 5
 nObjUnfixed = 4
 numBands = 2
 numLines = 3
@@ -84,7 +84,7 @@ def use_inducing(request):
         return random_X_bzlt(nInducing, numBands=numBands)
 
 
-@pytest.fixture(params=[True])
+@pytest.fixture(params=[False, True])
 def use_interpolators(request):
     return request.param
 

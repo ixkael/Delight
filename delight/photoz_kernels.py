@@ -157,7 +157,7 @@ class Photoz_mean_function(Mapping):
         fac = l*opz/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
         return (fac * self.sum_mf).reshape((-1, 1))
 
-    def gradients_X(self, dL_dm, X):
+    def get_gradients_X(self, X):
         grad = np.zeros_like(X)
         b = X[:, 0].astype(int)
         z = X[:, 1]
@@ -166,12 +166,12 @@ class Photoz_mean_function(Mapping):
         opz = 1 + z
         self.update_parts(X)
         fac = opz/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
-        grad[:, 2] = fac * self.sum_ell  # ell
-        grad[:, 3] = l * fac * self.sum_t  # t
+        grad_ell = fac * self.sum_ell  # ell
+        grad_t = l * fac * self.sum_t  # t
         # TODO: implement z gradient
-        return dL_dm * grad
+        return grad_ell, grad_t
 
-    def update_gradients(self, dL_dF, X):
+    def get_gradients(self, X):
         b = X[:, 0].astype(int)
         z = X[:, 1]
         l = X[:, 2]
@@ -179,11 +179,22 @@ class Photoz_mean_function(Mapping):
         opz = 1 + z
         self.update_parts(X)
         fac = 1. / self.fourpi / self.DL_z(z)**2.0 / self.g_AB / self.norms[b]
-        self.alpha.gradient = np.dot(dL_dF.T, opz * l * fac * self.sum_alpha)
-        ind = t > 0
-        if ind.sum() > 0:
-            self.beta.gradient = np.dot(dL_dF[ind].T,
-                                        (opz * l * fac * self.sum_beta)[ind])
+        alpha_gradient = opz * l * fac * self.sum_alpha
+        beta_gradient = opz * l * fac * self.sum_beta
+        beta_gradient[t <= 0] = 0
+        return alpha_gradient, beta_gradient
+
+    def update_gradients(self, dL_dF, X):
+        alpha_gradient, beta_gradient = self.get_gradients(X)
+        self.alpha.gradient = np.dot(dL_dF.T, alpha_gradient)
+        self.beta.gradient = np.dot(dL_dF.T, beta_gradient)
+
+    def gradients_X(self, dL_dm, X):
+        grad_ell, grad_t = self.get_gradients_X(X)
+        grad = np.zeros_like(X)
+        grad[:, 2] = grad_ell
+        grad[:, 3] = grad_t
+        return dL_dm * grad
 
 
 class Photoz_kernel(Kern):
@@ -206,7 +217,7 @@ class Photoz_kernel(Kern):
             self.DL_z = DL_z
         # Store arrays of coefficients.
         if redshiftGrid is None:
-            self.redshiftGrid = np.linspace(0, 3, num=120)
+            self.redshiftGrid = np.linspace(0, 3, num=60)
         else:
             self.redshiftGrid = redshiftGrid
         self.nz = self.redshiftGrid.size
@@ -315,34 +326,51 @@ class Photoz_kernel(Kern):
         b[b >= self.numBands] = self.numBands - 1
         return b
 
-    def update_gradients_diag(self, dL_dKdiag, X):
+    def get_gradients_diag(self, X):
         l1 = X[:, 2]
         self.update_kernelparts_diag(X)
         prefac = self.KTd * self.Zprefacd**2 * l1**2
-        self.var_C.gradient = np.sum(dL_dKdiag * prefac * self.KCd)
-        self.var_L.gradient = np.sum(dL_dKdiag * prefac * self.KLd)
-        self.alpha_C.gradient = np.sum(dL_dKdiag * self.var_C *
-                                       prefac * self.D_alpha_Cd)
-        self.alpha_L.gradient = np.sum(dL_dKdiag * self.var_L *
-                                       prefac * self.D_alpha_Ld)
-        self.alpha_T.gradient = 0
+        var_C_gradient = prefac * self.KCd
+        var_L_gradient = prefac * self.KLd
+        alpha_C_gradient = self.var_C * prefac * self.D_alpha_Cd
+        alpha_L_gradient = self.var_L * prefac * self.D_alpha_Ld
+        alpha_T_gradient = 0
+        return var_C_gradient, var_L_gradient, alpha_C_gradient,\
+            alpha_L_gradient, alpha_T_gradient
 
-    def update_gradients_full(self, dL_dK, X, X2=None):
+    def get_gradients_full(self, X, X2=None):
         if X2 is None:
             X2 = X
         l1 = X[:, 2]
         l2 = X2[:, 2]
         self.update_kernelparts(X, X2)
         prefac = self.KT * self.Zprefac**2 * l1[:, None] * l2[None, :]
-        self.var_C.gradient = np.sum(dL_dK * prefac * self.KC)
-        self.var_L.gradient = np.sum(dL_dK * prefac * self.KL)
-        self.alpha_C.gradient\
-            = np.sum(dL_dK * self.var_C * prefac * self.D_alpha_C)
-        self.alpha_L.gradient\
-            = np.sum(dL_dK * self.var_L * prefac * self.D_alpha_L)
-        self.alpha_T.gradient\
-            = np.sum(dL_dK * (X[:, 3:4]-X2[None, :, 3])**2 / self.alpha_T**3 *
-                     prefac * (self.var_C * self.KC + self.var_L * self.KL))
+        var_C_gradient = prefac * self.KC
+        var_L_gradient = prefac * self.KL
+        alpha_C_gradient = self.var_C * prefac * self.D_alpha_C
+        alpha_L_gradient = self.var_L * prefac * self.D_alpha_L
+        alpha_T_gradient = (X[:, 3:4]-X2[None, :, 3])**2 / self.alpha_T**3 *\
+            prefac * (self.var_C * self.KC + self.var_L * self.KL)
+        return var_C_gradient, var_L_gradient, alpha_C_gradient,\
+            alpha_L_gradient, alpha_T_gradient
+
+    def update_gradients_diag(self, dL_dKdiag, X):
+        var_C_gradient, var_L_gradient, alpha_C_gradient,\
+            alpha_L_gradient, alpha_T_gradient = self.get_gradients_diag(X)
+        self.var_C.gradient = np.sum(dL_dKdiag * var_C_gradient)
+        self.var_L.gradient = np.sum(dL_dKdiag * var_L_gradient)
+        self.alpha_C.gradient = np.sum(dL_dKdiag * alpha_C_gradient)
+        self.alpha_T.gradient = np.sum(dL_dKdiag * alpha_T_gradient)
+        self.alpha_L.gradient = np.sum(dL_dKdiag * alpha_L_gradient)
+
+    def update_gradients_full(self, dL_dK, X, X2):
+        var_C_gradient, var_L_gradient, alpha_C_gradient,\
+            alpha_L_gradient, alpha_T_gradient = self.get_gradients_full(X, X2)
+        self.var_C.gradient = np.sum(dL_dK * var_C_gradient)
+        self.var_L.gradient = np.sum(dL_dK * var_L_gradient)
+        self.alpha_C.gradient = np.sum(dL_dK * alpha_C_gradient)
+        self.alpha_T.gradient = np.sum(dL_dK * alpha_T_gradient)
+        self.alpha_L.gradient = np.sum(dL_dK * alpha_L_gradient)
 
     def Kdiag(self, X):
         l1 = X[:, 2]
@@ -359,22 +387,26 @@ class Photoz_kernel(Kern):
         return self.KT * self.Zprefac**2 * l1[:, None] * l2[None, :] *\
             (self.var_C * self.KC + self.var_L * self.KL)
 
-    def gradients_X(self, dL_dK, X, X2=None):
+    def get_gradients_X(self, X, X2=None):
         if X2 is None:
             X2 = X
         self.update_kernelparts(X, X2)
-        tmp = dL_dK * self.KT * self.Zprefac**2 * X[:, 2:3] * X2[None, :, 2] *\
+        tmp = self.KT * self.Zprefac**2 * X[:, 2:3] * X2[None, :, 2] *\
             (self.var_C*self.KC + self.var_L*self.KL)
-        grad = np.zeros(X.shape, dtype=np.float64)
-        grad[:, 2] = np.sum(tmp / X[:, 2:3], axis=1)  # ell
-        tempfull = - tmp * (X[:, 3:4] - X2[None, :, 3]) / self.alpha_T**2
-        grad[:, 3] = np.sum(tempfull, axis=1)  # t
+        grad_ell = tmp / X[:, 2:3]  # ell
+        grad_t = - tmp * (X[:, 3:4] - X2[None, :, 3]) / self.alpha_T**2
         # TODO: add kernel derivatives with respect to redshift
+        return grad_ell, grad_t
+
+    def gradients_X(self, dL_dK, X, X2=None):
+        grad_ell, grad_t = self.get_gradients_X(X, X2)
+        grad = np.zeros_like(X)
+        grad[:, 2] = np.sum(dL_dK * grad_ell, axis=1)
+        grad[:, 3] = np.sum(dL_dK * grad_t, axis=1)
         return grad
 
-    def gradients_X_diag(self, dL_dKdiag, X):
-        # TODO: speed up diagonal gradients
-        return self.gradients_X(dL_dKdiag, X)
+    def gradients_X_diag(self, dL_dK, X):
+        return self.gradients_X(dL_dK, X)
 
     def cThash(self, X):
         return hash(X[:, 3].tostring()) + hash(self.alpha_T.tostring())

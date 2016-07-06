@@ -16,12 +16,12 @@ from delight.hmc import HMC
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 
-NREPEAT = 4
-nObj = 100
-nInducing = 5
-numBands = 4
+NREPEAT = 1
+nObj = 10
+nInducing = 35
+numBands = 5
 size = numBands * nObj
-redshiftGrid = np.linspace(0, 3, num=60)
+redshiftGrid = np.linspace(0, 3, num=30)
 use_interpolators = True
 
 numLines = 3
@@ -109,7 +109,10 @@ class Timer(object):
 
 
 X = random_X_bzlt(size, numBands=numBands)
-X_inducing = random_X_bzlt(nInducing, numBands=numBands)
+if nInducing > 0:
+    X_inducing = random_X_bzlt(nInducing, numBands=numBands)
+else:
+    X_inducing = None
 fcoefs_amp, fcoefs_mu, fcoefs_sig \
     = random_filtercoefs(numBands, numCoefs)
 lines_mu, lines_sig = random_linecoefs(numLines)
