@@ -25,7 +25,7 @@ class PhotozGP(Model):
     """
     def __init__(self,
                  redshifts, luminosities, types, unfixed_indices,
-                 noisy_fluxes, flux_variances, bandsUsed,
+                 noisy_fluxes, flux_variances, extranoise, bandsUsed,
                  fcoefs_amp, fcoefs_mu, fcoefs_sig,
                  lines_mu, lines_sig,
                  alpha, beta, var_C, var_L,
@@ -108,8 +108,12 @@ class PhotozGP(Model):
             'output_index': np.arange(Ny)[:, None],
         }
 
+        self.extranoise = Param('extranoise', float(extranoise))
+        self.extranoise.constrain_positive()
+        self.link_parameter(self.extranoise)
         self.likelihood = HeteroscedasticGaussian(self.Y_metadata)
-        self.likelihood.variance.fix(flux_variances.T.reshape((-1, 1)))
+        self.flux_variances = flux_variances.T.reshape((-1, 1))
+        self.likelihood.variance.fix(self.flux_variances + self.extranoise)
 
         self.inference_method =\
             exact_gaussian_inference.ExactGaussianInference()
@@ -168,6 +172,15 @@ class PhotozGP(Model):
             self[nmb] = params[i]
         self.update_model(True)
 
+    def set_extranoise(self, extranoise):
+        self.update_model(False)
+        index = self.extranoise._parent_index_
+        self.unlink_parameter(self.extranoise)
+        self.extranoise = Param('extranoise', float(extranoise))
+        self.extranoise.constrain_positive()
+        self.link_parameter(self.extranoise, index=index)
+        self.update_model(True)
+
     def set_redshifts(self, redshifts):
         """Set redshifts"""
         assert redshifts.shape[1] == 1
@@ -222,19 +235,76 @@ class PhotozGP(Model):
                                               self.Y, self.mean_function,
                                               self.Y_metadata)
 
+        self.likelihood.variance.fix(self.flux_variances + self.extranoise)
+        self.extranoise.gradient\
+            = self.grad_dict['dL_dthetaL'].sum()
         self.likelihood.update_gradients(self.grad_dict['dL_dthetaL'])
+
         self.mean_function.update_gradients(self.grad_dict['dL_dm'], self.X)
-        self.kern.update_gradients_full(self.grad_dict['dL_dK'], self.X)
-        wm = self.mean_function.gradients_X(self.grad_dict['dL_dm'], self.X)
-        wk = self.kern.gradients_X_diag(self.grad_dict['dL_dK'], self.X)
-        gradX = wm + wk
+
+        gradX = self.mean_function.gradients_X(self.grad_dict['dL_dm'], self.X)
+
+        var_C_gradient_X, var_L_gradient_X, alpha_C_gradient_X,\
+            alpha_L_gradient_X, alpha_T_gradient_X\
+            = self.kern.get_gradients_full(self.X)
+
+        grad_ell_X, grad_t_X = self.kern.get_gradients_X(self.X)
+
+        dL_dK = self.grad_dict['dL_dK']
+        self.kern.var_C.gradient = np.sum(dL_dK * var_C_gradient_X)
+        self.kern.var_L.gradient = np.sum(dL_dK * var_L_gradient_X)
+        self.kern.alpha_C.gradient = np.sum(dL_dK * alpha_C_gradient_X)
+        self.kern.alpha_T.gradient = np.sum(dL_dK * alpha_T_gradient_X)
+        self.kern.alpha_L.gradient = np.sum(dL_dK * alpha_L_gradient_X)
+
+        gradX[:, 2] += np.sum(dL_dK * grad_ell_X, axis=1)
+        gradX[:, 3] += np.sum(dL_dK * grad_t_X, axis=1)
 
         if self.X_inducing is not None:
-            mu, var, marglike, dL_dKnn, V = self._raw_predict(
+
+            mu, var, marglike, dL_dKz, V = self._raw_predict(
                 self.X_inducing, full_cov=True, marglike=True)
-            #  self._log_marginal_likelihood += marglike
+            self._log_marginal_likelihood += marglike
             self.Y_inducing_mean[:, 0] = mu[:, 0]
-            self.Y_inducing_std[:, 0] = np.sqrt(var[:, 0])
+            self.Y_inducing_std[:, 0] = np.sqrt(np.diag(var))
+
+            var_C_gradient_Z, var_L_gradient_Z, alpha_C_gradient_Z,\
+                alpha_L_gradient_Z, alpha_T_gradient_Z\
+                = self.kern.get_gradients_full(self.X_inducing)
+
+            var_C_gradient_XZ, var_L_gradient_XZ, alpha_C_gradient_XZ,\
+                alpha_L_gradient_XZ, alpha_T_gradient_XZ\
+                = self.kern.get_gradients_full(self.X, self.X_inducing)
+
+            grad_ell_XZ, grad_t_XZ = self.kern.get_gradients_X(
+                self.X, self.X_inducing)
+
+            var_C_gradient = var_C_gradient_Z\
+                + np.dot(np.dot(V.T, var_C_gradient_X), V)\
+                - 2*np.dot(V.T, var_C_gradient_XZ)
+            var_L_gradient = var_L_gradient_Z\
+                + np.dot(np.dot(V.T, var_L_gradient_X), V)\
+                - np.dot(V.T, var_L_gradient_XZ)
+            alpha_C_gradient = alpha_C_gradient_Z\
+                + np.dot(np.dot(V.T, alpha_C_gradient_X), V)\
+                - 2*np.dot(V.T, alpha_C_gradient_XZ)
+            alpha_T_gradient = alpha_T_gradient_Z\
+                + np.dot(np.dot(V.T, alpha_T_gradient_X), V)\
+                - 2*np.dot(V.T, alpha_T_gradient_XZ)
+            alpha_L_gradient = alpha_L_gradient_Z\
+                + np.dot(np.dot(V.T, alpha_L_gradient_X), V)\
+                - 2*np.dot(V.T, alpha_L_gradient_XZ)
+            self.kern.var_C.gradient += np.sum(dL_dKz * var_C_gradient)
+            self.kern.var_L.gradient += np.sum(dL_dKz * var_L_gradient)
+            self.kern.alpha_C.gradient += np.sum(dL_dKz * alpha_C_gradient)
+            self.kern.alpha_T.gradient += np.sum(dL_dKz * alpha_T_gradient)
+            self.kern.alpha_L.gradient += np.sum(dL_dKz * alpha_L_gradient)
+
+            #  TODO: implement gradients_X w.r.t. inducing marg like
+            #  grad_ell =  - 2 * np.dot(V.T, grad_ell_XZ)
+            #  grad_t = - 2 * np.dot(V.T, grad_t_XZ)
+            #  gradX[:, 2] += np.sum(dL_dKz * grad_ell, axis=1)
+            #  gradX[:, 3] += np.sum(dL_dKz * grad_t, axis=1)
 
         if not self.unfixed_redshifts.is_fixed:
             self.unfixed_redshifts.gradient[:] = 0

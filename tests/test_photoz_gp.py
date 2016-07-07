@@ -15,13 +15,13 @@ from scipy.misc import derivative
 from copy import deepcopy
 
 NREPEAT = 1
-nObj = 10
+nObj = 5
 nInducing = 5
 nObjUnfixed = 4
 numBands = 2
 numLines = 3
-numCoefs = 10
-relative_accuracy = 0.20
+numCoefs = 8
+relative_accuracy = 0.50
 size = numBands * nObj
 bandsUsed = range(numBands)
 
@@ -34,6 +34,7 @@ fcoefs_amp, fcoefs_mu, fcoefs_sig \
     = random_filtercoefs(numBands, numCoefs)
 lines_mu, lines_sig = random_linecoefs(numLines)
 var_C, var_L, alpha_C, alpha_L, alpha_T = random_hyperparams()
+noise = np.random.uniform(0, 1)
 
 noisy_fluxes = np.random.uniform(low=0.5, high=1., size=size)\
     .reshape((nObj, numBands))
@@ -76,7 +77,7 @@ def create_p_t(request):
         return Kumaraswamy(alpha0, alpha1)
 
 
-@pytest.fixture(params=[False, True])
+@pytest.fixture(params=[True, False])
 def use_inducing(request):
     if request.param is False:
         return None
@@ -105,7 +106,7 @@ def create_gp(use_inducing, use_interpolators,
 
     gp = PhotozGP(
         redshifts, luminosities, types, unfixed_indices,
-        noisy_fluxes, flux_variances, bandsUsed,
+        noisy_fluxes, flux_variances, noise, bandsUsed,
         fcoefs_amp, fcoefs_mu, fcoefs_sig,
         lines_mu, lines_sig,
         alpha, beta, var_C, var_L,
@@ -146,17 +147,6 @@ def test_gradients(create_gp):
                     dx=0.01*gp.mean_function.beta.values)
     assert abs(v1/v2-1) < relative_accuracy
 
-    v1 = gp.kern.alpha_L.gradient
-
-    def f_alpha_L(v):
-        gp2 = deepcopy(gp)
-        gp2.kern.set_alpha_L(v)
-        return gp2._log_marginal_likelihood
-    v2 = derivative(f_alpha_L, gp.kern.alpha_L.values,
-                    dx=0.01*gp.kern.alpha_L.values)
-    if np.abs(v1) > 1e-10 and np.abs(v2) > 1e-10:
-        assert abs(v1/v2-1) < relative_accuracy
-
     v1 = gp.kern.alpha_C.gradient
 
     def f_alpha_C(v):
@@ -196,6 +186,28 @@ def test_gradients(create_gp):
         return gp2._log_marginal_likelihood
     v2 = derivative(f_alpha_T, gp.kern.alpha_T.values,
                     dx=0.01*gp.kern.alpha_T.values)
+    if np.abs(v1) > 1e-10 and np.abs(v2) > 1e-10:
+        assert abs(v1/v2-1) < relative_accuracy
+
+    v1 = gp.extranoise.gradient
+
+    def f_noise(v):
+        gp2 = deepcopy(gp)
+        gp2.set_extranoise(v)
+        return gp2._log_marginal_likelihood
+    v2 = derivative(f_noise, gp.extranoise.values,
+                    dx=0.01*gp.extranoise.values)
+    if np.abs(v1) > 1e-10 and np.abs(v2) > 1e-10:
+        assert abs(v1/v2-1) < relative_accuracy
+
+    v1 = gp.kern.alpha_L.gradient
+
+    def f_alpha_L(v):
+        gp2 = deepcopy(gp)
+        gp2.kern.set_alpha_L(v)
+        return gp2._log_marginal_likelihood
+    v2 = derivative(f_alpha_L, gp.kern.alpha_L.values,
+                    dx=0.01*gp.kern.alpha_L.values)
     if np.abs(v1) > 1e-10 and np.abs(v2) > 1e-10:
         assert abs(v1/v2-1) < relative_accuracy
 
