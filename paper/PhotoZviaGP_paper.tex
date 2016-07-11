@@ -169,7 +169,7 @@ The photometric flux mesured in a band indexed by $b$ and described by a the res
 \eqn{
 	f(b, z, t, \ell) &=&\frac{ \int \mathrm{SED}(\lambda_\mathrm{obs}, z, t, \ell) \ W_b(\lambda_\mathrm{obs}) \frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}} }{ \int g^\mathrm{AB}\ W_b(\lambda_\mathrm{obs}) \frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}}  } \\ 
 	&=& \frac{1+z}{4\pi D^2(z)} \frac{\ell}{g^\mathrm{AB} C_b} \int\frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}} \left( \exp\Bigl(-\alpha(t)\ (\frac{\lambda_\mathrm{obs}}{1+z}-\lambda^\mathrm{ref})\Bigr) \ + \ R_\nu\Bigl(\frac{\lambda_\mathrm{obs}}{1+z},t\Bigr) \right) \ W_b(\lambda_\mathrm{obs})   \\ 
-	&=& \frac{(1+z)^2 \ \ell}{4\pi D^2(z) g^\mathrm{AB} C_b}  \int{\d\lambda_\mathrm{em}} \left( \exp\bigl(-\alpha(t)\ \left(\lambda_\mathrm{em}-\lambda^\mathrm{ref}\right)\bigr) \ + \ R_\nu\bigl({\lambda_\mathrm{em}},t\bigr)  \right) \ V_b\bigl((1+z)\lambda_\mathrm{em}\bigr)
+	&=& \frac{(1+z)^2 \ \ell}{4\pi D^2(z) g^\mathrm{AB} C_b}  \int{\d\lambda_\mathrm{em}} \left( \exp\bigl(-\alpha(t)\ \left(\lambda_\mathrm{em}-\lambda^\mathrm{ref}(1+z)\right)\bigr) \ + \ R_\nu\bigl({\lambda_\mathrm{em}},t\bigr)  \right) \ V_b\bigl((1+z)\lambda_\mathrm{em}\bigr)
 }
 
 where we have defined the rescale filter response $V_b(\lambda) = W_b(\lambda)/\lambda$ and the normalization constant $C_b = \int W_b(\lambda) \d\lambda / \lambda$.
