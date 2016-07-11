@@ -73,19 +73,19 @@ class PhotozGP(Model):
 
         self.redshifts = copy(redshifts)
         self.unfixed_redshifts\
-            = Param('redshifts', redshifts[unfixed_indices, :])
+            = Param('redshifts', copy(redshifts[unfixed_indices, :]))
         self.unfixed_redshifts.constrain_positive()
         self.link_parameter(self.unfixed_redshifts)
 
         self.luminosities = copy(luminosities)
         self.unfixed_luminosities\
-            = Param('luminosities', luminosities[unfixed_indices, :])
+            = Param('luminosities', copy(luminosities[unfixed_indices, :]))
         self.unfixed_luminosities.constrain_positive()
         self.link_parameter(self.unfixed_luminosities)
 
         self.types = copy(types)
         self.unfixed_types\
-            = Param('types', types[unfixed_indices, :])
+            = Param('types', copy(types[unfixed_indices, :]))
         self.unfixed_types.constrain_bounded(0, 1)
         self.link_parameter(self.unfixed_types)
 
@@ -197,6 +197,7 @@ class PhotozGP(Model):
         assert luminosities.shape[1] == 1
         assert luminosities.shape[0] == self.types.shape[0] and\
             luminosities.shape[0] == self.redshifts.shape[0]
+        self.update_model(False)
         self.luminosities = copy(luminosities)
         self.unfixed_luminosities.values[:, 0]\
             = luminosities[self.unfixed_indices, 0]
