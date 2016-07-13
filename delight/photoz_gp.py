@@ -28,7 +28,7 @@ class PhotozGP(Model):
                  noisy_fluxes, flux_variances, extranoise, bandsUsed,
                  fcoefs_amp, fcoefs_mu, fcoefs_sig,
                  lines_mu, lines_sig,
-                 alpha, beta, var_C, var_L,
+                 var_C, var_L,
                  alpha_C, alpha_L, alpha_T,
                  prior_z_t=None,
                  prior_ell_t=None,
@@ -91,8 +91,7 @@ class PhotozGP(Model):
 
         self.num_data, self.input_dim = self.X.shape
 
-        self.mean_function = Photoz_mean_function(alpha, beta,
-                                                  fcoefs_amp,
+        self.mean_function = Photoz_mean_function(fcoefs_amp,
                                                   fcoefs_mu,
                                                   fcoefs_sig)
         self.link_parameter(self.mean_function)
@@ -265,47 +264,49 @@ class PhotozGP(Model):
 
             mu, var, marglike, dL_dKz, V = self._raw_predict(
                 self.X_inducing, full_cov=True, marglike=True)
-            self._log_marginal_likelihood += marglike
             self.Y_inducing_mean[:, 0] = mu[:, 0]
             self.Y_inducing_std[:, 0] = np.sqrt(np.diag(var))
 
-            var_C_gradient_Z, var_L_gradient_Z, alpha_C_gradient_Z,\
-                alpha_L_gradient_Z, alpha_T_gradient_Z\
-                = self.kern.get_gradients_full(self.X_inducing)
+            if False:
+                self._log_marginal_likelihood += marglike
 
-            var_C_gradient_XZ, var_L_gradient_XZ, alpha_C_gradient_XZ,\
-                alpha_L_gradient_XZ, alpha_T_gradient_XZ\
-                = self.kern.get_gradients_full(self.X, self.X_inducing)
+                var_C_gradient_Z, var_L_gradient_Z, alpha_C_gradient_Z,\
+                    alpha_L_gradient_Z, alpha_T_gradient_Z\
+                    = self.kern.get_gradients_full(self.X_inducing)
 
-            grad_ell_XZ, grad_t_XZ = self.kern.get_gradients_X(
-                self.X, self.X_inducing)
+                var_C_gradient_XZ, var_L_gradient_XZ, alpha_C_gradient_XZ,\
+                    alpha_L_gradient_XZ, alpha_T_gradient_XZ\
+                    = self.kern.get_gradients_full(self.X, self.X_inducing)
 
-            var_C_gradient = var_C_gradient_Z\
-                + np.dot(np.dot(V.T, var_C_gradient_X), V)\
-                - 2*np.dot(V.T, var_C_gradient_XZ)
-            var_L_gradient = var_L_gradient_Z\
-                + np.dot(np.dot(V.T, var_L_gradient_X), V)\
-                - np.dot(V.T, var_L_gradient_XZ)
-            alpha_C_gradient = alpha_C_gradient_Z\
-                + np.dot(np.dot(V.T, alpha_C_gradient_X), V)\
-                - 2*np.dot(V.T, alpha_C_gradient_XZ)
-            alpha_T_gradient = alpha_T_gradient_Z\
-                + np.dot(np.dot(V.T, alpha_T_gradient_X), V)\
-                - 2*np.dot(V.T, alpha_T_gradient_XZ)
-            alpha_L_gradient = alpha_L_gradient_Z\
-                + np.dot(np.dot(V.T, alpha_L_gradient_X), V)\
-                - 2*np.dot(V.T, alpha_L_gradient_XZ)
-            self.kern.var_C.gradient += np.sum(dL_dKz * var_C_gradient)
-            self.kern.var_L.gradient += np.sum(dL_dKz * var_L_gradient)
-            self.kern.alpha_C.gradient += np.sum(dL_dKz * alpha_C_gradient)
-            self.kern.alpha_T.gradient += np.sum(dL_dKz * alpha_T_gradient)
-            self.kern.alpha_L.gradient += np.sum(dL_dKz * alpha_L_gradient)
+                grad_ell_XZ, grad_t_XZ = self.kern.get_gradients_X(
+                    self.X, self.X_inducing)
 
-            #  TODO: implement gradients_X w.r.t. inducing marg like
-            #  grad_ell =  - 2 * np.dot(V.T, grad_ell_XZ)
-            #  grad_t = - 2 * np.dot(V.T, grad_t_XZ)
-            #  gradX[:, 2] += np.sum(dL_dKz * grad_ell, axis=1)
-            #  gradX[:, 3] += np.sum(dL_dKz * grad_t, axis=1)
+                var_C_gradient = var_C_gradient_Z\
+                    + np.dot(np.dot(V.T, var_C_gradient_X), V)\
+                    - 2*np.dot(V.T, var_C_gradient_XZ)
+                var_L_gradient = var_L_gradient_Z\
+                    + np.dot(np.dot(V.T, var_L_gradient_X), V)\
+                    - np.dot(V.T, var_L_gradient_XZ)
+                alpha_C_gradient = alpha_C_gradient_Z\
+                    + np.dot(np.dot(V.T, alpha_C_gradient_X), V)\
+                    - 2*np.dot(V.T, alpha_C_gradient_XZ)
+                alpha_T_gradient = alpha_T_gradient_Z\
+                    + np.dot(np.dot(V.T, alpha_T_gradient_X), V)\
+                    - 2*np.dot(V.T, alpha_T_gradient_XZ)
+                alpha_L_gradient = alpha_L_gradient_Z\
+                    + np.dot(np.dot(V.T, alpha_L_gradient_X), V)\
+                    - 2*np.dot(V.T, alpha_L_gradient_XZ)
+                self.kern.var_C.gradient += np.sum(dL_dKz * var_C_gradient)
+                self.kern.var_L.gradient += np.sum(dL_dKz * var_L_gradient)
+                self.kern.alpha_C.gradient += np.sum(dL_dKz * alpha_C_gradient)
+                self.kern.alpha_T.gradient += np.sum(dL_dKz * alpha_T_gradient)
+                self.kern.alpha_L.gradient += np.sum(dL_dKz * alpha_L_gradient)
+
+                #  TODO: implement gradients_X w.r.t. inducing marg like
+                #  grad_ell =  - 2 * np.dot(V.T, grad_ell_XZ)
+                #  grad_t = - 2 * np.dot(V.T, grad_t_XZ)
+                #  gradX[:, 2] += np.sum(dL_dKz * grad_ell, axis=1)
+                #  gradX[:, 3] += np.sum(dL_dKz * grad_t, axis=1)
 
         if not self.unfixed_redshifts.is_fixed:
             self.unfixed_redshifts.gradient[:] = 0

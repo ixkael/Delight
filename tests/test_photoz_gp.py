@@ -26,8 +26,6 @@ size = numBands * nObj
 bandsUsed = range(numBands)
 
 X = random_X_bzlt(nObj, numBands=numBands)
-alpha = np.random.uniform(low=1e-4, high=1e-3, size=1)
-beta = np.random.uniform(low=0.3, high=0.7, size=1)
 bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
 
 fcoefs_amp, fcoefs_mu, fcoefs_sig \
@@ -109,7 +107,7 @@ def create_gp(use_inducing, use_interpolators,
         noisy_fluxes, flux_variances, noise, bandsUsed,
         fcoefs_amp, fcoefs_mu, fcoefs_sig,
         lines_mu, lines_sig,
-        alpha, beta, var_C, var_L,
+        var_C, var_L,
         alpha_C, alpha_L, alpha_T,
         prior_z_t=prior_z_t,
         prior_ell_t=prior_ell_t,
@@ -126,26 +124,6 @@ def test_gradients(create_gp):
     """Test all gradients of the full likelihood function"""
     gp = create_gp
     assert(isinstance(gp, PhotozGP))
-
-    v1 = gp.mean_function.alpha.gradient
-
-    def f_alpha(v):
-        gp2 = deepcopy(gp)
-        gp2.mean_function.set_alpha(v)
-        return gp2._log_marginal_likelihood
-    v2 = derivative(f_alpha, gp.mean_function.alpha.values,
-                    dx=0.01*gp.mean_function.alpha.values)
-    assert abs(v1/v2-1) < relative_accuracy
-
-    v1 = gp.mean_function.beta.gradient
-
-    def f_beta(v):
-        gp2 = deepcopy(gp)
-        gp2.mean_function.set_beta(v)
-        return gp2._log_marginal_likelihood
-    v2 = derivative(f_beta, gp.mean_function.beta.values,
-                    dx=0.01*gp.mean_function.beta.values)
-    assert abs(v1/v2-1) < relative_accuracy
 
     v1 = gp.kern.alpha_C.gradient
 

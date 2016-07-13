@@ -179,33 +179,8 @@ def test_meanfunction_gradients_X():
     fcoefs_amp, fcoefs_mu, fcoefs_sig \
         = random_filtercoefs(numBands, numCoefs)
     for i in range(NREPEAT):
-        alpha = np.random.uniform(low=0, high=2e-3, size=1)
-        beta = np.random.uniform(low=0, high=1, size=1)
         X = random_X_bzlt(size, numBands=numBands)
-        mf = Photoz_mean_function(alpha, beta,
-                                  fcoefs_amp, fcoefs_mu, fcoefs_sig)
-
-        alpha_gradient, beta_gradient = mf.get_gradients(X)
-
-        v1 = np.sum(alpha_gradient)
-
-        def f_alpha(alpha):
-            mf2 = copy(mf)
-            mf2.set_alpha(alpha)
-            return np.sum(mf2.f(X))
-
-        v2 = derivative(f_alpha, alpha, dx=0.01*alpha)
-        assert abs(v1/v2-1) < relative_accuracy
-
-        v1 = np.sum(beta_gradient)
-
-        def f_beta(beta):
-            mf2 = copy(mf)
-            mf2.set_beta(beta)
-            return np.sum(mf2.f(X))
-
-        v2 = derivative(f_beta, beta, dx=0.01*beta)
-        assert abs(v1/v2-1) < relative_accuracy
+        mf = Photoz_mean_function(fcoefs_amp, fcoefs_mu, fcoefs_sig)
 
         grad_ell, grad_t = mf.get_gradients_X(X)
 
@@ -234,13 +209,10 @@ def test_meanfunction():
     fcoefs_amp, fcoefs_mu, fcoefs_sig \
         = random_filtercoefs(numBands, numCoefs)
     for i in range(NREPEAT):
-        alpha = np.random.uniform(low=0, high=2e-3, size=1)
-        beta = np.random.uniform(low=0, high=1, size=1)
         X = random_X_bzlt(size, numBands=numBands)
         bands, redshifts, luminosities, types = np.split(X, 4, axis=1)
         bands = bands.astype(int)
-        mf = Photoz_mean_function(alpha, beta,
-                                  fcoefs_amp, fcoefs_mu, fcoefs_sig)
+        mf = Photoz_mean_function(fcoefs_amp, fcoefs_mu, fcoefs_sig)
         assert mf.f(X).shape == (size, 1)
 
         f_mod = np.zeros((size, ))
@@ -256,7 +228,15 @@ def test_meanfunction():
                 lambdaMax = mu[k] + 4*sig[k]
                 xf = np.linspace(lambdaMin, lambdaMax, num=200)
                 yf = amp[k] * np.exp(-0.5*((xf-mu[k])/sig[k])**2)
-                sed = ell*np.exp(-alpha*types[k]**beta*(xf/oneplusz[k]-4.5e3))
+                xfz = xf/oneplusz[k]
+                alpha = 0*xfz
+                alpha[xfz < mf.lambdaRef] = mf.alpha0 * \
+                    (1-types[k]**mf.alphaexp0)\
+                    + mf.alpha1*types[k]**mf.alphaexp1
+                alpha[xfz >= mf.lambdaRef] = mf.beta0 * \
+                    (1-types[k]**mf.betaexp0)\
+                    + mf.beta1*types[k]**mf.betaexp1
+                sed = ell * np.exp(-alpha*(xfz-4.5e3))
                 fac = oneplusz[k] / mf.DL_z(redshifts[k])**2 / (4*np.pi)
                 f_mod[k] += np.trapz(sed*yf, x=xf) / norms[bands[k]] * fac
 

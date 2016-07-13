@@ -151,7 +151,15 @@ We design a Gaussian Process with mean and covariance that capture the known phy
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Spectral energy distribution of galaxies and photometric fluxes}
 
-For a galaxy of type $t$ of luminosity $\ell$, the energy density of the luminosity is assumed to be $\ell \exp\bigl(-\alpha(t)\ (\lambda_\mathrm{obs}-\lambda^\mathrm{ref})\bigr)  + \ell R_\nu(\lambda_\mathrm{em},t)$, where $R_\nu(\lambda_\mathrm{em},t)$ is a generic template for the relative luminosity density of galaxies as a function of emitted wavelength $\lambda_\mathrm{em}$ and type $t$.
+For a galaxy of type $t$ of luminosity $\ell$, the energy density of the luminosity is assumed to be $\ell \exp\bigl(-\alpha(t,\lambda_\mathrm{em})\ (\lambda_\mathrm{em}-\lambda^\mathrm{ref})\bigr)  + \ell R_\nu(\lambda_\mathrm{em},t)$, where $R_\nu(\lambda_\mathrm{em},t)$ is a generic template for the relative luminosity density of galaxies as a function of emitted wavelength $\lambda_\mathrm{em}$ and type $t$.
+
+In practice, we will adopt a double power law
+\eqn{
+	\alpha(t,\lambda) = \left\{\begin{array}{ll}
+		\alpha_<(t) = 0.0018\ (1-t^{0.56} + t^{9.57}) &\mathrm{if}\quad \lambda \leq \lambda^\mathrm{ref}\\
+		\alpha_>(t) = 0.00035\ (1-t^{4.3}) - 0.00022\ t^{0.46}  &\mathrm{if}\quad \lambda > \lambda^\mathrm{ref}\\
+	\end{array}\right.
+}
 
 \todo{Add units}
 
@@ -161,18 +169,18 @@ Second, our definition of luminosity is a constant background value $\ell$ since
 
 For the same galaxy at redshift $z$, the observed energy density of the flux measured at a wavelength $\lambda_\mathrm{obs}$ reads
 \equ{
-	\mathrm{SED}(\lambda_\mathrm{obs}, z, t, \ell) = \frac{(1+z) \ \ell}{4\pi D^2(z)} \left( \exp\Bigl(-\alpha(t)\ (\frac{\lambda_\mathrm{obs}}{1+z}-\lambda^\mathrm{ref})\Bigr) + R_\nu\Bigl(\frac{\lambda_\mathrm{obs}}{1+z},t\Bigr) \right)
+	\mathrm{SED}(\lambda_\mathrm{obs}, z, t, \ell) = \frac{(1+z) \ \ell}{4\pi D^2(z)} \left( \exp\Bigl(-\alpha(t,\frac{\lambda_\mathrm{obs}}{1+z})\ (\frac{\lambda_\mathrm{obs}}{1+z}-\lambda^\mathrm{ref})\Bigr) + R_\nu\Bigl(\frac{\lambda_\mathrm{obs}}{1+z},t\Bigr) \right)
 }
 where $D(z)$ is the luminosity distance.
 
 The photometric flux mesured in a band indexed by $b$ and described by a the response of the filter $W_b(\lambda)$ is
 \eqn{
-	f(b, z, t, \ell) &=&\frac{ \int \mathrm{SED}(\lambda_\mathrm{obs}, z, t, \ell) \ W_b(\lambda_\mathrm{obs}) \frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}} }{ \int g^\mathrm{AB}\ W_b(\lambda_\mathrm{obs}) \frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}}  } \\ 
-	&=& \frac{1+z}{4\pi D^2(z)} \frac{\ell}{g^\mathrm{AB} C_b} \int\frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}} \left( \exp\Bigl(-\alpha(t)\ (\frac{\lambda_\mathrm{obs}}{1+z}-\lambda^\mathrm{ref})\Bigr) \ + \ R_\nu\Bigl(\frac{\lambda_\mathrm{obs}}{1+z},t\Bigr) \right) \ W_b(\lambda_\mathrm{obs})   \\ 
-	&=& \frac{(1+z)^2 \ \ell}{4\pi D^2(z) g^\mathrm{AB} C_b}  \int{\d\lambda_\mathrm{em}} \left( \exp\bigl(-\alpha(t)\ \left(\lambda_\mathrm{em}-\lambda^\mathrm{ref}(1+z)\right)\bigr) \ + \ R_\nu\bigl({\lambda_\mathrm{em}},t\bigr)  \right) \ V_b\bigl((1+z)\lambda_\mathrm{em}\bigr)
+	f(b, z, t, \ell) &=&\frac{ \int_0^\infty \mathrm{SED}(\lambda_\mathrm{obs}, z, t, \ell) \ W_b(\lambda_\mathrm{obs}) \frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}} }{ \int_0^\infty g^\mathrm{AB}\ W_b(\lambda_\mathrm{obs}) \frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}}  } \\ 
+	&=& \frac{1+z}{4\pi D^2(z)} \frac{\ell}{g^\mathrm{AB} C_b} \int_0^\infty\frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}} \left( \exp\Bigl(-\alpha(t,\frac{\lambda_\mathrm{obs}}{1+z})\ (\frac{\lambda_\mathrm{obs}}{1+z}-\lambda^\mathrm{ref})\Bigr) \ + \ R_\nu\Bigl(\frac{\lambda_\mathrm{obs}}{1+z},t\Bigr) \right) \ W_b(\lambda_\mathrm{obs})   \\ 
+	&=& \frac{(1+z)^2 \ \ell}{4\pi D^2(z) g^\mathrm{AB} C_b}  \int_0^\infty{\d\lambda_\mathrm{em}} \left( \exp\bigl(-\alpha(t,\lambda_\mathrm{em})\ \left(\lambda_\mathrm{em}-\lambda^\mathrm{ref}(1+z)\right)\bigr) \ + \ R_\nu\bigl({\lambda_\mathrm{em}},t\bigr)  \right) \ V_b\bigl((1+z)\lambda_\mathrm{em}\bigr)
 }
 
-where we have defined the rescale filter response $V_b(\lambda) = W_b(\lambda)/\lambda$ and the normalization constant $C_b = \int W_b(\lambda) \d\lambda / \lambda$.
+where we have defined the rescale filter response $V_b(\lambda) = W_b(\lambda)/\lambda$ and the normalization constant $C_b = \int_0^\infty W_b(\lambda) \d\lambda / \lambda$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Gaussian process in flux space}
@@ -188,11 +196,11 @@ Since the previous equations connecting fluxes to SEDs are deterministic, the ph
 }
 It is straightforward to show that the mean function is
 \eqn{
-	m(b,z,\ell,t) = \frac{(1+z)^2\ \ell}{4\pi D^2(z)g^\mathrm{AB} C_b}  \int{\d\lambda}  \exp\Bigl(-\alpha(t)\ \left(\lambda-\lambda^\mathrm{ref}\right)\Bigr) \ V_b\Bigl((1+z)\lambda\Bigr)
+	m(b,z,\ell,t) = \frac{(1+z)^2\ \ell}{4\pi D^2(z)g^\mathrm{AB} C_b}  \int_0^\infty {\d\lambda}  \exp\Bigl(-\alpha(t,\lambda)\ \left(\lambda-\lambda^\mathrm{ref}\right)\Bigr) \ V_b\Bigl((1+z)\lambda\Bigr)
 }
 and does not depend on type or photometric band, while the covariance function or kernel is
 \eqn{
-	k(b,b',z,z',\ell,\ell',t,t') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2  \frac{\ell\ell'}{C_bC_{b'}} \int \ k^\lambda\Bigl(t,t',\lambda,\lambda'\Bigr) \ V_b\Bigl((1+z)\lambda\Bigr) \ V_{b'}\Bigl((1+z')\lambda'\Bigr) \ \d\lambda\d\lambda' 
+	k(b,b',z,z',\ell,\ell',t,t') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2  \frac{\ell\ell'}{C_bC_{b'}} \int_0^\infty \ k^\lambda\Bigl(t,t',\lambda,\lambda'\Bigr) \ V_b\Bigl((1+z)\lambda\Bigr) \ V_{b'}\Bigl((1+z')\lambda'\Bigr) \ \d\lambda\d\lambda' 
 }
 and does not depend on luminosity.
 
@@ -337,9 +345,15 @@ We approximate the filters are a sum of Gaussian distributions,
 	V_b(\lambda) = \sum_{i} a_{i}\mathcal{N}(\lambda,\mu_i,\sigma_i) \quad\quad  V_{b'}(\lambda) = \sum_{i'} a_{i'}\mathcal{N}(\lambda,\mu_{i'},\sigma_{i'})
 }
 We drop the secondary $b$ dependency below, but it should be understood that the $i$ and $j$ indices below depend on each band.
-In this case, one can derive an exact expression for the Gaussian Process mean function kernel in flux space. The former is
+In this case, one can derive an exact expression for the Gaussian Process mean function kernel in flux space, by calculating the definiting integral in two sections $[0, \lambda^\mathrm{ref}]$ and $[\lambda^\mathrm{ref}, \infty]$ with the $\alpha_>(t)$ and $\alpha_>(t)$ coefficients, respectively. The result is
 \eqn{
-	m(b,z,\ell,t) = \frac{\ell\  (1+z)}{4\pi D^2(z)g^\mathrm{AB} C_b} \sum_{i} a_i \sigma_i\frac{\pi}{2}  \left( 1 + \mathrm{erf}\ \frac{\mu_i(1+z)-\alpha(t)\sigma_i^2}{\sqrt{2}\sigma_i(1+z)} \ \right) \exp\left( \alpha(t)\Bigl( \frac{\alpha(t)\sigma_i^2}{2(1+z)^2} - \frac{\mu_i}{1+z} + \lambda^\mathrm{ref}\Bigr)\right)
+	m(b,z,\ell,t) &=& \frac{\ell\  (1+z)}{4\pi D^2(z)g^\mathrm{AB} C_b} \sum_{i} a_i  \int_0^\infty{\d\lambda} \exp\Bigl(-\alpha(t,\lambda)\ \left(\lambda-\lambda^\mathrm{ref}\right)\Bigr) \ \mathcal{N}\Bigl((1+z)\lambda,\mu_i,\sigma_i\Bigr) \\
+	&=& \frac{\ell\  (1+z)}{4\pi D^2(z)g^\mathrm{AB} C_b} \sum_{i} a_i  \Bigl(I_i(\alpha_>(t), z, \infty) - I_i(\alpha_>(t), z, \lambda^\mathrm{ref}) + I_i(\alpha_<(t), z, \lambda^\mathrm{ref}) - I_i(\alpha_<(t), z, 0) \Bigl)\nonumber
+}
+with the indefinite integral 
+\eqn{
+	I_i(\alpha, z, \lambda') &=& \int_0^{\lambda'}{\d\lambda} \exp\Bigl(-\alpha\left(\lambda-\lambda^\mathrm{ref}\right)\Bigr) \ \mathcal{N}\Bigl((1+z)\lambda,\mu_i,\sigma_i\Bigr) 
+	\\ &=& \sigma_i\frac{\pi}{2} \ \mathrm{erf}\left( \frac{\alpha\sigma_i^2 - \mu_i(1+z) + \lambda(1+z)^2}{\sqrt{2}\sigma_i(1+z)}\right) \ \exp\left( \frac{\alpha}{2(1+z)^2}\Bigl( \alpha\sigma_i^2 - \frac{\mu_i}{1+z} + \lambda^\mathrm{ref}\Bigr)\right)
 }
 The kernel is
 \eqn{
@@ -393,7 +407,7 @@ Similarly, we use a Schechter luminosity function
 }
 with another function of type $\alpha(t,\bm{\theta})$.
 
-We can verify that since the three distributions are properly normalised, we have $\int\d z\d l \d t p(z,t,\ell | \vec{\theta}) = 1$ regardless of the values of the hyperparameters and the form of the free functions $\sigma(t,\bm{\theta})$ and $\alpha(t,\bm{\theta})$.
+We can verify that since the three distributions are properly normalised, we have $\int_0^\infty\d z\d l \d t p(z,t,\ell | \vec{\theta}) = 1$ regardless of the values of the hyperparameters and the form of the free functions $\sigma(t,\bm{\theta})$ and $\alpha(t,\bm{\theta})$.
 
 We use 
 \eqn{

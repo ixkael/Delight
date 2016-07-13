@@ -24,7 +24,7 @@ class Photoz_mean_function(Mapping):
     """
     Mean function of photoz GP
     """
-    def __init__(self, alpha, beta, fcoefs_amp, fcoefs_mu, fcoefs_sig,
+    def __init__(self, fcoefs_amp, fcoefs_mu, fcoefs_sig,
                  g_AB=1.0, lambdaRef=4.5e3, DL_z=None, name='photoz_mf'):
         """ Constructor."""
         # Call standard Kern constructor with 2 dimensions (z and l).
@@ -47,37 +47,15 @@ class Photoz_mean_function(Mapping):
         self.numCoefs = fcoefs_amp.shape[1]
         self.norms = np.sqrt(2*np.pi)\
             * np.sum(self.fcoefs_amp * self.fcoefs_sig, axis=1)
-        self.alpha = Param('alpha', float(alpha))
-        self.alpha.constrain_positive()
-        self.link_parameter(self.alpha)
-        self.beta = Param('beta', float(beta))
-        self.beta.constrain_bounded(0, 1)
-        self.link_parameter(self.beta)
+        # TODO: implement these parameters and their gradients properly
+        self.alpha0, self.alpha1 = -0.00177522929007, 0.000186441821799
+        self.beta0, self.beta1 = -0.000354784639976, 0.000227322055552
+        self.alphaexp0, self.alphaexp1 = 0.5653, 9.57259
+        self.betaexp0, self.betaexp1 = 4.30089, 0.46153
         self.hash = 0
 
-    def set_alpha(self, alpha):
-        """Set alpha"""
-        self.update_model(False)
-        index = self.alpha._parent_index_
-        self.unlink_parameter(self.alpha)
-        self.alpha = Param('alpha', float(alpha))
-        self.alpha.constrain_positive()
-        self.link_parameter(self.alpha, index=index)
-        self.update_model(True)
-
-    def set_beta(self, beta):
-        """Set beta"""
-        self.update_model(False)
-        index = self.beta._parent_index_
-        self.unlink_parameter(self.beta)
-        self.beta = Param('beta', float(beta))
-        self.beta.constrain_bounded(0, 1)
-        self.link_parameter(self.beta, index=index)
-        self.update_model(True)
-
     def chash(self, X):
-        return hash(X.tostring())\
-            + hash(self.alpha.tostring()) + hash(self.beta.tostring())
+        return hash(X.tostring())
 
     def update_parts(self, X):
         b = X[:, 0].astype(int)
@@ -85,65 +63,46 @@ class Photoz_mean_function(Mapping):
         l = X[:, 2]
         t = X[:, 3]
         opz = 1. + z
+        lambdaRef = self.lambdaRef
+
+        def IanddI(coefs, t, opz, mu, sig, lam):
+            alpha = coefs[0] * (1 - t**coefs[1]) + coefs[2] * t**coefs[3]
+            dalphadt = - coefs[0] * coefs[1] * t**(coefs[1]-1) \
+                + coefs[2] * coefs[3] * t**(coefs[3]-1)
+            T1 = (alpha*sig**2 - mu*opz + lam*opz**2) / (np.sqrt(2)*sig*opz)
+            T2 = alpha/2/opz**2*(alpha*sig**2 - 2*mu*opz + 2*lambdaRef*opz**2)
+            erfT1 = erf(T1)
+            expT2 = np.exp(T2)
+            I = self.sqrthalfpi * sig / opz * erfT1 * expT2
+            dT1dt = sig * dalphadt / opz / np.sqrt(2)
+            dT2dt = dalphadt/2/opz**2 * \
+                (2*alpha*sig**2 - 2*mu*opz + 2*lambdaRef*opz**2)
+            dI = sig / opz * expT2 * (
+                np.sqrt(2) * np.exp(-T1**2) * dT1dt +
+                self.sqrthalfpi * erfT1 * dT2dt
+                )
+            return I, dI
+
         if self.hash != self.chash(X):
             self.sum_mf = np.zeros_like(t)
-            self.sum_beta = np.zeros_like(t)
-            self.sum_alpha = np.zeros_like(t)
             self.sum_t = np.zeros_like(t)
             self.sum_ell = np.zeros_like(t)
             for i in range(self.numCoefs):
                 amp, mu, sig = self.fcoefs_amp[b, i],\
                                self.fcoefs_mu[b, i],\
                                self.fcoefs_sig[b, i]
-                alphat = self.alpha * (t - self.beta)
-                term1 = (mu * opz - alphat * sig**2) /\
-                    (1.41421356237 * sig * opz)
-                term2 = alphat * (self.lambdaRef - mu/opz +
-                                  alphat*(sig/opz)**2/2)
-                expterm = np.exp(term2)
-                erfterm = (1 + erf(term1))
+                coefs = np.array([self.alpha0, self.alphaexp0,
+                                  self.alpha1, self.alphaexp1])
+                I3, dI3 = IanddI(coefs, t, opz, mu, sig, lambdaRef)
+                I4, dI4 = IanddI(coefs, t, opz, mu, sig, 0)
+                coefs = np.array([self.beta0, self.betaexp0,
+                                  self.beta1, self.betaexp1])
+                I1, dI1 = IanddI(coefs, t, opz, mu, sig, 1e8)
+                I2, dI2 = IanddI(coefs, t, opz, mu, sig, lambdaRef)
 
-                self.sum_mf += amp * erfterm * expterm *\
-                    self.sqrthalfpi * sig
-                self.sum_ell += amp * erfterm * expterm *\
-                    self.sqrthalfpi * sig
-
-                Dterm1 = (self.alpha *
-                          np.exp(-((-self.alpha*sig**2*(t - self.beta) +
-                                    mu*opz)**2 /
-                                   (2*sig**2*opz**2))) *
-                          self.sqrthalfpi*sig) / opz
-                Dterm2 = (self.alpha**2*self.beta*sig**2*(t-self.beta)**2 /
-                          (2*opz**2) +
-                          self.alpha * (self.lambdaRef +
-                          (self.alpha*sig**2*(t-self.beta)) /
-                           (2*opz**2) - mu/opz))
-                self.sum_t += amp * expterm * Dterm1 *\
-                    self.sqrthalfpi * sig
-                self.sum_t += amp * erfterm * expterm *\
-                    Dterm2 * self.sqrthalfpi * sig
-
-                Dterm1 = np.sqrt(2/np.pi) * sig * (t-self.beta) / opz *\
-                    np.exp(-0.5*((mu*opz - alphat * sig**2 * (t-self.beta)) /
-                           sig / opz)**2)
-                Dterm2 = (t-self.beta) * (self.lambdaRef - mu/opz +
-                                          alphat*(sig/opz)**2/2)\
-                    + self.alpha*((t-self.beta)*sig/opz)**2/2
-                self.sum_alpha += amp * expterm * Dterm1 *\
-                    self.sqrthalfpi * sig
-                self.sum_alpha += amp * erfterm * expterm *\
-                    Dterm2 * self.sqrthalfpi * sig
-
-                Dterm1 = np.sqrt(2/np.pi) * sig * self.alpha / opz *\
-                    np.exp(-0.5*((mu*opz - alphat * sig**2 * (t-self.beta)) /
-                           sig / opz)**2)
-                Dterm2 = - self.alpha * (self.lambdaRef - mu/opz +
-                                         alphat*(sig/opz)**2/2)\
-                    - self.alpha**2*((t-self.beta)*sig/opz)**2/2
-                self.sum_beta += amp * expterm * Dterm1 *\
-                    self.sqrthalfpi * sig
-                self.sum_beta += amp * erfterm * expterm *\
-                    Dterm2 * self.sqrthalfpi * sig
+                self.sum_mf += amp * (I1 - I2 + I3 - I4)
+                self.sum_ell += amp * (I1 - I2 + I3 - I4)
+                self.sum_t += amp * (dI1 - dI2 + dI3 - dI4)
 
             self.hash = self.chash(X)
 
@@ -171,23 +130,8 @@ class Photoz_mean_function(Mapping):
         # TODO: implement z gradient
         return grad_ell, grad_t
 
-    def get_gradients(self, X):
-        b = X[:, 0].astype(int)
-        z = X[:, 1]
-        l = X[:, 2]
-        t = X[:, 3]
-        opz = 1 + z
-        self.update_parts(X)
-        fac = 1. / self.fourpi / self.DL_z(z)**2.0 / self.g_AB / self.norms[b]
-        alpha_gradient = opz * l * fac * self.sum_alpha
-        beta_gradient = opz * l * fac * self.sum_beta
-        beta_gradient[t <= 0] = 0
-        return alpha_gradient, beta_gradient
-
     def update_gradients(self, dL_dF, X):
-        alpha_gradient, beta_gradient = self.get_gradients(X)
-        self.alpha.gradient = np.dot(dL_dF.T, alpha_gradient)
-        self.beta.gradient = np.dot(dL_dF.T, beta_gradient)
+        pass
 
     def gradients_X(self, dL_dm, X):
         grad_ell, grad_t = self.get_gradients_X(X)
