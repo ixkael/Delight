@@ -108,7 +108,7 @@ class PhotozGP(Model):
         }
 
         self.extranoise = Param('extranoise', float(extranoise))
-        self.extranoise.constrain_positive()
+        self.extranoise.constrain_bounded(1e-12, 1e-4)
         self.link_parameter(self.extranoise)
         self.likelihood = HeteroscedasticGaussian(self.Y_metadata)
         self.flux_variances = flux_variances.T.reshape((-1, 1))
@@ -161,6 +161,22 @@ class PhotozGP(Model):
         for nmb, (idx1, idx2) in array_params.iteritems():
             array_params[nmb] = (np.array(idx1), np.array(idx2))
         return scalar_params, array_params
+
+    def set_X_inducing(self, X_inducing):
+        self.X_inducing = X_inducing
+
+        assert self.X_inducing.shape[1] == self.input_dim
+        self.Y_inducing_mean = np.zeros((self.X_inducing.shape[0], 1))
+        self.Y_inducing_std = np.zeros((self.X_inducing.shape[0], 1))
+        self.derived_params.append(self.Y_inducing_mean)
+        self.derived_param_names.append('Y_inducing_mean')
+        self.derived_params.append(self.Y_inducing_std)
+        self.derived_param_names.append('Y_inducing_std')
+
+        mu, var = self._raw_predict(  # marglike, dL_dKz, V
+            self.X_inducing, full_cov=False, marglike=False)
+        self.Y_inducing_mean[:, 0] = mu[:, 0]
+        self.Y_inducing_std[:, 0] = np.sqrt(var[:, 0])  # np.sqrt(np.diag(var))
 
     def set_unfixed_parameters(self, params, scalar_params, array_params):
         """Set unfixed parameters all at once"""
@@ -262,10 +278,11 @@ class PhotozGP(Model):
 
         if self.X_inducing is not None:
 
-            mu, var, marglike, dL_dKz, V = self._raw_predict(
-                self.X_inducing, full_cov=True, marglike=True)
+            mu, var = self._raw_predict(  # marglike, dL_dKz, V
+                self.X_inducing, full_cov=False, marglike=False)
             self.Y_inducing_mean[:, 0] = mu[:, 0]
-            self.Y_inducing_std[:, 0] = np.sqrt(np.diag(var))
+            self.Y_inducing_std[:, 0] = np.sqrt(var[:, 0])
+            # np.sqrt(np.diag(var))
 
             if False:
                 self._log_marginal_likelihood += marglike
@@ -388,7 +405,7 @@ class PhotozGP(Model):
         else:
             Kxx = kern.Kdiag(Xnew)
             if self.posterior._woodbury_chol.ndim == 2:
-                tmp = dtrtrs(self._woodbury_chol, Kx)[0]
+                tmp = dtrtrs(self.posterior._woodbury_chol, Kx)[0]
                 var = (Kxx - np.square(tmp).sum(0))[:, None]
             elif self.posterior._woodbury_chol.ndim == 3:  # Missing data
                 var = np.empty((Kxx.shape[0],

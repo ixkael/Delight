@@ -18,12 +18,13 @@ from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 NREPEAT = 1
 nObj = 10
-nInducing = 35
+nInducing = 5
 numBands = 5
 size = numBands * nObj
 redshiftGrid = np.linspace(0, 3, num=30)
 use_interpolators = True
 
+extranoise = 1e-8
 numLines = 3
 numCoefs = 10
 bandsUsed = range(numBands)
@@ -117,8 +118,6 @@ fcoefs_amp, fcoefs_mu, fcoefs_sig \
     = random_filtercoefs(numBands, numCoefs)
 lines_mu, lines_sig = random_linecoefs(numLines)
 var_C, var_L, alpha_C, alpha_L, alpha_T = random_hyperparams()
-alpha = np.random.uniform(low=1e-4, high=1e-3, size=1)
-beta = np.random.uniform(low=0.3, high=0.7, size=1)
 kern = Photoz_kernel(fcoefs_amp, fcoefs_mu, fcoefs_sig,
                      lines_mu, lines_sig, var_C, var_L,
                      alpha_C, alpha_L, alpha_T)
@@ -202,7 +201,7 @@ print "=> gradients_X (X fixed): %s s" % (t.secs / NREPEAT)
 
 print '-------'
 
-mf = Photoz_mean_function(alpha, beta, fcoefs_amp, fcoefs_mu, fcoefs_sig)
+mf = Photoz_mean_function(fcoefs_amp, fcoefs_mu, fcoefs_sig)
 
 with Timer() as t:
     for i in range(NREPEAT):
@@ -251,10 +250,10 @@ flux_variances = np.random.uniform(low=0., high=1., size=size)\
 with Timer() as t:
     gp = PhotozGP(
         redshifts, luminosities, types, used_indices,
-        noisy_fluxes, flux_variances, bandsUsed,
+        noisy_fluxes, flux_variances, extranoise, bandsUsed,
         fcoefs_amp, fcoefs_mu, fcoefs_sig,
         lines_mu, lines_sig,
-        alpha, beta, var_C, var_L,
+        var_C, var_L,
         alpha_C, alpha_L, alpha_T,
         X_inducing=X_inducing,
         redshiftGrid=redshiftGrid,
@@ -299,8 +298,6 @@ print "=> HMC iterations (all varying): %s s" % (t.secs / NREPEAT)
 gp.kern.var_L.fix()
 gp.kern.alpha_C.fix()
 gp.kern.alpha_L.fix()
-gp.mean_function.alpha.fix()
-gp.mean_function.beta.fix()
 
 hmc = GPy.inference.mcmc.HMC(gp, stepsize=1e-4)
 with Timer() as t:

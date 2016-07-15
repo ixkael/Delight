@@ -347,13 +347,13 @@ We approximate the filters are a sum of Gaussian distributions,
 We drop the secondary $b$ dependency below, but it should be understood that the $i$ and $j$ indices below depend on each band.
 In this case, one can derive an exact expression for the Gaussian Process mean function kernel in flux space, by calculating the definiting integral in two sections $[0, \lambda^\mathrm{ref}]$ and $[\lambda^\mathrm{ref}, \infty]$ with the $\alpha_>(t)$ and $\alpha_>(t)$ coefficients, respectively. The result is
 \eqn{
-	m(b,z,\ell,t) &=& \frac{\ell\  (1+z)}{4\pi D^2(z)g^\mathrm{AB} C_b} \sum_{i} a_i  \int_0^\infty{\d\lambda} \exp\Bigl(-\alpha(t,\lambda)\ \left(\lambda-\lambda^\mathrm{ref}\right)\Bigr) \ \mathcal{N}\Bigl((1+z)\lambda,\mu_i,\sigma_i\Bigr) \\
-	&=& \frac{\ell\  (1+z)}{4\pi D^2(z)g^\mathrm{AB} C_b} \sum_{i} a_i  \Bigl(I_i(\alpha_>(t), z, \infty) - I_i(\alpha_>(t), z, \lambda^\mathrm{ref}) + I_i(\alpha_<(t), z, \lambda^\mathrm{ref}) - I_i(\alpha_<(t), z, 0) \Bigl)\nonumber
+	m(b,z,\ell,t) &=& \frac{\ell\  (1+z)^2}{4\pi D^2(z)g^\mathrm{AB} C_b} \sum_{i} a_i  \int_0^\infty{\d\lambda} \exp\Bigl(-\alpha(t,\lambda)\ \left(\lambda-\lambda^\mathrm{ref}\right)\Bigr) \ \mathcal{N}\Bigl((1+z)\lambda,\mu_i,\sigma_i\Bigr) \\
+	&=& \frac{\ell\  (1+z)^2}{4\pi D^2(z)g^\mathrm{AB} C_b} \sum_{i} a_i  \Bigl(I_i(\alpha_>(t), z, \infty) - I_i(\alpha_>(t), z, \lambda^\mathrm{ref}) + I_i(\alpha_<(t), z, \lambda^\mathrm{ref}) - I_i(\alpha_<(t), z, 0) \Bigl)\nonumber
 }
 with the indefinite integral 
 \eqn{
 	I_i(\alpha, z, \lambda') &=& \int_0^{\lambda'}{\d\lambda} \exp\Bigl(-\alpha\left(\lambda-\lambda^\mathrm{ref}\right)\Bigr) \ \mathcal{N}\Bigl((1+z)\lambda,\mu_i,\sigma_i\Bigr) 
-	\\ &=& \sigma_i\frac{\pi}{2} \ \mathrm{erf}\left( \frac{\alpha\sigma_i^2 - \mu_i(1+z) + \lambda(1+z)^2}{\sqrt{2}\sigma_i(1+z)}\right) \ \exp\left( \frac{\alpha}{2(1+z)^2}\Bigl( \alpha\sigma_i^2 - \frac{\mu_i}{1+z} + \lambda^\mathrm{ref}\Bigr)\right)
+	\\ &=& \frac{\sigma_i}{1+z}\sqrt{\frac{\pi}{2}} \ \mathrm{erf}\left( \frac{\alpha\sigma_i^2 - \mu_i(1+z) + \lambda(1+z)^2}{\sqrt{2}\sigma_i(1+z)}\right) \ \exp\left( \frac{\alpha}{2(1+z)^2}\Bigl( \alpha\sigma_i^2 - \frac{\mu_i}{1+z} + \lambda^\mathrm{ref}\Bigr)\right)
 }
 The kernel is
 \eqn{

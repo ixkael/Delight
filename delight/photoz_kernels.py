@@ -35,7 +35,7 @@ class Photoz_mean_function(Mapping):
         else:
             self.DL_z = DL_z
         self.g_AB = g_AB
-        assert lambdaRef > 1 and lambdaRef < 1e5
+        assert lambdaRef > 1e2 and lambdaRef < 1e5
         self.lambdaRef = lambdaRef
         self.fourpi = 4 * np.pi
         self.sqrthalfpi = np.sqrt(np.pi/2)
@@ -113,7 +113,7 @@ class Photoz_mean_function(Mapping):
         t = X[:, 3]
         opz = 1. + z
         self.update_parts(X)
-        fac = l*opz/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
+        fac = l*opz**2/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
         return (fac * self.sum_mf).reshape((-1, 1))
 
     def get_gradients_X(self, X):
@@ -124,7 +124,7 @@ class Photoz_mean_function(Mapping):
         t = X[:, 3]
         opz = 1 + z
         self.update_parts(X)
-        fac = opz/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
+        fac = opz**2/self.fourpi/self.DL_z(z)**2.0/self.g_AB/self.norms[b]
         grad_ell = fac * self.sum_ell  # ell
         grad_t = l * fac * self.sum_t  # t
         # TODO: implement z gradient
@@ -193,13 +193,13 @@ class Photoz_kernel(Kern):
         self.alpha_T.constrain_positive()
         self.link_parameters(self.var_C, self.var_L,
                              self.alpha_C, self.alpha_L, self.alpha_T)
-        self.Thashd = 0
-        self.BZhashd = 0
-        self.Thash = 0
-        self.T2hash = 0
-        self.BZhash = 0
-        self.BZ2hash = 0
-        self.CLhash = 0
+        self.Thashd = None
+        self.BZhashd = None
+        self.Thash = None
+        self.T2hash = None
+        self.BZhash = None
+        self.BZ2hash = None
+        self.CLhash = None
         # TODO: addd more realistic constraints?
 
     def set_alpha_C(self, alpha_C):
@@ -534,7 +534,7 @@ class Photoz_kernel(Kern):
 
             else:  # not use interpolators
                 fz1 = 1 + X[:, 1]
-                kernelparts_diag(self.nz, self.numCoefs, self.numLines,
+                kernelparts_diag(NO1, self.numCoefs, self.numLines,
                                  self.alpha_C, self.alpha_L,
                                  self.fcoefs_amp, self.fcoefs_mu,
                                  self.fcoefs_sig,

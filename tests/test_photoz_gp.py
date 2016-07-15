@@ -16,7 +16,7 @@ from copy import deepcopy
 
 NREPEAT = 1
 nObj = 5
-nInducing = 5
+nInducing = 10
 nObjUnfixed = 4
 numBands = 2
 numLines = 3
@@ -32,7 +32,7 @@ fcoefs_amp, fcoefs_mu, fcoefs_sig \
     = random_filtercoefs(numBands, numCoefs)
 lines_mu, lines_sig = random_linecoefs(numLines)
 var_C, var_L, alpha_C, alpha_L, alpha_T = random_hyperparams()
-noise = np.random.uniform(0, 1)
+noise = np.random.uniform(0, 1e-6)
 
 noisy_fluxes = np.random.uniform(low=0.5, high=1., size=size)\
     .reshape((nObj, numBands))
@@ -83,7 +83,7 @@ def use_inducing(request):
         return random_X_bzlt(nInducing, numBands=numBands)
 
 
-@pytest.fixture(params=[False, True])
+@pytest.fixture(params=[True, False])
 def use_interpolators(request):
     return request.param
 
