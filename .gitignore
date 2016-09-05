@@ -1,9 +1,10 @@
 # Project specific
-notebooks/pics
-notebooks/oldstuff
-notebooks/data
-notebooks/movies
+notebooks/*
 paper/PhotoZviaGP_paper.pdf
+data/SDSS_FILTERS/*png
+data/SDSS_FILTERS/*txt
+data/DECAM_FILTERS/*png
+data/DECAM_FILTERS/*txt
 delight/*.pyx
 delight/*.c
 
