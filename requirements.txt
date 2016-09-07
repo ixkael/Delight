@@ -1,10 +1,9 @@
 numpy
 cython
 pytest
-gpy
-paramz
 pylint
 pep8
 scipy
 matplotlib
 coveralls
+mpi4py

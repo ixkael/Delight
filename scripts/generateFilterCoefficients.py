@@ -13,7 +13,7 @@ root = './data'
 # Function we will optimize
 def dfunc(p, x, yd):
     y = 0*x
-    n = p.size/2
+    n = p.size//2
     for i in range(n):
         y += np.abs(p[i]) * np.exp(-0.5*((mus[i]-x)/np.abs(p[n+i]))**2.0)
     return yd - y
@@ -69,7 +69,7 @@ for band in bandNames:
     title = band + ' band (' + fname_in + ') with %i' % numCoefs+' components'
     ax.set_title(title)
     ax.set_ylim([0, data[:, 1].max()*1.2])
-    ax.set_yticks([])
+    #ax.set_yticks([])
     ax.set_xlabel('$\lambda$')
     ax.legend(loc='upper center', frameon=False, ncol=3)
 
