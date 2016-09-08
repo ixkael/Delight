@@ -124,9 +124,6 @@ for chunk in range(numChunks):
             data = np.array(next(iterTarget).split(' '), dtype=float)
 
             refFlux = data[refBandColumn]
-            z = data[redshiftColumn]
-            luminosity_estimate = refFlux\
-                * ((1+z)**2./DL(z)**2. / refBandNorm) * 1000.
 
             mask = np.isfinite(data[bandColumns])
             mask &= np.isfinite(data[bandVarColumns])
@@ -136,7 +133,7 @@ for chunk in range(numChunks):
             numBandsUsed = mask.sum()
 
             if (refFlux <= 0) or (not np.isfinite(refFlux))\
-                    or (z < 0) or (numBandsUsed <= 1):
+                    or (numBandsUsed <= 1):
                 continue  # not valid data - skip to next valid object
 
             if params['useCompression'] and params['compressionFilesFound']:

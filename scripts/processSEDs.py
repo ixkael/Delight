@@ -3,13 +3,10 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from delight.utils import approx_DL
 
-numCoefs = 12  # number of components for the fit
-prefix = 'SDSS'  # Survey name
 bandNames = ['u', 'g', 'r', 'i', 'z']  # Bands
 dir_seds = './data/CWW_SEDs'
 dir_filters = './data/SDSS_FILTERS'
 lambdaRef = 4.5e3
-fmt = '.sed'
 sed_names = ['El_B2004a', 'Sbc_B2004a', 'Scd_B2004a',
              'SB3_B2004a', 'Im_B2004a', 'SB2_B2004a',
              'ssp_25Myr_z008', 'ssp_5Myr_z008']

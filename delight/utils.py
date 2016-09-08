@@ -84,12 +84,20 @@ def parseParamFile(fileName):
         raise Exception(params['rootDir']+' is not a valid directory')
 
     # Parsing Bands
+    params['bands_directory'] = config.get('Bands', 'directory')
+    if not os.path.isdir(params['bands_directory']):
+        raise Exception(params['bands_directory']+' is not a valid directory')
     params['bandNames'] = config.get('Bands', 'Names').split(' ')
     for band in params['bandNames']:
         fname = config.get('Bands', band)
         if not os.path.isfile(fname):
             raise Exception(fname+' : file does not exist')
         params['bandFile_'+band] = fname
+
+    # Parsing Templates
+    params['templates_directory'] = config.get('Templates', 'directory')
+    params['lambdaRef'] = config.getfloat('Templates', 'lambdaRef')
+    params['templates_names'] = config.get('Templates', 'names').split(' ')
 
     # Parsing Training
     params['training_catFile'] = config.get('Training', 'catFile')
