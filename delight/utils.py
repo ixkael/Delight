@@ -125,6 +125,11 @@ def parseParamFile(fileName):
             raise Exception(band+' does not exist')
     params['compressIndicesFile'] = config.get('Target', 'compressIndicesFile')
     params['compressMargLikFile'] = config.get('Target', 'compressMargLikFile')
+    if os.path.isfile(params['compressIndicesFile'])\
+       and os.path.isfile(params['compressMargLikFile']):
+            params['compressionFilesFound'] = True
+    else:
+        params['compressionFilesFound'] = False
     params['Ncompress'] = config.getint('Target', 'Ncompress')
     params['useCompression'] = config.getboolean("Target", 'useCompression')
     params['redshiftpdfFile'] = config.get('Target', 'redshiftpdfFile')

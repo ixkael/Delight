@@ -1,5 +1,6 @@
 # Project specific
 notebooks/*
+old_2D_stuff
 paper/PhotoZviaGP_paper.pdf
 data/SDSS_FILTERS/*png
 data/SDSS_FILTERS/*txt

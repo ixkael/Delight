@@ -18,8 +18,7 @@ if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
 paramFileName = sys.argv[1]
 params = parseParamFile(paramFileName)
-if comm.rank == 0:
-    print('Thread number / number of threads: ', threadNum+1, numThreads)
+if threadNum == 0:
     print('Input parameter file:', paramFileName)
     print('Parameters read:')
     for k, v in params.items():
@@ -31,7 +30,7 @@ if comm.rank == 0:
 bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
     = readBandCoefficients(params)
 DL = approx_DL()  # Luminosity distance function.
-numBands = bandCoefAmplitudes.shape[1]
+numBands = bandCoefAmplitudes.shape[0]
 
 redshiftGrid = np.arange(0, params['redshiftMax'], params['redshiftBinSize'])
 
@@ -52,17 +51,20 @@ bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
 refBandNorm = norms[params['bandNames'].index(params['referenceBand'])]
 
 numObjectsTraining = np.sum(1 for line in open(params['training_catFile']))
-firstLine = int(threadNum * numObjectsTraining / float(numThreads))
+firstLine = int(threadNum * numObjectsTraining / numThreads)
 lastLine = int(min(numObjectsTraining,
-               (threadNum + 1) * numObjectsTraining / float(numThreads)))
-if comm.rank == 0:
+               (threadNum + 1) * numObjectsTraining / numThreads))
+numLines = lastLine - firstLine
+if threadNum == 0:
     print('Number of Training Objects', numObjectsTraining)
-    print('Lines to analyze (in training): ', firstLine, lastLine)
+comm.Barrier()
+print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
 B = numBands
-localData = np.zeros((numObjectsTraining, 4 + B*(B+1)//2 + 2*B))
+numCol = 4 + B + B*(B+1)//2 + B
+localData = np.zeros((numLines, numCol))
 fmt = '%i ' + '%.6e ' * (localData.shape[1] - 1)
 
-loc = firstLine - 1
+loc = - 1
 with open(params['training_catFile']) as f:
     for line in itertools.islice(f, firstLine, lastLine):
         loc += 1
@@ -110,12 +112,21 @@ with open(params['training_catFile']) as f:
 
 # use MPI to get the totals
 comm.Barrier()
-if comm.rank == 0:
-    reducedData = np.zeros_like(localData)
+if threadNum == 0:
+    reducedData = np.zeros((numObjectsTraining, numCol))
 else:
     reducedData = None
-comm.Reduce([localData, MPI.DOUBLE], [reducedData, MPI.DOUBLE],
-            op=MPI.SUM, root=0)
+firstLines = [int(k*numObjectsTraining/numThreads)
+              for k in range(numThreads)]
+lastLines = [int(min(numObjectsTraining, (k+1)*numObjectsTraining/numThreads))
+             for k in range(numThreads)]
+sendcounts = tuple([(lastLines[k] - firstLines[k]) * numCol
+                    for k in range(numThreads)])
+displacements = tuple([firstLines[k] * numCol
+                       for k in range(numThreads)])
+
+comm.Gatherv(localData, [reducedData, sendcounts, displacements, MPI.DOUBLE])
 comm.Barrier()
 
-np.savetxt(params['training_paramFile'], reducedData, fmt=fmt)
+if threadNum == 0:
+    np.savetxt(params['training_paramFile'], reducedData, fmt=fmt)

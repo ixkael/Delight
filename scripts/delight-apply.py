@@ -18,7 +18,7 @@ if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
 paramFileName = sys.argv[1]
 params = parseParamFile(paramFileName)
-if comm.rank == 0:
+if threadNum == 0:
     print('Thread number / number of threads: ', threadNum+1, numThreads)
     print('Input parameter file:', paramFileName)
     print('Parameters read:')
@@ -64,15 +64,17 @@ numObjectsTarget = np.sum(1 for line in open(params['target_catFile']))
 firstLine = int(threadNum * numObjectsTarget / float(numThreads))
 lastLine = int(min(numObjectsTarget,
                (threadNum + 1) * numObjectsTarget / float(numThreads)))
-if comm.rank == 0:
+numLines = lastLine - firstLine
+if threadNum == 0:
     print('Number of Training Objects', numObjectsTraining)
     print('Number of Target Objects', numObjectsTarget)
-    print('Lines to analyze (in target): ', firstLine, lastLine)
+comm.Barrier()
+print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
 
 # Create local files to store results
-localPDFs = np.zeros((numObjectsTraining, numZ))
-localCompressIndices = np.zeros((numObjectsTarget,  Ncompress))
-localCompEvidences = np.zeros((numObjectsTarget,  Ncompress))
+localPDFs = np.zeros((numLines, numZ))
+localCompressIndices = np.zeros((numLines,  Ncompress), dtype=int)
+localCompEvidences = np.zeros((numLines,  Ncompress))
 
 # Looping over chunks of the training set to prepare model predictions over z
 numChunks = params['training_numChunks']
@@ -109,18 +111,23 @@ for chunk in range(numChunks):
                 model_var[:, loc-TR_firstLine,  i] =\
                     np.diag(y_pred_fullcov)[i*numZ:(i+1)*numZ] / ell**2.
     # Now loop over target set to compute likelihood function
-    loc = firstLine - 1
+    loc = - 1
     with open(params['target_catFile']) as f:
-        for line in itertools.islice(f, firstLine, lastLine):
-            loc += 1
-            data = np.array(line.split(' '), dtype=float)
+        if params['compressionFilesFound']:
+            fC = open(params['compressMargLikFile'])
+            fCI = open(params['compressIndicesFile'])
+            itCompM = itertools.islice(fC, firstLine, lastLine)
+            iterCompI = itertools.islice(fCI, firstLine, lastLine)
+        iterTarget = itertools.islice(f, firstLine, lastLine)
+
+        for loc in range(numLines):
+            data = np.array(next(iterTarget).split(' '), dtype=float)
 
             refFlux = data[refBandColumn]
             z = data[redshiftColumn]
             luminosity_estimate = refFlux\
                 * ((1+z)**2./DL(z)**2. / refBandNorm) * 1000.
 
-            # drop bad values and find how many bands are valid
             mask = np.isfinite(data[bandColumns])
             mask &= np.isfinite(data[bandVarColumns])
             mask &= data[bandColumns] > 0.0
@@ -132,50 +139,80 @@ for chunk in range(numChunks):
                     or (z < 0) or (numBandsUsed <= 1):
                 continue  # not valid data - skip to next valid object
 
-            like_grid = scalefree_flux_likelihood(
-                data[bandColumns[mask]],  # fluxes
-                data[bandVarColumns[mask]],  # flux var
-                model_mean[:, :, bandIndices[mask]],  # model mean
-                f_mod_var=model_var[:, :, bandIndices[mask]]  # model var
-            )
+            if params['useCompression'] and params['compressionFilesFound']:
+                indices = np.array(next(iterCompI).split(' '), dtype=int)
+                sel = np.in1d(targetIndices, indices, assume_unique=True)
+                like_grid = scalefree_flux_likelihood(
+                    data[bandColumns[mask]],  # fluxes
+                    data[bandVarColumns[mask]],  # flux var
+                    model_mean[:, :, bandIndices[mask]][:, sel, :],
+                    f_mod_var=model_var[:, :, bandIndices[mask]][:, sel, :]
+                )
+            else:
+                like_grid = scalefree_flux_likelihood(
+                    data[bandColumns[mask]],  # fluxes
+                    data[bandVarColumns[mask]],  # flux var
+                    model_mean[:, :, bandIndices[mask]],  # model mean
+                    f_mod_var=model_var[:, :, bandIndices[mask]]  # model var
+                )
+
             localPDFs[loc, :] += like_grid.sum(axis=1)
             evidences = np.trapz(like_grid, x=redshiftGrid, axis=0)
-            if localCompressIndices[loc, :].sum() == 0:
-                sortind = np.argsort(evidences)[::-1][0:Ncompress]
-                localCompressIndices[loc, :] = targetIndices[sortind]
-                localCompEvidences[loc, :] = evidences[sortind]
-            else:
-                dind = np.concatenate((targetIndices,
-                                       localCompressIndices[loc, :]))
-                devi = np.concatenate((evidences,
-                                       localCompEvidences[loc, :]))
-                sortind = np.argsort(devi)[::-1][0:Ncompress]
-                localCompressIndices[loc, :] = dind[sortind]
-                localCompEvidences[loc, :] = devi[sortind]
+
+            if not params['compressionFilesFound']:
+                if localCompressIndices[loc, :].sum() == 0:
+                    sortind = np.argsort(evidences)[::-1][0:Ncompress]
+                    localCompressIndices[loc, :] = targetIndices[sortind]
+                    localCompEvidences[loc, :] = evidences[sortind]
+                else:
+                    dind = np.concatenate((targetIndices,
+                                           localCompressIndices[loc, :]))
+                    devi = np.concatenate((evidences,
+                                           localCompEvidences[loc, :]))
+                    sortind = np.argsort(devi)[::-1][0:Ncompress]
+                    localCompressIndices[loc, :] = dind[sortind]
+                    localCompEvidences[loc, :] = devi[sortind]
+
+        if params['compressionFilesFound']:
+            fC.close()
+            fCI.close()
 
 comm.Barrier()
-if comm.rank == 0:
-    globalPDFs = np.zeros_like(localPDFs)
-    globalCompressIndices = np.zeros_like(localCompressIndices)
-    globalCompEvidences = np.zeros_like(localCompEvidences)
+if threadNum == 0:
+    globalPDFs = np.zeros((numObjectsTarget, numZ))
+    globalCompressIndices = np.zeros((numObjectsTarget, Ncompress), dtype=int)
+    globalCompEvidences = np.zeros((numObjectsTarget, Ncompress))
 else:
     globalPDFs = None
     globalCompressIndices = None
     globalCompEvidences = None
-comm.Reduce([localPDFs, MPI.DOUBLE],
-            [globalPDFs, MPI.DOUBLE],
-            op=MPI.SUM, root=0)
-comm.Reduce([localCompressIndices, MPI.DOUBLE],
-            [globalCompressIndices, MPI.DOUBLE],
-            op=MPI.SUM, root=0)
-comm.Reduce([localCompEvidences, MPI.DOUBLE],
-            [globalCompEvidences, MPI.DOUBLE],
-            op=MPI.SUM, root=0)
+
+firstLines = [int(k*numObjectsTarget/numThreads)
+              for k in range(numThreads)]
+lastLines = [int(min(numObjectsTarget, (k+1)*numObjectsTarget/numThreads))
+             for k in range(numThreads)]
+numLines = [lastLines[k] - firstLines[k] for k in range(numThreads)]
+
+sendcounts = tuple([numLines[k] * numZ for k in range(numThreads)])
+displacements = tuple([firstLines[k] * numZ for k in range(numThreads)])
+comm.Gatherv(localPDFs,
+             [globalPDFs, sendcounts, displacements, MPI.DOUBLE])
+
+sendcounts = tuple([numLines[k] * Ncompress for k in range(numThreads)])
+displacements = tuple([firstLines[k] * Ncompress for k in range(numThreads)])
+comm.Gatherv(localCompressIndices,
+             [globalCompressIndices, sendcounts, displacements, MPI.LONG])
+comm.Gatherv(localCompEvidences,
+             [globalCompEvidences, sendcounts, displacements, MPI.DOUBLE])
 comm.Barrier()
 
-fmt = '%.2e'
-np.savetxt(params['redshiftpdfFile'], globalPDFs, fmt=fmt)
-np.savetxt(params['compressMargLikFile'], globalCompressIndices, fmt=fmt)
-np.savetxt(params['compressIndicesFile'], globalCompEvidences, fmt='%i')
+if threadNum == 0:
+    fmt = '%.2e'
+    np.savetxt(params['redshiftpdfFile'], globalPDFs, fmt=fmt)
+    if not params['compressionFilesFound']:
+        np.savetxt(params['compressMargLikFile'],
+                   globalCompEvidences, fmt=fmt)
+        np.savetxt(params['compressIndicesFile'],
+                   globalCompressIndices, fmt="%i")
 
 ## POST PROCESSING : find levels, z mean, z map, frac, etc
