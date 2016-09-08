@@ -1,4 +1,11 @@
 # Project specific
+*fluxredshiftmod.txt
+*Indices.txt
+*MargLikes.txt
+*gpparams.txt
+*redshiftpdfs*
+*fluxredshifts*
+
 notebooks/*
 old_2D_stuff
 paper/PhotoZviaGP_paper.pdf

@@ -4,10 +4,10 @@ from scipy.interpolate import interp1d
 from scipy.optimize import leastsq
 
 numCoefs = 12  # number of components for the fit
-prefix = 'SDSS'  # Survey name
 bandNames = ['u', 'g', 'r', 'i', 'z']  # Bands
+fmt = '.res'
 max_redshift = 2.0  # for plotting purposes
-root = './data'
+root = './data/SDSS_FILTERS'
 
 
 # Function we will optimize
@@ -22,7 +22,7 @@ def dfunc(p, x, yd):
 # Loop over bands
 for band in bandNames:
 
-    fname_in = root + '/' + prefix + '_FILTERS/' + band + '.res'
+    fname_in = root + '/' + band + fmt
     data = np.genfromtxt(fname_in)
     coefs = np.zeros((numCoefs, 3))
     x, y = data[:, 0], data[:, 1]
@@ -41,8 +41,7 @@ for band in bandNames:
     coefs[:, 1] = mus  # positions
     coefs[:, 2] = np.abs(popt[numCoefs:2*numCoefs])  # widths
 
-    fname_out = root + '/' + prefix
-    fname_out += '_FILTERS/' + band + '_gaussian_coefficients.txt'
+    fname_out = root + '/' + band + '_gaussian_coefficients.txt'
     np.savetxt(fname_out, coefs, header=fname_in)
 
     fig, ax = plt.subplots(figsize=(8, 4))
@@ -69,11 +68,10 @@ for band in bandNames:
     title = band + ' band (' + fname_in + ') with %i' % numCoefs+' components'
     ax.set_title(title)
     ax.set_ylim([0, data[:, 1].max()*1.2])
-    #ax.set_yticks([])
+    ax.set_yticks([])
     ax.set_xlabel('$\lambda$')
     ax.legend(loc='upper center', frameon=False, ncol=3)
 
     fig.tight_layout()
-    fname_fig = root + '/' + prefix
-    fname_fig += '_FILTERS/' + band + '_gaussian_approximation.png'
+    fname_fig = root + '/' + band + '_gaussian_approximation.png'
     fig.savefig(fname_fig)
