@@ -141,6 +141,7 @@ def parseParamFile(fileName):
     params['Ncompress'] = config.getint('Target', 'Ncompress')
     params['useCompression'] = config.getboolean("Target", 'useCompression')
     params['redshiftpdfFile'] = config.get('Target', 'redshiftpdfFile')
+    params['metricsFile'] = config.get('Target', 'metricsFile')
 
     # Parsing other parameters
     params['alpha_C'] = config.getfloat('Other', 'alpha_C')
@@ -172,7 +173,10 @@ def readColumnPositions(params, pfx="training_"):
                             for b in bandNames])
     bandVarColumns = np.array([params[pfx+'bandOrder'].index(b+'_var')
                                for b in bandNames])
-    redshiftColumn = params[pfx+'bandOrder'].index('redshift')
+    if 'redshift' in params[pfx+'bandOrder']:
+        redshiftColumn = params[pfx+'bandOrder'].index('redshift')
+    else:
+        redshiftColumn = -1
     refBandColumn = params[pfx+'bandOrder'].index(params['referenceBand'])
     return bandIndices, bandNames, bandColumns, bandVarColumns,\
         redshiftColumn, refBandColumn
@@ -206,3 +210,23 @@ def scalefree_flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None):
     chi2 = FOO - FOT**2.0 / FTT  # nz * nt
     like = np.exp(-0.5*chi2) / np.sqrt(FTT)  # nz * nt
     return like
+
+
+def CIlevel(redshiftGrid, PDF, fraction, numlevels=100):
+    evidence = np.trapz(PDF, redshiftGrid)
+    for level in np.linspace(0, PDF.max(), num=numlevels):
+        ind = np.where(PDF <= level)
+        resint = np.trapz(PDF[ind], redshiftGrid[ind])
+        if resint >= fraction*evidence:
+            return level
+
+
+def computeMetrics(ztrue, redshiftGrid, PDF, fractions):
+    zmean = np.average(redshiftGrid, weights=PDF)
+    zmap = redshiftGrid[np.argmax(PDF)]
+    pdfAtZ = np.interp(ztrue, redshiftGrid, PDF)
+    cumPdfAtZ = np.interp(ztrue, redshiftGrid, PDF.cumsum())
+    confidencelevels = [
+        CIlevel(redshiftGrid, PDF, fraction) for fraction in fractions
+    ]
+    return [ztrue, zmean, zmap, pdfAtZ, cumPdfAtZ] + confidencelevels

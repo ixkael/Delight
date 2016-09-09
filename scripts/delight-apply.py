@@ -5,7 +5,7 @@ import numpy as np
 import itertools
 from delight.utils import parseParamFile,\
     readColumnPositions, readBandCoefficients
-from delight.utils import approx_DL, scalefree_flux_likelihood
+from delight.utils import approx_DL, scalefree_flux_likelihood, computeMetrics
 from delight.photoz_gp import PhotozGP
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
@@ -72,7 +72,9 @@ comm.Barrier()
 print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
 
 # Create local files to store results
+numMetrics = 5 + len(params['confidenceLevels'])
 localPDFs = np.zeros((numLines, numZ))
+localMetrics = np.zeros((numLines, numMetrics))
 localCompressIndices = np.zeros((numLines,  Ncompress), dtype=int)
 localCompEvidences = np.zeros((numLines,  Ncompress))
 
@@ -122,8 +124,9 @@ for chunk in range(numChunks):
 
         for loc in range(numLines):
             data = np.array(next(iterTarget).split(' '), dtype=float)
-
             refFlux = data[refBandColumn]
+            if redshiftColumn >= 0:
+                z = data[redshiftColumn]
 
             mask = np.isfinite(data[bandColumns])
             mask &= np.isfinite(data[bandVarColumns])
@@ -170,6 +173,12 @@ for chunk in range(numChunks):
                     localCompressIndices[loc, :] = dind[sortind]
                     localCompEvidences[loc, :] = devi[sortind]
 
+            if chunk == numChunks - 1:
+                localMetrics[loc, :] = computeMetrics(
+                                        z, redshiftGrid,
+                                        localPDFs[loc, :],
+                                        params['confidenceLevels'])
+
         if params['compressionFilesFound']:
             fC.close()
             fCI.close()
@@ -179,10 +188,12 @@ if threadNum == 0:
     globalPDFs = np.zeros((numObjectsTarget, numZ))
     globalCompressIndices = np.zeros((numObjectsTarget, Ncompress), dtype=int)
     globalCompEvidences = np.zeros((numObjectsTarget, Ncompress))
+    globalMetrics = np.zeros((numObjectsTarget, numMetrics))
 else:
     globalPDFs = None
     globalCompressIndices = None
     globalCompEvidences = None
+    globalMetrics = None
 
 firstLines = [int(k*numObjectsTarget/numThreads)
               for k in range(numThreads)]
@@ -203,13 +214,20 @@ comm.Gatherv(localCompEvidences,
              [globalCompEvidences, sendcounts, displacements, MPI.DOUBLE])
 comm.Barrier()
 
+sendcounts = tuple([numLines[k] * numMetrics for k in range(numThreads)])
+displacements = tuple([firstLines[k] * numMetrics for k in range(numThreads)])
+comm.Gatherv(localMetrics,
+             [globalMetrics, sendcounts, displacements, MPI.DOUBLE])
+
+comm.Barrier()
+
 if threadNum == 0:
     fmt = '%.2e'
     np.savetxt(params['redshiftpdfFile'], globalPDFs, fmt=fmt)
+    if redshiftColumn >= 0:
+        np.savetxt(params['metricsFile'], globalMetrics, fmt=fmt)
     if not params['compressionFilesFound']:
         np.savetxt(params['compressMargLikFile'],
                    globalCompEvidences, fmt=fmt)
         np.savetxt(params['compressIndicesFile'],
                    globalCompressIndices, fmt="%i")
-
-## POST PROCESSING : find levels, z mean, z map, frac, etc

@@ -6,7 +6,7 @@ import itertools
 from scipy.interpolate import interp1d
 from delight.utils import parseParamFile, readColumnPositions
 from delight.photoz_gp import PhotozGP
-from delight.utils import approx_DL, scalefree_flux_likelihood
+from delight.utils import approx_DL, scalefree_flux_likelihood, computeMetrics
 
 comm = MPI.COMM_WORLD
 threadNum = comm.Get_rank()
@@ -67,8 +67,10 @@ if threadNum == 0:
 comm.Barrier()
 print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
 
+numMetrics = 5 + len(params['confidenceLevels'])
 # Create local files to store results
 localPDFs = np.zeros((numLines, numZ))
+localMetrics = np.zeros((numLines, numMetrics))
 
 # Now loop over target set to compute likelihood function
 loc = - 1
@@ -77,6 +79,8 @@ with open(params['target_catFile']) as f:
     for loc in range(numLines):
         data = np.array(next(iterTarget).split(' '), dtype=float)
         refFlux = data[refBandColumn]
+        if redshiftColumn >= 0:
+            z = data[redshiftColumn]
 
         mask = np.isfinite(data[bandColumns])
         mask &= np.isfinite(data[bandVarColumns])
@@ -96,12 +100,18 @@ with open(params['target_catFile']) as f:
         )
 
         localPDFs[loc, :] += like_grid.sum(axis=1)
+        localMetrics[loc, :] = computeMetrics(
+                                    z, redshiftGrid,
+                                    localPDFs[loc, :],
+                                    params['confidenceLevels'])
 
 comm.Barrier()
 if threadNum == 0:
     globalPDFs = np.zeros((numObjectsTarget, numZ))
+    globalMetrics = np.zeros((numObjectsTarget, numMetrics))
 else:
     globalPDFs = None
+    globalMetrics = None
 
 firstLines = [int(k*numObjectsTarget/numThreads)
               for k in range(numThreads)]
@@ -113,8 +123,16 @@ sendcounts = tuple([numLines[k] * numZ for k in range(numThreads)])
 displacements = tuple([firstLines[k] * numZ for k in range(numThreads)])
 comm.Gatherv(localPDFs,
              [globalPDFs, sendcounts, displacements, MPI.DOUBLE])
+
+sendcounts = tuple([numLines[k] * numMetrics for k in range(numThreads)])
+displacements = tuple([firstLines[k] * numMetrics for k in range(numThreads)])
+comm.Gatherv(localMetrics,
+             [globalMetrics, sendcounts, displacements, MPI.DOUBLE])
+
 comm.Barrier()
 
 if threadNum == 0:
     fmt = '%.2e'
     np.savetxt(params['redshiftpdfFile'], globalPDFs, fmt=fmt)
+    if redshiftColumn >= 0:
+        np.savetxt(params['metricsFile'], globalMetrics, fmt=fmt)
