@@ -103,6 +103,7 @@ def parseParamFile(fileName):
     params['training_catFile'] = config.get('Training', 'catFile')
     params['training_numChunks'] = config.getint('Training', 'numChunks')
     params['training_paramFile'] = config.get('Training', 'paramFile')
+    params['training_optimize'] = config.getboolean('Training', 'optimize')
     if not os.path.isfile(params['training_catFile']):
         raise Exception(params['training_catFile']+' : file does not exist')
     params['referenceBand'] = config.get('Training', 'referenceBand')
@@ -149,7 +150,10 @@ def parseParamFile(fileName):
     params['V_C'] = config.getfloat('Other', 'V_C')
     params['V_L'] = config.getfloat('Other', 'V_L')
     params['redshiftMax'] = config.getfloat('Other', 'redshiftMax')
-    params['redshiftBinSize'] = config.getfloat('Other', 'redshiftBinSize')
+    params['redshiftBinSize']\
+        = config.getfloat('Other', 'redshiftBinSize')
+    params['redshiftBinSizeGPpred']\
+        = config.getfloat('Other', 'redshiftBinSizeGPpred')
     params['redshiftDisBinSize']\
         = config.getfloat('Other', 'redshiftDisBinSize')
     params['lines_pos']\

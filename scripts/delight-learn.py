@@ -32,7 +32,8 @@ bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
 DL = approx_DL()  # Luminosity distance function.
 numBands = bandCoefAmplitudes.shape[0]
 
-redshiftGrid = np.arange(0, params['redshiftMax'], params['redshiftBinSize'])
+redshiftGrid\
+    = np.arange(0, params['redshiftMax'], params['redshiftBinSizeGPpred'])
 
 # Create Gaussian process mean fct and kernel
 alpha = 0.0
@@ -73,7 +74,7 @@ with open(params['training_catFile']) as f:
         refFlux = data[refBandColumn]
         z = data[redshiftColumn]
         luminosity_estimate = refFlux\
-            * ((1+z)**2./DL(z)**2. / refBandNorm) * 1000.
+            * ((1+z)**2./DL(z)**2. / refBandNorm)
 
         # drop bad values and find how many bands are valid
         mask = np.isfinite(data[bandColumns])

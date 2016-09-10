@@ -33,11 +33,15 @@ bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
 DL = approx_DL()  # Luminosity distance function.
 numBands = bandCoefAmplitudes.shape[0]
 
-redshiftGrid = np.arange(0, params['redshiftMax'], params['redshiftBinSize'])
+redshiftGrid\
+    = np.arange(0, params['redshiftMax'], params['redshiftBinSize'])
+redshiftGridGP\
+    = np.arange(0, params['redshiftMax'], params['redshiftBinSizeGPpred'])
 numZ = redshiftGrid.size
-xv, yv = np.meshgrid(redshiftGrid, np.arange(numBands),
+numZGP = redshiftGridGP.size
+xv, yv = np.meshgrid(redshiftGridGP, np.arange(numBands),
                      sparse=False, indexing='xy')
-X_pred = np.ones((numBands*numZ, 3))
+X_pred = np.ones((numBands*numZGP, 3))
 X_pred[:, 0] = yv.flatten()
 X_pred[:, 1] = xv.flatten()
 
@@ -50,7 +54,7 @@ kernel = Photoz_kernel(
     bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
     params['lines_pos'], params['lines_width'],
     params['V_C'], params['V_L'], params['alpha_C'], params['alpha_L'],
-    g_AB=1.0, DL_z=DL, redshiftGrid=redshiftGrid, use_interpolators=True)
+    g_AB=1.0, DL_z=DL, redshiftGrid=redshiftGridGP, use_interpolators=True)
 
 # Locate which columns of the catalog correspond to which bands.
 bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
@@ -108,10 +112,15 @@ for chunk in range(numChunks):
             X_pred[:, 2] = ell  # ell
             y_pred, y_pred_fullcov = gp.predict(X_pred)
             for i in range(numBands):
-                model_mean[:, loc-TR_firstLine,  i] =\
-                    y_pred[i*numZ:(i+1)*numZ].ravel() / ell
-                model_var[:, loc-TR_firstLine,  i] =\
-                    np.diag(y_pred_fullcov)[i*numZ:(i+1)*numZ] / ell**2.
+                y_pred_bin\
+                    = y_pred[i*numZGP:(i+1)*numZGP].ravel() / ell
+                y_var_bin\
+                    = np.diag(y_pred_fullcov)[i*numZGP:(i+1)*numZGP] / ell**2
+                model_mean[:, loc - TR_firstLine,  i]\
+                    = np.interp(redshiftGrid, redshiftGridGP, y_pred_bin)
+                model_var[:, loc - TR_firstLine,  i]\
+                    = np.interp(redshiftGrid, redshiftGridGP, y_var_bin)
+
     # Now loop over target set to compute likelihood function
     loc = - 1
     with open(params['target_catFile']) as f:
