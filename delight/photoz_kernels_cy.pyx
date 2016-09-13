@@ -41,6 +41,7 @@ def kernel_parts_interp(
         for o2 in range(NO2):
             opz2 = fz2[o2]
             p2 = p2s[o2]
+            dzm2 = 1. / (fzGrid[p1+1] - fzGrid[p1]) / (fzGrid[p2+1] - fzGrid[p2])
             Kinterp[o1, o2] = dzm2 * (
                 (fzGrid[p1+1] - opz1) * (fzGrid[p2+1] - opz2) * Kgrid[b1[o1], b2[o2], p1, p2]
                 + (opz1 - fzGrid[p1]) * (fzGrid[p2+1] - opz2) * Kgrid[b1[o1], b2[o2], p1+1, p2]
