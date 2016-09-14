@@ -195,8 +195,10 @@ def getDataFromFile(params, firstLine, lastLine, prefix="", getXY=True):
             data = np.array(line.split(' '), dtype=float)
             refFlux = data[refBandColumn]
             z = data[redshiftColumn]
-            ell = refFlux * (1+z)**2. / DL(z)**2. / refBandNorm\
-                * params['fluxLuminosityNorm']
+            fac = (1+z)**0. / DL(z)**2. / refBandNorm\
+                / params['fluxLuminosityNorm']
+            ell = refFlux / fac
+            print(z, refFlux, DL(z), fac, refBandNorm, ell)
 
             # drop bad values and find how many bands are valid
             mask = np.isfinite(data[bandColumns])
