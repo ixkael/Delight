@@ -122,7 +122,7 @@ if threadNum == 0:
     globalZspecmean /= globalNobj
     for i_V_C, V_C in enumerate(V_C_grid):
         for ialpha, alpha_C in enumerate(alpha_C_grid):
-            print("\n")
+            print("")
             print(" V_C", V_C, "alpha", alpha_C)
             for i in range(numZbins):
                 print(" N(z) bin", i,
@@ -140,7 +140,7 @@ if threadNum == 0:
                         print("  > CI:", params['confidenceLevels'][k],
                               '%.g' % globalConfFractions[i_V_C, ialpha, k, i],
                               end="")
-                    print("")
+                print("")
 
     for i_V_C, V_C in enumerate(V_C_grid):
         for ialpha, alpha_C in enumerate(alpha_C_grid):
