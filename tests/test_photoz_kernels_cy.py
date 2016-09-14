@@ -63,10 +63,10 @@ def test_diagonalOfKernels():
 def test_find_positions():
 
     a = np.array([0., 1., 2., 3., 4.])
-    b = np.array([0.5, 2.5, 3.0])
+    b = np.array([0.5, 2.5, 3.0, 3.1, 4.0])
     pos = np.zeros(b.size, dtype=np.long)
     find_positions(b.size, a.size, b, pos, a)
-    np.testing.assert_almost_equal(pos, [0, 2, 3])
+    np.testing.assert_almost_equal(pos, [0, 2, 2, 3, 3])
 
 
 def test_kernel_parts_interp():
@@ -148,7 +148,7 @@ def test_kernel_parts_interp():
                         b1, fz1, p1s,
                         b2, fz2, p2s,
                         opzgrid, KC_grid)
-    print np.abs(KC_interp/KC_rand - 1)
+    print(np.abs(KC_interp/KC_rand - 1))
     assert np.mean(np.abs(KC_interp/KC_rand - 1)) < relative_accuracy
     assert np.max(np.abs(KC_interp/KC_rand - 1)) < relative_accuracy
 
@@ -157,7 +157,7 @@ def test_kernel_parts_interp():
                         b1, fz1, p1s,
                         b2, fz2, p2s,
                         opzgrid, D_alpha_C_grid)
-    print np.abs(D_alpha_C_interp/D_alpha_C_rand - 1)
+    print(np.abs(D_alpha_C_interp/D_alpha_C_rand - 1))
     assert np.mean(np.abs(D_alpha_C_interp/D_alpha_C_rand - 1))\
         < relative_accuracy
     assert np.max(np.abs(D_alpha_C_interp/D_alpha_C_rand - 1))\
