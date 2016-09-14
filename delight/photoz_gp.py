@@ -12,8 +12,7 @@ log_2_pi = np.log(2*np.pi)
 
 class PhotozGP:
     """
-    Photo-z Gaussian process, with   physical kernel and mean function.
-    Default: all parameters are variable except bands and likelihood/noise.
+    Photo-z Gaussian process, with physical kernel and mean function.
     """
     def __init__(self, alpha,
                  bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
@@ -34,6 +33,9 @@ class PhotozGP:
         self.redshiftGridGP = redshiftGridGP
 
     def setData(self, X, Y, Yvar):
+        """
+        Set data content for the Gaussian process
+        """
         self.X = X
         self.Y = Y.reshape((-1, 1))
         self.Yvar = Yvar.reshape((-1, 1))
@@ -43,7 +45,16 @@ class PhotozGP:
         self.L = scipy.linalg.cholesky(self.A, lower=True)
         self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
 
+    def getCore(self):
+        """
+        Returns core matrices, useful to re-use the GP elsewhere.
+        """
+        return self.mean_fct.alpha, self.KXX, self.L, self.D
+
     def setCore(self, alpha, KXX, L, D):
+        """
+        Set core matrices
+        """
         self.mean_fct.alpha = alpha
         self.KXX = KXX
         self.L = L
@@ -51,12 +62,18 @@ class PhotozGP:
         self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
 
     def margLike(self):
+        """
+        Returns marginalized likelihood of GP
+        """
         logdet = np.log(scipy.linalg.det(self.KXX))
         return\
             0.5 * np.sum(self.beta * self.D) +\
             0.5 * logdet + 0.5 * self.Y.size * log_2_pi
 
     def predict(self, x_pred):
+        """
+        Raw way to predict outputs with the GP
+        """
         assert x_pred.shape[1] == 3
         KXXp = self.kernel.K(x_pred, self.X)
         KXpXp = self.kernel.K(x_pred)
@@ -66,6 +83,12 @@ class PhotozGP:
         return y_pred, y_pred_fullcov
 
     def predictAndInterpolate(self, redshiftGrid, ell=1.0, z=None):
+        """
+        Convenient way to get flux predictions on a redshift/band grid.
+        First compute on the coarce GP grid and then interpolate on finer grid.
+        ell should be set to reference luminosity used in the GP.
+        z is an additional redshift to compute predictions at.
+        """
         numBands = self.bands.size
         numZGP = self.redshiftGridGP.size
         redshiftGridGP_loc = 1 * self.redshiftGridGP
@@ -90,13 +113,10 @@ class PhotozGP:
                                         redshiftGridGP_loc, y_var_bin)
         return model_mean, model_var
 
-    def updateAlphaAndReturnMarglike(self, alpha):
-        self.mean_fct.alpha = alpha[0]
-        self.D = self.Y - self.mean_fct.f(self.X)
-        self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
-        return self.margLike()
-
     def optimizeAlpha(self):
+        """
+        Optimize alpha with marglike as objective.
+        """
         x0 = 0.0  # [0.0, self.X[0, 2]]
         res = minimize(self.updateAlphaAndReturnMarglike, x0,
                        method='L-BFGS-B', tol=1e-6,
@@ -104,3 +124,12 @@ class PhotozGP:
         # , (1e-3*self.X[0, 2], 1e3*self.X[0, 2])])
         self.mean_fct.alpha = res.x[0]
         # self.X[:, 2] = res.x[1]
+
+    def updateAlphaAndReturnMarglike(self, alpha):
+        """
+        For optimizing alpha with the marglike as objective using scipy.
+        """
+        self.mean_fct.alpha = alpha[0]
+        self.D = self.Y - self.mean_fct.f(self.X)
+        self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
+        return self.margLike()

@@ -125,6 +125,9 @@ def parseParamFile(fileName, verbose=True):
 
 
 def readColumnPositions(params, prefix="training_"):
+    """
+    Read column/band information needed for parsing catalog file.
+    """
     bandIndices = np.array([ib for ib, b in enumerate(params['bandNames'])
                             if b in params[prefix+'bandOrder']])
     bandNames = np.array(params['bandNames'])[bandIndices]
@@ -142,6 +145,9 @@ def readColumnPositions(params, prefix="training_"):
 
 
 def readBandCoefficients(params):
+    """
+    Read band/filter information.
+    """
     bandCoefAmplitudes =\
         np.vstack([np.loadtxt(params['bandFile_'+band])[:, 0]
                    for band in params['bandNames']])
@@ -157,6 +163,9 @@ def readBandCoefficients(params):
 
 
 def createGrids(params):
+    """
+    Create redshift grids.
+    """
     redshiftDistGrid = np.arange(0, params['redshiftMax'],
                                  params['redshiftDisBinSize'])
     redshiftGrid = np.arange(params['redshiftMin'],
@@ -169,7 +178,10 @@ def createGrids(params):
 
 
 def getDataFromFile(params, firstLine, lastLine, prefix="", getXY=True):
-
+    """
+    Returns an iterator to parse an input catalog file.
+    Returns the fluxes, redshifts, etc, and also GP inputs if getXY=True.
+    """
     bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
         refBandColumn = readColumnPositions(params, prefix=prefix)
     bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\

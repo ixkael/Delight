@@ -41,6 +41,9 @@ class Photoz_mean_function():
             * np.sum(self.fcoefs_amp * self.fcoefs_sig, axis=1)
 
     def f(self, X):
+        """
+        Compute mean function.
+        """
         b = X[:, 0].astype(int)
         z = X[:, 1]
         l = X[:, 2]
@@ -111,7 +114,9 @@ class Photoz_kernel:
         self.construct_interpolators()
 
     def roundband(self, bfloat):
-        """Cast the last dimension (band index) as integer"""
+        """
+        Cast the last dimension (band index) as integer
+        """
         # In GPy, numpy arrays are type ObsAr, so the values must be extracted.
         b = bfloat.astype(int)
         # Check bounds. This is ok because band indices should never change
@@ -121,6 +126,9 @@ class Photoz_kernel:
         return b
 
     def K(self, X, X2=None):
+        """
+        Compute kernel.
+        """
         if X2 is None:
             X2 = X
         l1 = X[:, 2]
@@ -130,6 +138,9 @@ class Photoz_kernel:
             (self.var_C * self.KC + self.var_L * self.KL)
 
     def update_kernelparts(self, X, X2=None):
+        """
+        Update kernel components if inputs have changed.
+        """
         if X2 is None:
             X2 = X
         NO1, NO2 = X.shape[0], X2.shape[0]
@@ -190,6 +201,9 @@ class Photoz_kernel:
              self.DL_z(X2[None, :, 1]))
 
     def construct_interpolators(self):
+        """
+        Construct interpolation scheme for the kernel.
+        """
         bands = np.arange(self.numBands).astype(int)
         fzgrid = 1 + self.redshiftGrid
         ts = (self.numBands, self.numBands, self.nz, self.nz)
