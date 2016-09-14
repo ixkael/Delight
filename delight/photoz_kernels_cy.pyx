@@ -15,7 +15,7 @@ def find_positions(
     cdef long p1, o1
     for o1 in prange(NO1, nogil=True):
         for p1 in range(nz-1):
-            if fz1[o1] >= fzGrid[p1] and fz1[o1] < fzGrid[p1+1]:
+            if fz1[o1] >= fzGrid[p1] and fz1[o1] <= fzGrid[p1+1]:
                 p1s[o1] = p1
                 break;
 
@@ -34,7 +34,6 @@ def kernel_parts_interp(
 
     cdef int p1, p2, o1, o2
     cdef double dzm2, opz1, opz2
-    dzm2 = pow(fzGrid[1] - fzGrid[0], -2.)
     for o1 in prange(NO1, nogil=True):
         opz1 = fz1[o1]
         p1 = p1s[o1]

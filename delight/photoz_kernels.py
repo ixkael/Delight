@@ -106,7 +106,7 @@ class Photoz_kernel:
         if redshiftGrid is None:
             self.redshiftGrid = np.linspace(0, 4, num=160)
         else:
-            self.redshiftGrid = redshiftGrid
+            self.redshiftGrid = copy(redshiftGrid)
         self.nz = self.redshiftGrid.size
         self.construct_interpolators()
 

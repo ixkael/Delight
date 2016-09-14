@@ -4,6 +4,7 @@ from copy import copy
 import scipy.linalg
 from scipy.optimize import minimize
 
+from delight.utils import approx_DL
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 log_2_pi = np.log(2*np.pi)
@@ -14,38 +15,44 @@ class PhotozGP:
     Photo-z Gaussian process, with   physical kernel and mean function.
     Default: all parameters are variable except bands and likelihood/noise.
     """
-    def __init__(self, mean_fct, kernel,
-                 X=None, Y=None, Yvar=None, L=None, beta=None):
+    def __init__(self, alpha,
+                 bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+                 lines_pos, lines_width, V_C, V_L, alpha_C, alpha_L,
+                 redshiftGridGP, use_interpolators=True,
+                 lambdaRef=4.5e3, g_AB=1.0):
 
-        self.mean_fct = mean_fct
-        self.kernel = kernel
-        if X is None:
-            raise Exception("Problem! X should be specified")
+        DL = approx_DL()
+        self.bands = np.arange(bandCoefAmplitudes.shape[0])
+        self.mean_fct = Photoz_mean_function(
+            alpha, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+            g_AB=g_AB, lambdaRef=lambdaRef, DL_z=DL)
+        self.kernel = Photoz_kernel(
+            bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+            lines_pos, lines_width, V_C, V_L, alpha_C, alpha_L,
+            g_AB=g_AB, DL_z=DL, redshiftGrid=redshiftGridGP,
+            use_interpolators=use_interpolators)
+        self.redshiftGridGP = redshiftGridGP
+
+    def setData(self, X, Y, Yvar):
         self.X = X
-
-        if L is None and beta is None:
-            if Y is None or Yvar is None:
-                raise Exception("Problem! Y and Yvar should be specified")
-            self.Y = Y.reshape((-1, 1))
-            self.Yvar = Yvar.reshape((-1, 1))
-            self.compute()
-
-        if Y is None and Yvar is None:
-            if L is None or beta is None:
-                raise Exception("Problem! L and beta should be specified")
-            self.L = L
-            self.beta = beta.reshape((-1, 1))
-
-    def compute(self):
-        self.D = 1*self.Y
-        if self.mean_fct is not None:
-            self.D -= self.mean_fct.f(self.X)
+        self.Y = Y.reshape((-1, 1))
+        self.Yvar = Yvar.reshape((-1, 1))
+        self.D = self.Y - self.mean_fct.f(X)
         self.KXX = self.kernel.K(self.X)
         self.A = self.KXX + np.diag(self.Yvar.flatten())
         self.L = scipy.linalg.cholesky(self.A, lower=True)
         self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
+
+    def setCore(self, alpha, KXX, L, D):
+        self.mean_fct.alpha = alpha
+        self.KXX = KXX
+        self.L = L
+        self.D = D.reshape((-1, 1))
+        self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
+
+    def margLike(self):
         logdet = np.log(scipy.linalg.det(self.KXX))
-        self.marglike =\
+        return\
             0.5 * np.sum(self.beta * self.D) +\
             0.5 * logdet + 0.5 * self.Y.size * log_2_pi
 
@@ -53,22 +60,47 @@ class PhotozGP:
         assert x_pred.shape[1] == 3
         KXXp = self.kernel.K(x_pred, self.X)
         KXpXp = self.kernel.K(x_pred)
-        y_pred = np.dot(KXXp, self.beta)
-        if self.mean_fct is not None:
-            y_pred += self.mean_fct.f(x_pred)
+        y_pred = np.dot(KXXp, self.beta) + self.mean_fct.f(x_pred)
         v = scipy.linalg.cho_solve((self.L, True), KXXp.T)
         y_pred_fullcov = KXpXp - KXXp.dot(v)
         return y_pred, y_pred_fullcov
 
+    def predictAndInterpolate(self, redshiftGrid, ell=1.0, z=None):
+        numBands = self.bands.size
+        numZGP = self.redshiftGridGP.size
+        redshiftGridGP_loc = 1 * self.redshiftGridGP
+        if z is not None:
+            zloc = np.abs(z - redshiftGridGP_loc).argmin()
+            redshiftGridGP_loc[zloc] = z
+        xv, yv = np.meshgrid(redshiftGridGP_loc, self.bands,
+                             sparse=False, indexing='xy')
+        X_pred = np.ones((numBands*numZGP, 3))
+        X_pred[:, 0] = yv.flatten()
+        X_pred[:, 1] = xv.flatten()
+        X_pred[:, 2] = ell
+        y_pred, y_pred_fullcov = self.predict(X_pred)
+        model_mean = np.zeros((redshiftGrid.size, numBands))
+        model_var = np.zeros((redshiftGrid.size, numBands))
+        for i in range(numBands):
+            y_pred_bin = y_pred[i*numZGP:(i+1)*numZGP].ravel() / ell
+            y_var_bin = np.diag(y_pred_fullcov)[i*numZGP:(i+1)*numZGP] / ell**2
+            model_mean[:, i] = np.interp(redshiftGrid,
+                                         redshiftGridGP_loc, y_pred_bin)
+            model_var[:, i] = np.interp(redshiftGrid,
+                                        redshiftGridGP_loc, y_var_bin)
+        return model_mean, model_var
+
     def updateAlphaAndReturnMarglike(self, alpha):
         self.mean_fct.alpha = alpha[0]
-        #self.X[:, 2] = alpha[1]
-        self.compute()
-        return self.marglike
+        self.D = self.Y - self.mean_fct.f(self.X)
+        self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
+        return self.margLike()
 
-    def optimize_alpha(self):
-        x0 = 0.0# [0.0, self.X[0, 2]]
+    def optimizeAlpha(self):
+        x0 = 0.0  # [0.0, self.X[0, 2]]
         res = minimize(self.updateAlphaAndReturnMarglike, x0,
-                       method='L-BFGS-B', tol=1e-6, bounds=[(-3e-4, 3e-4)])
+                       method='L-BFGS-B', tol=1e-6,
+                       bounds=[(-3e-4, 3e-4)])
+        # , (1e-3*self.X[0, 2], 1e3*self.X[0, 2])])
         self.mean_fct.alpha = res.x[0]
-        #self.X[:, 2] = res.x[1]
+        # self.X[:, 2] = res.x[1]
