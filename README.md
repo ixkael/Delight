@@ -20,7 +20,7 @@
 
 ## Requirements
 
-Python (2.7+ or 3.5+), cython, numpy, scipy, pytest, pylint, coveralls, matplotlib, astropy </br>
+Python 3.5, cython, numpy, scipy, pytest, pylint, coveralls, matplotlib, astropy </br>
 
 ## Authors
 
