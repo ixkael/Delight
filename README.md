@@ -20,8 +20,7 @@
 
 ## Requirements
 
-**Standard**: python, cython, numpy, scipy, pytest, pylint, coveralls, matplotlib </br>
-**Less standard**: gpy
+python, cython, numpy, scipy, pytest, pylint, coveralls, matplotlib, astropy </br>
 
 ## Authors
 

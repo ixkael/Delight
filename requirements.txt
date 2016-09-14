@@ -7,3 +7,4 @@ scipy
 matplotlib
 coveralls
 mpi4py
+astropy
