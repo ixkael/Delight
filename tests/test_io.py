@@ -9,12 +9,15 @@ def test_Parser():
 
 
 def test_createGrids():
-    out = createGrids(paramFile)
+    params = parseParamFile(paramFile, verbose=False)
+    out = createGrids(params)
 
 
 def test_readBandCoefficients():
-    out = readBandCoefficients(paramFile)
+    params = parseParamFile(paramFile, verbose=False)
+    out = readBandCoefficients(params)
 
 
 def test_readColumnPositions():
-    out = readColumnPositions(paramFile)
+    params = parseParamFile(paramFile, verbose=False)
+    out = readColumnPositions(params)

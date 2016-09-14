@@ -1,16 +1,14 @@
 
 import numpy as np
 
+
 class approx_DL():
     """
     Approximate luminosity_distance relation,
     agrees with astropy.FlatLambdaCDM(H0=70, Om0=0.3, Ob0=None) better than 1%
     """
     def __call__(self, z):
-        return 30.5 * z**0.04 - 21.7
-
-    def derivative(self, z):
-        return 1.22 / z**0.96
+        return np.exp(30.5 * z**0.04 - 21.7)
 
     def __str__(self):
         return str(self.__dict__)
