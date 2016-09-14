@@ -117,9 +117,10 @@ def parseParamFile(fileName, verbose=True):
         print('Input parameter file:', fileName)
         print('Parameters read:')
         for k, v in params.items():
-            print('> ', "%-20s" % k,
-                  ' '.join([str(x) for x in v])) if type(v) is list\
-                else print(v)
+            if type(v) is list:
+                print('> ', "%-20s" % k, ' '.join([str(x) for x in v]))
+            else:
+                print('> ', "%-20s" % k, v)
 
     return params
 
@@ -198,7 +199,6 @@ def getDataFromFile(params, firstLine, lastLine, prefix="", getXY=True):
             fac = (1+z)**0. / DL(z)**2. / refBandNorm\
                 / params['fluxLuminosityNorm']
             ell = refFlux / fac
-            print(z, refFlux, DL(z), fac, refBandNorm, ell)
 
             # drop bad values and find how many bands are valid
             mask = np.isfinite(data[bandColumns])
