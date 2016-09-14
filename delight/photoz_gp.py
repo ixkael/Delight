@@ -14,8 +14,8 @@ class PhotozGP:
     """
     Photo-z Gaussian process, with physical kernel and mean function.
     """
-    def __init__(self, alpha,
-                 bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+    def __init__(self,
+                 alpha, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
                  lines_pos, lines_width, V_C, V_L, alpha_C, alpha_L,
                  redshiftGridGP, use_interpolators=True,
                  lambdaRef=4.5e3, g_AB=1.0):

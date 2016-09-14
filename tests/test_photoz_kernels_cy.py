@@ -17,7 +17,7 @@ def test_diagonalOfKernels():
     """
     Test that diagonal of kernels and derivatives are correct across functions.
     """
-    X = random_X_bzlt(size, numBands=numBands)
+    X = random_X_bzl(size, numBands=numBands)
     X2 = X
 
     fcoefs_amp, fcoefs_mu, fcoefs_sig = random_filtercoefs(numBands, numCoefs)
@@ -30,8 +30,6 @@ def test_diagonalOfKernels():
     b2 = X2[:, 0].astype(int)
     fz1 = 1 + X[:, 1]
     fz2 = 1 + X2[:, 1]
-    t1 = X[:, 2]
-    t2 = X2[:, 2]
     KC, KL \
         = np.zeros((NO1, NO2)), np.zeros((NO1, NO2))
     D_alpha_C, D_alpha_L, D_alpha_z \
@@ -102,15 +100,13 @@ def test_kernel_parts_interp():
                         D_alpha_L_grid[ib1, ib2, :, :],
                         D_alpha_z_grid[ib1, ib2, :, :])
 
-    Xrand = random_X_bzlt(size, numBands=numBands)
-    X2rand = random_X_bzlt(size, numBands=numBands)
+    Xrand = random_X_bzl(size, numBands=numBands)
+    X2rand = random_X_bzl(size, numBands=numBands)
     NO1, NO2 = Xrand.shape[0], X2rand.shape[0]
     b1 = Xrand[:, 0].astype(int)
     b2 = X2rand[:, 0].astype(int)
     fz1 = 1 + Xrand[:, 1]
     fz2 = 1 + X2rand[:, 1]
-    t1 = Xrand[:, 2]
-    t2 = X2rand[:, 2]
 
     KC_rand, KL_rand =\
         np.zeros((NO1, NO2)),\

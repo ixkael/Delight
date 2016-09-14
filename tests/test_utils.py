@@ -14,5 +14,5 @@ def test_approx_DL():
 
 def test_random_X():
     size = 10
-    X = random_X_bzlt(size, numBands=5, redshiftMax=3.0)
-    assert X.shape == (size, 4)
+    X = random_X_bzl(size, numBands=5, redshiftMax=3.0)
+    assert X.shape == (size, 3)
