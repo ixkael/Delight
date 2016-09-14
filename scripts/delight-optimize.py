@@ -2,7 +2,6 @@
 import sys
 from mpi4py import MPI
 import numpy as np
-import itertools
 from delight.io import *
 from delight.utils import *
 from delight.photoz_gp import PhotozGP

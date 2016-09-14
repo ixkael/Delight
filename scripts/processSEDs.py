@@ -10,7 +10,8 @@ lambdaRef = 4.5e3
 sed_names = ['El_B2004a', 'Sbc_B2004a', 'Scd_B2004a',
              'SB3_B2004a', 'Im_B2004a', 'SB2_B2004a',
              'ssp_25Myr_z008', 'ssp_5Myr_z008']
-redshiftGrid = np.arange(0, 3, 0.01)
+fmt = '.sed'
+redshiftGrid = np.linspace(0.01, 2, num=100)
 DL = approx_DL()
 
 # Loop over SEDs

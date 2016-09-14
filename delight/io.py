@@ -178,59 +178,84 @@ def createGrids(params):
     return redshiftDistGrid, redshiftGrid, redshiftGridGP
 
 
-def getDataFromFile(params, firstLine, lastLine, prefix="", getXY=True):
+def getDataFromFile(params, firstLine, lastLine,
+                    prefix="", ftype="catalog", getXY=True):
     """
     Returns an iterator to parse an input catalog file.
     Returns the fluxes, redshifts, etc, and also GP inputs if getXY=True.
     """
-    bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
-        refBandColumn = readColumnPositions(params, prefix=prefix)
-    bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
-        = readBandCoefficients(params)
-    refBandNorm = norms[params['bandNames'].index(params['referenceBand'])]
-    DL = approx_DL()
 
-    with open(params[prefix+'catFile']) as f:
-        for line in itertools.islice(f, firstLine, lastLine):
+    if ftype == "gpparams":
 
-            data = np.array(line.split(' '), dtype=float)
-            refFlux = data[refBandColumn]
-            z = data[redshiftColumn]
-            fac = (1+z)**0. / DL(z)**2. / refBandNorm\
-                / params['fluxLuminosityNorm']
-            ell = refFlux / fac
-
-            # drop bad values and find how many bands are valid
-            mask = np.isfinite(data[bandColumns])
-            mask &= np.isfinite(data[bandVarColumns])
-            mask &= data[bandColumns] > 0.0
-            mask &= data[bandVarColumns] > 0.0
-            bandsUsed = np.where(mask)[0]
-            numBandsUsed = mask.sum()
-
-            if (refFlux <= 0) or (not np.isfinite(refFlux))\
-                    or (z < 0) or (numBandsUsed <= 1):
-                continue  # not valid data - skip to next valid object
-
-            if not getXY:
-
-                yield z, ell, bandIndices[mask],\
-                    data[bandColumns[mask]],\
-                    data[bandVarColumns[mask]]
-
-            if getXY:
-
-                Y = np.zeros((numBandsUsed, 1))
-                Yvar = np.zeros((numBandsUsed, 1))
-                X = np.ones((numBandsUsed, 3))
-                for off, iband in enumerate(bandIndices[mask]):
+        with open(params[prefix+'paramFile']) as f:
+            for line in itertools.islice(f, firstLine, lastLine):
+                data = np.fromstring(line, dtype=float, sep=' ')
+                B = int(data[0])
+                z = data[1]
+                ell = data[2]
+                bands = data[3:3+B]
+                flatarray = data[3+B:]
+                X = np.zeros((B, 3))
+                for off, iband in enumerate(bands):
                     X[off, 0] = iband
                     X[off, 1] = z
                     X[off, 2] = ell
-                    Y[off, 0] = data[bandColumns[off]]
-                    Yvar[off, 0] = data[bandVarColumns[off]]
 
-                yield z, ell, bandIndices[mask],\
-                    data[bandColumns[mask]],\
-                    data[bandVarColumns[mask]],\
-                    X, Y, Yvar
+                yield z, ell, bands, X, B, flatarray
+
+    if ftype == "catalog":
+
+        bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
+            refBandColumn = readColumnPositions(params, prefix=prefix)
+        bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
+            = readBandCoefficients(params)
+        refBandNorm = norms[params['bandNames'].index(params['referenceBand'])]
+        DL = approx_DL()
+
+        with open(params[prefix+'catFile']) as f:
+            for line in itertools.islice(f, firstLine, lastLine):
+
+                data = np.array(line.split(' '), dtype=float)
+                refFlux = data[refBandColumn]
+                if redshiftColumn >= 0:
+                    z = data[redshiftColumn]
+                else:
+                    z = -1
+                fac = (1+z)**0. / DL(z)**2. / refBandNorm\
+                    / params['fluxLuminosityNorm']
+                ell = refFlux / fac
+
+                # drop bad values and find how many bands are valid
+                mask = np.isfinite(data[bandColumns])
+                mask &= np.isfinite(data[bandVarColumns])
+                mask &= data[bandColumns] > 0.0
+                mask &= data[bandVarColumns] > 0.0
+                bandsUsed = np.where(mask)[0]
+                numBandsUsed = mask.sum()
+
+                if (refFlux <= 0) or (not np.isfinite(refFlux))\
+                        or (z < 0) or (numBandsUsed <= 1):
+                    continue  # not valid data - skip to next valid object
+
+                if not getXY:
+
+                    yield z, ell, bandIndices[mask],\
+                        data[bandColumns[mask]],\
+                        data[bandVarColumns[mask]]
+
+                if getXY:
+
+                    Y = np.zeros((numBandsUsed, 1))
+                    Yvar = np.zeros((numBandsUsed, 1))
+                    X = np.ones((numBandsUsed, 3))
+                    for off, iband in enumerate(bandIndices[mask]):
+                        X[off, 0] = iband
+                        X[off, 1] = z
+                        X[off, 2] = ell
+                        Y[off, 0] = data[bandColumns[off]]
+                        Yvar[off, 0] = data[bandVarColumns[off]]
+
+                    yield z, ell, bandIndices[mask],\
+                        data[bandColumns[mask]],\
+                        data[bandVarColumns[mask]],\
+                        X, Y, Yvar

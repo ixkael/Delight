@@ -41,6 +41,7 @@ class PhotozGP:
         self.Yvar = Yvar.reshape((-1, 1))
         self.D = self.Y - self.mean_fct.f(X)
         self.KXX = self.kernel.K(self.X)
+        self.logdet = np.log(scipy.linalg.det(self.KXX))
         self.A = self.KXX + np.diag(self.Yvar.flatten())
         self.L = scipy.linalg.cholesky(self.A, lower=True)
         self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
@@ -49,26 +50,31 @@ class PhotozGP:
         """
         Returns core matrices, useful to re-use the GP elsewhere.
         """
-        return self.mean_fct.alpha, self.KXX, self.L, self.D
+        B = self.D.size
+        halfL = self.L[np.tril_indices(B)]
+        flatarray = np.zeros((1 + B + B*(B+1)//2, ))
+        flatarray[0] = self.mean_fct.alpha
+        flatarray[1:1+B*(B+1)//2] = halfL
+        flatarray[1+B*(B+1)//2:] = self.D.ravel()
+        return flatarray
 
-    def setCore(self, alpha, KXX, L, D):
+    def setCore(self, X, B, flatarray):
         """
         Set core matrices
         """
-        self.mean_fct.alpha = alpha
-        self.KXX = KXX
-        self.L = L
-        self.D = D.reshape((-1, 1))
+        self.X = X
+        self.mean_fct.alpha = flatarray[0]
+        self.D = flatarray[1+B*(B+1)//2:].reshape((-1, 1))
+        self.L = np.zeros((B, B))
+        self.L[np.tril_indices(B)] = flatarray[1:1+B*(B+1)//2]
         self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
 
     def margLike(self):
         """
         Returns marginalized likelihood of GP
         """
-        logdet = np.log(scipy.linalg.det(self.KXX))
-        return\
-            0.5 * np.sum(self.beta * self.D) +\
-            0.5 * logdet + 0.5 * self.Y.size * log_2_pi
+        return 0.5 * np.sum(self.beta * self.D) +\
+            0.5 * self.logdet + 0.5 * self.D.size * log_2_pi
 
     def predict(self, x_pred):
         """

@@ -59,15 +59,17 @@ for z, ell, bands, fluxes, fluxesVar, X, Y, Yvar in trainingDataIter1:
 
     gp.optimizeAlpha()
 
-    model_mean, model_var = gp.predictAndInterpolate(redshiftGrid,
-                                                     ell=ell, z=z)
+    model_mean, model_var, redshiftGridGP_loc\
+        = gp.predictAndInterpolate(redshiftGrid, ell=ell, z=z)
     model_sig = np.sqrt(model_var)
     for i in range(numBands):
-        axs[i].fill_between(redshiftGrid,
+        axs[i].fill_between(redshiftGridGP_loc,
                             model_mean[:, i] - model_sig[:, i],
                             model_mean[:, i] + model_sig[:, i],
                             color='r', alpha=0.25)
-        axs[i].plot(redshiftGrid, model_mean[:, i], c='r',
+        axs[i].plot(redshiftGridGP_loc, model_mean[:, i], c='r',
                     label='alpha = %.2g' % gp.mean_fct.alpha)
 
+        axs[i].set_xscale('log')
+        axs[i].set_yscale('log')
     fig.savefig('data/pdfs-'+str(loc)+'.png')
