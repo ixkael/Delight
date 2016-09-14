@@ -117,8 +117,8 @@ def parseParamFile(fileName, verbose=True):
         print('Input parameter file:', fileName)
         print('Parameters read:')
         for k, v in params.items():
-            print('> ', "%-20s" % k, end="")
-            print(' '.join([str(x) for x in v])) if type(v) is list\
+            print('> ', "%-20s" % k,
+                  ' '.join([str(x) for x in v])) if type(v) is list\
                 else print(v)
 
     return params
