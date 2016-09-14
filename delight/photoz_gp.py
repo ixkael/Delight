@@ -111,7 +111,10 @@ class PhotozGP:
                                          redshiftGridGP_loc, y_pred_bin)
             model_var[:, i] = np.interp(redshiftGrid,
                                         redshiftGridGP_loc, y_var_bin)
-        return model_mean, model_var
+        if z is None:
+            return model_mean, model_var
+        else:
+            return model_mean, model_var, redshiftGridGP_loc
 
     def optimizeAlpha(self):
         """
