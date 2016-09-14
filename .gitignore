@@ -1,4 +1,7 @@
 # Project specific
+*ipynb
+notebooks
+*fits
 *fluxredshiftmod.txt
 *Indices.txt
 *MargLikes.txt
@@ -6,7 +9,6 @@
 *redshiftpdfs*
 *fluxredshifts*
 
-notebooks/*
 old_2D_stuff
 paper/PhotoZviaGP_paper.pdf
 data/SDSS_FILTERS/*png
@@ -258,3 +260,5 @@ TSWLatexianTemp*
 
 # KBibTeX
 *~[0-9]*
+
+*.ipynb
