@@ -75,7 +75,7 @@ for loc in range(numLines):
     for i in range(numConfLevels):
         if pdfAtZ >= confidencelevels[i]:
             localConfFractions[i, zmeanBinLoc] += 1
-    pdf /= np.trapz(pdf, x=redshiftGrid)
+    #pdf /= np.trapz(pdf, x=redshiftGrid)
     localStackedPdfs[:, zmeanBinLoc] += pdf / numObjectsTarget
 
 comm.Barrier()

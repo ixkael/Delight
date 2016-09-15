@@ -6,7 +6,7 @@ import itertools
 from delight.utils import approx_DL
 
 
-def parseParamFile(fileName, verbose=True):
+def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     """
     Parser for cfg inputtype parameter files,
     see examples for details.
@@ -44,11 +44,11 @@ def parseParamFile(fileName, verbose=True):
     params['templates_names'] = config.get('Templates', 'names').split(' ')
 
     # Parsing Training
-    params['training_catFile'] = config.get('Training', 'catFile')
     params['training_numChunks'] = config.getint('Training', 'numChunks')
     params['training_paramFile'] = config.get('Training', 'paramFile')
     params['training_optimize'] = config.getboolean('Training', 'optimize')
-    if not os.path.isfile(params['training_catFile']):
+    params['training_catFile'] = config.get('Training', 'catFile')
+    if catFilesNeeded and not os.path.isfile(params['training_catFile']):
         raise Exception(params['training_catFile']+' : file does not exist')
     params['referenceBand'] = config.get('Training', 'referenceBand')
     if params['referenceBand'] not in params['bandNames']:
@@ -64,9 +64,17 @@ def parseParamFile(fileName, verbose=True):
     if 'redshift' not in params['training_bandOrder']:
         raise Exception('redshift should be included in training')
 
+    # Simulation
+    params['trainingFile'] = config.get('Simulation', 'trainingFile')
+    params['targetFile'] = config.get('Simulation', 'targetFile')
+    params['numObjects'] = int(config.getfloat('Simulation', 'numObjects'))
+    params['noiseLevels']\
+        = [float(x) for x in
+            config.get('Simulation', 'noiseLevels').split(' ')]
+
     # Parsing Target
     params['target_catFile'] = config.get('Target', 'catFile')
-    if not os.path.isfile(params['target_catFile']):
+    if catFilesNeeded and not os.path.isfile(params['target_catFile']):
         raise Exception(params['target_catFile']+' : file does not exist')
     params['target_bandOrder']\
         = config.get('Target', 'bandOrder').split(' ')
