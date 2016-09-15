@@ -3,6 +3,7 @@ import sys
 from mpi4py import MPI
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import stats
 from delight.io import *
 from delight.utils import *
 from delight.photoz_gp import PhotozGP
@@ -16,7 +17,7 @@ numThreads = comm.Get_size()
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
 paramFileName = sys.argv[1]
-params = parseParamFile(paramFileName)
+params = parseParamFile(paramFileName, verbose=False)
 if threadNum == 0:
     print('Thread number / number of threads: ', threadNum+1, numThreads)
     print('Input parameter file:', paramFileName)
@@ -116,7 +117,10 @@ if threadNum == 0:
             print("")
         ind = (globalBinlocs[:, 0] == i)
         pdf = globalStackedPdfs[:, i] / np.trapz(globalStackedPdfs[:, i], x=redshiftGrid)
-        axs[i].plot(redshiftGrid, pdf)
-        axs[i].hist(globalBinlocs[ind, 1], 50, normed=True, range=[0, redshiftGrid[-1]], histtype='step')
+        axs[i].plot(redshiftGrid, pdf, label='Inferred', color='b')
+        density = stats.kde.gaussian_kde(globalBinlocs[ind, 1])
+        axs[i].plot(redshiftGrid, density(redshiftGrid), label='Data KDE', c='k')
+        axs[i].hist(globalBinlocs[ind, 1], 50, normed=True, range=[0, redshiftGrid[-1]], histtype='step', label='Data hist', color='gray')
+    axs[0].legend(loc='upper right')
     fig.tight_layout()
     plt.show()

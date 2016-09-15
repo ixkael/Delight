@@ -14,8 +14,7 @@ numThreads = comm.Get_size()
 # Parse parameters file
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
-verbose = (True if (threadNum == 0) else False)
-params = parseParamFile(sys.argv[1], verbose=verbose)
+params = parseParamFile(sys.argv[1], verbose=False)
 
 # Read filter coefficients, compute normalization of filters
 bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
@@ -33,7 +32,7 @@ if threadNum == 0:
     print('Number of Target Objects', numObjectsTarget)
 
 V_C_grid = np.logspace(-1, numThreads - 2, numThreads)
-alpha_C_grid = [1e3]
+alpha_C_grid = [1e0, 1e1, 1e2]
 i_V_C = 1*threadNum
 V_C = V_C_grid[i_V_C]
 numVC, numAlpha = V_C_grid.size, len(alpha_C_grid)
@@ -68,7 +67,7 @@ for ialpha, alpha_C in enumerate(alpha_C_grid):
         loc += 1
         gp.setData(X, Y, Yvar)
         gp.optimizeAlpha()
-        model_mean[:, loc, :], model_var[:, loc, :], g =\
+        model_mean[:, loc, :], model_var[:, loc, :] =\
             gp.predictAndInterpolate(redshiftGrid, ell=ell, z=z)
 
     loc = - 1
@@ -99,7 +98,7 @@ for ialpha, alpha_C in enumerate(alpha_C_grid):
         for i in range(numConfLevels):
             if pdfAtZ >= confidencelevels[i]:
                 localConfFractions[i_V_C, ialpha, i, zmeanBinLoc] += 1
-        pdf /= np.trapz(pdf, x=redshiftGrid)
+        #pdf /= np.trapz(pdf, x=redshiftGrid)
         localStackedPdfs[i_V_C, ialpha, :, zmeanBinLoc]\
             += pdf / numObjectsTraining
 

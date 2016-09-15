@@ -14,8 +14,7 @@ numThreads = comm.Get_size()
 # Parse parameters file
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
-verbose = (True if (threadNum == 0) else False)
-params = parseParamFile(sys.argv[1], verbose=verbose)
+params = parseParamFile(sys.argv[1], verbose=False)
 
 # Read filter coefficients, compute normalization of filters
 bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\

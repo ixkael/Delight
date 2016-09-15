@@ -16,7 +16,7 @@ numThreads = comm.Get_size()
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
 paramFileName = sys.argv[1]
-params = parseParamFile(paramFileName)
+params = parseParamFile(paramFileName, verbose=False)
 if threadNum == 0:
     print('Thread number / number of threads: ', threadNum+1, numThreads)
     print('Input parameter file:', paramFileName)
