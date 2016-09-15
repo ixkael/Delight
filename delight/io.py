@@ -231,9 +231,6 @@ def getDataFromFile(params, firstLine, lastLine,
                     z = data[redshiftColumn]
                 else:
                     z = -1
-                fac = (1+z)**0. / DL(z)**2. / refBandNorm\
-                    / params['fluxLuminosityNorm']
-                ell = refFlux / fac
 
                 # drop bad values and find how many bands are valid
                 mask = np.isfinite(data[bandColumns])
@@ -242,6 +239,12 @@ def getDataFromFile(params, firstLine, lastLine,
                 mask &= data[bandVarColumns] > 0.0
                 bandsUsed = np.where(mask)[0]
                 numBandsUsed = mask.sum()
+
+                #  fac = (1+z)**0. / DL(z)**2. / refBandNorm\
+                #    / params['fluxLuminosityNorm']
+                ell = np.mean(data[bandColumns[mask]] *
+                              norms[bandColumns[mask]])
+                ell *= DL(z)**2. * params['fluxLuminosityNorm']
 
                 if (refFlux <= 0) or (not np.isfinite(refFlux))\
                         or (z < 0) or (numBandsUsed <= 1):
