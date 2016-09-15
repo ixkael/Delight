@@ -86,6 +86,8 @@ def parseParamFile(fileName, verbose=True):
     params['Ncompress'] = config.getint('Target', 'Ncompress')
     params['useCompression'] = config.getboolean("Target", 'useCompression')
     params['redshiftpdfFile'] = config.get('Target', 'redshiftpdfFile')
+    params['redshiftpdfFileComp'] = config.get('Target', 'redshiftpdfFileComp')
+    params['redshiftpdfFileTemp'] = config.get('Target', 'redshiftpdfFileTemp')
     params['metricsFile'] = config.get('Target', 'metricsFile')
 
     # Parsing other parameters

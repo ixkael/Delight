@@ -166,7 +166,9 @@ comm.Barrier()
 
 if threadNum == 0:
     fmt = '%.2e'
-    np.savetxt(params['redshiftpdfFile'], globalPDFs, fmt=fmt)
+    fname = params['redshiftpdfFileComp'] if params['compressionFilesFound']\
+        else params['redshiftpdfFile']
+    np.savetxt(fname, globalPDFs, fmt=fmt)
     if redshiftsInTarget:
         np.savetxt(params['metricsFile'], globalMetrics, fmt=fmt)
     if not params['compressionFilesFound']:

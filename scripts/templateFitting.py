@@ -116,6 +116,6 @@ comm.Barrier()
 
 if threadNum == 0:
     fmt = '%.2e'
-    np.savetxt(params['redshiftpdfFile'], globalPDFs, fmt=fmt)
+    np.savetxt(params['redshiftpdfFileTemp'], globalPDFs, fmt=fmt)
     if redshiftColumn >= 0:
         np.savetxt(params['metricsFile'], globalMetrics, fmt=fmt)
