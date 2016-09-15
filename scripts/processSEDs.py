@@ -1,18 +1,23 @@
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
-from delight.utils import approx_DL
+from delight.io import *
+from delight.utils import *
 
-bandNames = ['u', 'g', 'r', 'i', 'z']  # Bands
-dir_seds = './data/CWW_SEDs'
-dir_filters = './data/SDSS_FILTERS'
-lambdaRef = 4.5e3
-sed_names = ['El_B2004a', 'Sbc_B2004a', 'Scd_B2004a',
-             'SB3_B2004a', 'Im_B2004a', 'SB2_B2004a',
-             'ssp_25Myr_z008', 'ssp_5Myr_z008']
+if len(sys.argv) < 2:
+    raise Exception('Please provide a parameter file')
+params = parseParamFile(sys.argv[1], verbose=False)
+bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
+    refBandColumn = readColumnPositions(params, prefix="target_")
+dir_seds = params['templates_directory']
+dir_filters = params['bands_directory']
+lambdaRef = params['lambdaRef']
+sed_names = params['templates_names']
 fmt = '.sed'
-redshiftGrid = np.linspace(0.01, 2, num=100)
 DL = approx_DL()
+redshiftDistGrid, redshiftGrid, redshiftGridGP = createGrids(params)
+numZ = redshiftGrid.size
 
 # Loop over SEDs
 for sed_name in sed_names:
