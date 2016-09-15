@@ -14,7 +14,8 @@ numThreads = comm.Get_size()
 # Parse parameters file
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
-params = parseParamFile(sys.argv[1], verbose=True)
+verbose = True if threadNum == 0 else verbose = False
+params = parseParamFile(sys.argv[1], verbose=verbose)
 
 # Read filter coefficients, compute normalization of filters
 bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
@@ -44,7 +45,7 @@ localData = np.zeros((numLines, numCol))
 fmt = '%i ' + '%.6e ' * (localData.shape[1] - 1)
 
 loc = - 1
-trainingDataIter1 = getDataFromFile(params, 0, numObjectsTraining,
+trainingDataIter1 = getDataFromFile(params, firstLine, lastLine,
                                     prefix="training_", getXY=True)
 for z, ell, bands, fluxes, fluxesVar, X, Y, Yvar in trainingDataIter1:
     loc += 1
