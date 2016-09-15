@@ -70,7 +70,7 @@ def scalefree_flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None):
     return like
 
 
-def CIlevel(redshiftGrid, PDF, fraction, numlevels=200):
+def CIlevel(redshiftGrid, PDF, fraction, numlevels=100):
     evidence = np.trapz(PDF, redshiftGrid)
     for level in np.linspace(0, PDF.max(), num=numlevels):
         ind = np.where(PDF <= level)

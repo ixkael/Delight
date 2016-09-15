@@ -2,11 +2,11 @@
 import sys
 from mpi4py import MPI
 import numpy as np
-import itertools
 from scipy.interpolate import interp1d
-from delight.utils import parseParamFile, readColumnPositions
+from delight.io import *
+from delight.utils import *
 from delight.photoz_gp import PhotozGP
-from delight.utils import approx_DL, scalefree_flux_likelihood, computeMetrics
+from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 comm = MPI.COMM_WORLD
 threadNum = comm.Get_rank()
@@ -22,12 +22,12 @@ if threadNum == 0:
     print('Input parameter file:', paramFileName)
 
 DL = approx_DL()
-redshiftGrid = np.arange(0, params['redshiftMax'], params['redshiftBinSize'])
+redshiftDistGrid, redshiftGrid, redshiftGridGP = createGrids(params)
 numZ = redshiftGrid.size
 
 # Locate which columns of the catalog correspond to which bands.
 bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
-    refBandColumn = readColumnPositions(params, pfx="target_")
+    refBandColumn = readColumnPositions(params, prefix="target_")
 
 dir_seds = params['templates_directory']
 dir_filters = params['bands_directory']
@@ -74,36 +74,19 @@ localMetrics = np.zeros((numLines, numMetrics))
 
 # Now loop over target set to compute likelihood function
 loc = - 1
-with open(params['target_catFile']) as f:
-    iterTarget = itertools.islice(f, firstLine, lastLine)
-    for loc in range(numLines):
-        data = np.array(next(iterTarget).split(' '), dtype=float)
-        refFlux = data[refBandColumn]
-        if redshiftColumn >= 0:
-            z = data[redshiftColumn]
-
-        mask = np.isfinite(data[bandColumns])
-        mask &= np.isfinite(data[bandVarColumns])
-        mask &= data[bandColumns] > 0.0
-        mask &= data[bandVarColumns] > 0.0
-        bandsUsed = np.where(mask)[0]
-        numBandsUsed = mask.sum()
-
-        if (refFlux <= 0) or (not np.isfinite(refFlux))\
-                or (numBandsUsed <= 1):
-            continue  # not valid data - skip to next valid object
-
-        like_grid = scalefree_flux_likelihood(
-            data[bandColumns[mask]],  # fluxes
-            data[bandVarColumns[mask]],  # flux var
-            f_mod[:, :, bandIndices[mask]]
-        )
-
-        localPDFs[loc, :] += like_grid.sum(axis=1)
-        localMetrics[loc, :] = computeMetrics(
-                                    z, redshiftGrid,
-                                    localPDFs[loc, :],
-                                    params['confidenceLevels'])
+trainingDataIter = getDataFromFile(params, firstLine, lastLine,
+                                    prefix="target_", getXY=False)
+for z, ell, bands, fluxes, fluxesVar in trainingDataIter:
+    loc += 1
+    like_grid = scalefree_flux_likelihood(
+        fluxes, fluxesVar,
+        f_mod[:, :, bands]
+    )
+    localPDFs[loc, :] += like_grid.sum(axis=1)
+    localMetrics[loc, :] = computeMetrics(
+                                z, redshiftGrid,
+                                localPDFs[loc, :],
+                                params['confidenceLevels'])
 
 comm.Barrier()
 if threadNum == 0:
