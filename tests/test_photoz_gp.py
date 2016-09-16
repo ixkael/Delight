@@ -51,6 +51,10 @@ def create_gp(use_interpolators):
 
 
 def test_alpha(create_gp):
-    """Test HMC: initialize the sampler and draw a few points"""
     gp = create_gp
-    gp.optimizeAlpha()
+    gp.optimizeAlpha_GP()
+
+
+def test_alpha_ell(create_gp):
+    gp = create_gp
+    gp.estimateAlphaEll()
