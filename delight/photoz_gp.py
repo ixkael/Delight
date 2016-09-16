@@ -4,7 +4,7 @@ from copy import copy
 import scipy.linalg
 from scipy.optimize import minimize
 
-from delight.utils import approx_DL
+from delight.utils import approx_DL, scalefree_flux_likelihood
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
 log_2_pi = np.log(2*np.pi)
@@ -108,6 +108,7 @@ class PhotozGP:
         X_pred[:, 1] = xv.flatten()
         X_pred[:, 2] = ell
         y_pred, y_pred_fullcov = self.predict(X_pred)
+
         model_mean = np.zeros((redshiftGrid.size, numBands))
         model_var = np.zeros((redshiftGrid.size, numBands))
         for i in range(numBands):
@@ -117,12 +118,50 @@ class PhotozGP:
                                          redshiftGridGP_loc, y_pred_bin)
             model_var[:, i] = np.interp(redshiftGrid,
                                         redshiftGridGP_loc, y_var_bin)
-        if z is None:
-            return model_mean, model_var
-        else:
-            return model_mean, model_var, redshiftGridGP_loc
+        return model_mean, model_var
 
-    def optimizeAlpha(self):
+    def estimateAlphaEll(self):
+        """
+        Estimate alpha by fitting colours with power law
+        then estimate ell by fixing alpha by fitting fluxes with power law.
+        """
+        X_pred = 1*self.X
+
+        def fun(alpha):
+            self.mean_fct.alpha = alpha[0]
+            y_pred = self.mean_fct.f(X_pred).ravel()
+            pdf = scalefree_flux_likelihood(self.Y.ravel(), self.Yvar.ravel(),
+                                            y_pred[None, None, :])
+            return - np.log10(pdf)
+
+        x0 = [0.0]
+        res = minimize(fun, x0, method='L-BFGS-B',
+                       bounds=[(-1e-3, 1e-3)])
+        if np.abs(res.x[0]) > 1e-2:
+            raise Exception("Problem! Optimized alpha is ", res.x[0])
+        self.mean_fct.alpha = res.x[0]
+
+        def fun(ell):
+            X_pred[:, 2] = ell
+            y_pred = self.mean_fct.f(X_pred).ravel()
+            chi2s = (self.Y.ravel() - y_pred)**2 / self.Yvar
+            return np.sum(chi2s)
+
+        ell = self.X[0, 2]
+        x0 = [ell]
+        res = minimize(fun, x0, method='L-BFGS-B',
+                       bounds=[(1e-3*ell, 1e3*ell)])
+        # bounds=[(1e-3*ell, 1e3*ell)])
+        if res.x[0] < 0:
+            raise Exception("Problem! Optimized ell is ", res.x[0])
+        # print("alpha optimized:", self.mean_fct.alpha,
+        #  "ell optimized:", res.x[0])
+        self.X[:, 2] = res.x[0]
+        self.setData(self.X, self.Y, self.Yvar)  # Need to recompute core
+
+        return self.mean_fct.alpha, self.X[0, 2]
+
+    def optimizeAlpha_GP(self):
         """
         Optimize alpha with marglike as objective.
         """

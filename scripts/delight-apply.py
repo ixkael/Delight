@@ -15,6 +15,8 @@ numThreads = comm.Get_size()
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
 params = parseParamFile(sys.argv[1], verbose=False)
+if threadNum == 0:
+    print("--- DELIGHT-APPLY ---")
 
 # Read filter coefficients, compute normalization of filters
 bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\

@@ -15,6 +15,8 @@ numThreads = comm.Get_size()
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
 params = parseParamFile(sys.argv[1], verbose=False)
+if threadNum == 0:
+    print("--- DELIGHT-LEARN ---")
 
 # Read filter coefficients, compute normalization of filters
 bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
@@ -49,10 +51,10 @@ trainingDataIter1 = getDataFromFile(params, firstLine, lastLine,
 for z, ell, bands, fluxes, fluxesVar, X, Y, Yvar in trainingDataIter1:
     loc += 1
     gp.setData(X, Y, Yvar)
-    gp.optimizeAlpha()
+    alpha_hat, ell_hat = gp.estimateAlphaEll()
     localData[loc, 0] = bands.size
     localData[loc, 1] = z
-    localData[loc, 2] = ell
+    localData[loc, 2] = ell_hat
     localData[loc, 3:3+bands.size] = bands
     localData[loc, 3+bands.size:] = gp.getCore()
 

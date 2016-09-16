@@ -12,6 +12,8 @@ comm = MPI.COMM_WORLD
 threadNum = comm.Get_rank()
 numThreads = comm.Get_size()
 
+if threadNum == 0:
+    print("--- TEMPLATE FITTING ---")
 # Parse parameters file
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')

@@ -66,7 +66,7 @@ for ialpha, alpha_C in enumerate(alpha_C_grid):
     for z, ell, bands, fluxes, fluxesVar, X, Y, Yvar in trainingDataIter:
         loc += 1
         gp.setData(X, Y, Yvar)
-        gp.optimizeAlpha()
+        alpha, ell = gp.estimateAlphaEll()
         model_mean[:, loc, :], model_var[:, loc, :] =\
             gp.predictAndInterpolate(redshiftGrid, ell=ell, z=z)
 

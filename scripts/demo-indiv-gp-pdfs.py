@@ -42,10 +42,10 @@ for z, ell, bands, fluxes, fluxesVar, X, Y, Yvar in trainingDataIter1:
     fig, axs = plt.subplots(3, 2, figsize=(10, 5))
     axs = axs.ravel()
     for off, iband in enumerate(bands):
-        axs[iband].errorbar(z, fluxes[off] / ell * z**2,
-                            np.sqrt(fluxesVar[off]) / ell * z**2,
+        axs[iband].errorbar(z, fluxes[off] * z**2,
+                            np.sqrt(fluxesVar[off]) * z**2,
                             fmt='-o')
-    fac = redshiftGrid**2
+    fac = ell * redshiftGrid**2
 
     model_mean, model_var = gp.predictAndInterpolate(redshiftGrid,
                                                      ell=ell, z=z)
@@ -58,11 +58,13 @@ for z, ell, bands, fluxes, fluxesVar, X, Y, Yvar in trainingDataIter1:
         axs[i].plot(redshiftGrid, model_mean[:, i]*fac, c='b',
                     label='alpha = %.2g' % gp.mean_fct.alpha)
 
-    gp.optimizeAlpha()
+    alpha, ell = gp.estimateAlphaEll()
+    fac = ell * redshiftGrid**2
 
     model_mean, model_var\
         = gp.predictAndInterpolate(redshiftGrid, ell=ell, z=z)
     model_sig = np.sqrt(model_var)
+
     for i in range(numBands):
         axs[i].fill_between(redshiftGrid,
                             (model_mean[:, i] - model_sig[:, i])*fac,
