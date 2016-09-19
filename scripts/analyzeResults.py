@@ -76,7 +76,7 @@ for loc in range(numLines):
     for i in range(numConfLevels):
         if pdfAtZ >= confidencelevels[i]:
             localConfFractions[i, zmeanBinLoc] += 1
-    #pdf /= np.trapz(pdf, x=redshiftGrid)
+    # pdf /= np.trapz(pdf, x=redshiftGrid)
     localStackedPdfs[:, zmeanBinLoc] += pdf / numObjectsTarget
 
 comm.Barrier()
@@ -108,19 +108,35 @@ if threadNum == 0:
     fig, axs = plt.subplots(numZbins // 2 + 1, 2, figsize=(10, 10))
     axs = axs.ravel()
     for i in range(numZbins):
-        print("> N(z) bin", i, "zlo", redshiftDistGrid[i], "zhi", redshiftDistGrid[i+1], "nobj=", globalNobj[i])
+        print("> N(z) bin", i, "zlo", redshiftDistGrid[i], "zhi",
+              redshiftDistGrid[i+1], "nobj=", globalNobj[i])
         if globalNobj[i] > 0:
-            pdfzmean = np.average(redshiftGrid, weights=globalStackedPdfs[:, i])
-            print("  > zspecmean", '%.3g' %globalZspecmean[i], "pdfzmean", '%.3g' %pdfzmean)
+            pdfzmean = np.average(redshiftGrid,
+                                  weights=globalStackedPdfs[:, i])
+            pdfzstd = np.sqrt(np.average((redshiftGrid - pdfzmean)**2.,
+                                         weights=globalStackedPdfs[:, i]))
+            print("  > zspecmean %.3g" % globalZspecmean[i],
+                  "pdfzmean %.3g" % pdfzmean,
+                  "bias %.3g" % np.abs(globalZspecmean[i] - pdfzmean),
+                  "pdfzstd %.3g" % pdfzstd)
             for k in range(numConfLevels):
-                print("  > CI:", params['confidenceLevels'][k], '%.3g' % globalConfFractions[k, i], end="")
+                print("  > CI:", params['confidenceLevels'][k],
+                      '%.3g' % globalConfFractions[k, i], end="")
             print("")
-        ind = (globalBinlocs[:, 0] == i)
-        pdf = globalStackedPdfs[:, i] / np.trapz(globalStackedPdfs[:, i], x=redshiftGrid)
-        axs[i].plot(redshiftGrid, pdf, label='Inferred', color='b')
-        density = stats.kde.gaussian_kde(globalBinlocs[ind, 1])
-        axs[i].plot(redshiftGrid, density(redshiftGrid), label='Data KDE', c='k')
-        axs[i].hist(globalBinlocs[ind, 1], 50, normed=True, range=[0, redshiftGrid[-1]], histtype='step', label='Data hist', color='gray')
+            ind = (globalBinlocs[:, 0] == i)
+            pdf = globalStackedPdfs[:, i]
+            if pdf.sum() > 0:
+                pdf /= np.trapz(pdf, x=redshiftGrid)
+            axs[i].plot(redshiftGrid, pdf,
+                        label='Inferred', color='b')
+            density = stats.kde.gaussian_kde(globalBinlocs[ind, 1])
+            axs[i].plot(redshiftGrid, density(redshiftGrid),
+                        label='Data KDE', c='k')
+            axs[i].hist(globalBinlocs[ind, 1], 50, normed=True,
+                        range=[0, redshiftGrid[-1]], histtype='step',
+                        label='Data hist', color='gray')
+            axs[i].axvline(redshiftDistGrid[i], ls='dashed', color='k')
+            axs[i].axvline(redshiftDistGrid[i+1], ls='dashed', color='k')
     axs[0].legend(loc='upper right')
     fig.tight_layout()
     plt.show()

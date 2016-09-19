@@ -135,8 +135,9 @@ class PhotozGP:
             return - np.log10(pdf)
 
         x0 = [0.0]
+        z = self.X[0, 1]
         res = minimize(fun, x0, method='L-BFGS-B',
-                       bounds=[(-1e-3, 1e-3)])
+                       bounds=[((1+2*z)*-4e-4, 4e-4)])
         if np.abs(res.x[0]) > 1e-2:
             raise Exception("Problem! Optimized alpha is ", res.x[0])
         self.mean_fct.alpha = res.x[0]

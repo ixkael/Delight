@@ -32,11 +32,6 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     if not os.path.isdir(params['bands_directory']):
         raise Exception(params['bands_directory']+' is not a valid directory')
     params['bandNames'] = config.get('Bands', 'Names').split(' ')
-    for band in params['bandNames']:
-        fname = config.get('Bands', band)
-        if not os.path.isfile(fname):
-            raise Exception(fname+' : file does not exist')
-        params['bandFile_'+band] = fname
 
     # Parsing Templates
     params['templates_directory'] = config.get('Templates', 'directory')
@@ -50,9 +45,9 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     params['training_catFile'] = config.get('Training', 'catFile')
     if catFilesNeeded and not os.path.isfile(params['training_catFile']):
         raise Exception(params['training_catFile']+' : file does not exist')
-    params['referenceBand'] = config.get('Training', 'referenceBand')
-    if params['referenceBand'] not in params['bandNames']:
-        raise Exception(params['referenceBand']+' : is not a valid band name')
+    params['training_referenceBand'] = config.get('Training', 'referenceBand')
+    if params['training_referenceBand'] not in params['bandNames']:
+        raise Exception(params['training_referenceBand']+' : is not a valid')
     params['training_bandOrder']\
         = config.get('Training', 'bandOrder').split(' ')
     for band in params['training_bandOrder']:
@@ -68,9 +63,7 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     params['trainingFile'] = config.get('Simulation', 'trainingFile')
     params['targetFile'] = config.get('Simulation', 'targetFile')
     params['numObjects'] = int(config.getfloat('Simulation', 'numObjects'))
-    params['noiseLevels']\
-        = [float(x) for x in
-            config.get('Simulation', 'noiseLevels').split(' ')]
+    params['noiseLevel'] = config.getfloat('Simulation', 'noiseLevel')
 
     # Parsing Target
     params['target_catFile'] = config.get('Target', 'catFile')
@@ -78,6 +71,9 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
         raise Exception(params['target_catFile']+' : file does not exist')
     params['target_bandOrder']\
         = config.get('Target', 'bandOrder').split(' ')
+    params['target_referenceBand'] = config.get('Target', 'referenceBand')
+    if params['target_referenceBand'] not in params['bandNames']:
+        raise Exception(params['target_referenceBand']+' : is not a valid')
     for band in params['target_bandOrder']:
         if (band not in params['bandNames'])\
                 and (band[:-4] not in params['bandNames'])\
@@ -150,7 +146,8 @@ def readColumnPositions(params, prefix="training_"):
         redshiftColumn = params[prefix+'bandOrder'].index('redshift')
     else:
         redshiftColumn = -1
-    refBandColumn = params[prefix+'bandOrder'].index(params['referenceBand'])
+    refBandColumn = params[prefix+'bandOrder']\
+        .index(params[prefix+'referenceBand'])
     return bandIndices, bandNames, bandColumns, bandVarColumns,\
         redshiftColumn, refBandColumn
 
@@ -159,15 +156,19 @@ def readBandCoefficients(params):
     """
     Read band/filter information.
     """
-    bandCoefAmplitudes =\
-        np.vstack([np.loadtxt(params['bandFile_'+band])[:, 0]
-                   for band in params['bandNames']])
-    bandCoefPositions =\
-        np.vstack([np.loadtxt(params['bandFile_'+band])[:, 1]
-                   for band in params['bandNames']])
-    bandCoefWidths =\
-        np.vstack([np.loadtxt(params['bandFile_'+band])[:, 2]
-                   for band in params['bandNames']])
+    bandCoefAmplitudes = []
+    bandCoefPositions = []
+    bandCoefWidths = []
+    for band in params['bandNames']:
+        fname = params['bands_directory'] + '/' + band\
+            + '_gaussian_coefficients.txt'
+        data = np.loadtxt(fname)
+        bandCoefAmplitudes.append(data[:, 0])
+        bandCoefPositions.append(data[:, 1])
+        bandCoefWidths.append(data[:, 2])
+    bandCoefAmplitudes = np.vstack(bandCoefAmplitudes)
+    bandCoefPositions = np.vstack(bandCoefPositions)
+    bandCoefWidths = np.vstack(bandCoefWidths)
     norms =\
         np.sqrt(2*np.pi) * np.sum(bandCoefAmplitudes * bandCoefWidths, axis=1)
     return bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms
@@ -219,7 +220,8 @@ def getDataFromFile(params, firstLine, lastLine,
             refBandColumn = readColumnPositions(params, prefix=prefix)
         bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
             = readBandCoefficients(params)
-        refBandNorm = norms[params['bandNames'].index(params['referenceBand'])]
+        refBandNorm = norms[params['bandNames']
+                            .index(params[prefix+'referenceBand'])]
         DL = approx_DL()
 
         with open(params[prefix+'catFile']) as f:
@@ -240,10 +242,9 @@ def getDataFromFile(params, firstLine, lastLine,
                 bandsUsed = np.where(mask)[0]
                 numBandsUsed = mask.sum()
 
-                #  fac = (1+z)**0. / DL(z)**2. / refBandNorm\
-                #    / params['fluxLuminosityNorm']
-                ell = np.mean(data[bandColumns[mask]] *
-                              norms[bandColumns[mask]])
+                ell = refFlux * refBandNorm
+                # ell = np.mean(data[bandColumns[mask]] *
+                #              norms[bandColumns[mask]])
                 ell *= DL(z)**2. * params['fluxLuminosityNorm']
 
                 if (refFlux <= 0) or (not np.isfinite(refFlux))\

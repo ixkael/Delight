@@ -72,7 +72,7 @@ for chunk in range(numChunks):
     trainingDataIter = getDataFromFile(params, TR_firstLine, TR_lastLine,
                                        prefix="training_", ftype="gpparams")
     for loc, (z, ell, bands, X, B, flatarray) in enumerate(trainingDataIter):
-        gp.setCore(X, B, flatarray)
+        gp.setCore(X, B, flatarray[0:1+B+B*(B+1)//2])
         model_mean[:, loc, :], model_var[:, loc, :] =\
             gp.predictAndInterpolate(redshiftGrid, ell=ell)
 

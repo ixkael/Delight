@@ -2,13 +2,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy.optimize import leastsq
+import sys
+from delight.io import *
+from delight.utils import *
 
-numCoefs = 12  # number of components for the fit
-bandNames = ['u', 'g', 'r', 'i', 'z']  # Bands
+numCoefs = 20  # number of components for the fit
+
+if len(sys.argv) < 2:
+    raise Exception('Please provide a parameter file')
+params = parseParamFile(sys.argv[1], verbose=False)
+bandNames = params['bandNames']
 fmt = '.res'
-max_redshift = 2.0  # for plotting purposes
-root = './data/SDSS_FILTERS'
-make_plots = False
+max_redshift = params['redshiftMax']  # for plotting purposes
+root = params['bands_directory']
+make_plots = True
 
 
 # Function we will optimize

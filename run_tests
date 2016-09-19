@@ -1,4 +1,6 @@
+python scripts/processFilters.py
 coverage run --source delight -m py.test --ignore=old_2D_stuff
 pep8 delight/*py
 pep8 tests/*py
+pep8 scripts/*py
 coverage report

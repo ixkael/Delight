@@ -35,29 +35,11 @@ dir_seds = params['templates_directory']
 dir_filters = params['bands_directory']
 lambdaRef = params['lambdaRef']
 sed_names = params['templates_names']
-f_mod = np.zeros((redshiftGrid.size, len(sed_names), len(bandNames)))
+f_mod = np.zeros((redshiftGrid.size, len(sed_names),
+                  len(params['bandNames'])))
 for t, sed_name in enumerate(sed_names):
-    seddata = np.genfromtxt(dir_seds + '/' + sed_name + '.sed')
-    seddata[:, 1] *= seddata[:, 0]**2. / 3e18
-    ref = np.interp(lambdaRef, seddata[:, 0], seddata[:, 1])
-    seddata[:, 1] /= ref
-    sed_interp = interp1d(seddata[:, 0], seddata[:, 1])
-    for jf, band in enumerate(bandNames):
-        fname_in = dir_filters + '/' + band + '.res'
-        data = np.genfromtxt(fname_in)
-        xf, yf = data[:, 0], data[:, 1]
-        yf /= xf  # divide by lambda
-        ind = np.where(yf > 0.01*np.max(yf))[0]
-        lambdaMin, lambdaMax = xf[ind[0]], xf[ind[-1]]
-        norm = np.trapz(yf, x=xf)
-        for iz in range(redshiftGrid.size):
-            opz = (redshiftGrid[iz] + 1)
-            xf_z = np.linspace(lambdaMin / opz, lambdaMax / opz, num=5000)
-            yf_z = interp1d(xf / opz, yf)(xf_z)
-            ysed = sed_interp(xf_z)
-            f_mod[iz, t, jf] = np.trapz(ysed * yf_z, x=xf_z) / norm
-            f_mod[iz, t, jf] *= opz**2. / DL(redshiftGrid[iz])**2. / (4*np.pi)
-
+    f_mod[:, t, :] = np.loadtxt(dir_seds + '/' + sed_name +
+                                '_fluxredshiftmod.txt')
 
 numObjectsTarget = np.sum(1 for line in open(params['target_catFile']))
 firstLine = int(threadNum * numObjectsTarget / float(numThreads))
@@ -77,7 +59,7 @@ localMetrics = np.zeros((numLines, numMetrics))
 # Now loop over target set to compute likelihood function
 loc = - 1
 trainingDataIter = getDataFromFile(params, firstLine, lastLine,
-                                    prefix="target_", getXY=False)
+                                   prefix="target_", getXY=False)
 for z, ell, bands, fluxes, fluxesVar in trainingDataIter:
     loc += 1
     like_grid = scalefree_flux_likelihood(

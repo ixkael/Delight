@@ -51,12 +51,13 @@ trainingDataIter1 = getDataFromFile(params, firstLine, lastLine,
 for z, ell, bands, fluxes, fluxesVar, X, Y, Yvar in trainingDataIter1:
     loc += 1
     gp.setData(X, Y, Yvar)
+    lB = bands.size
     alpha_hat, ell_hat = gp.estimateAlphaEll()
-    localData[loc, 0] = bands.size
+    localData[loc, 0] = lB
     localData[loc, 1] = z
     localData[loc, 2] = ell_hat
     localData[loc, 3:3+bands.size] = bands
-    localData[loc, 3+bands.size:] = gp.getCore()
+    localData[loc, 3+lB:4+lB+lB*(lB+1)//2+lB] = gp.getCore()
 
 # use MPI to get the totals
 comm.Barrier()

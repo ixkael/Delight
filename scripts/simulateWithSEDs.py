@@ -15,7 +15,7 @@ numZ = redshiftGrid.size
 numT = len(sed_names)
 numB = len(params['bandNames'])
 numObjects = params['numObjects']
-noiseLevels = params['noiseLevels']
+noiseLevel = params['noiseLevel']
 f_mod = np.zeros((numT, numB), dtype=object)
 for it, sed_name in enumerate(sed_names):
     data = np.loadtxt(dir_seds + '/' + sed_name + '_fluxredshiftmod.txt')
@@ -32,16 +32,17 @@ fluxes, fluxesVar = np.zeros((numObjects, numB)), np.zeros((numObjects, numB))
 for k in range(numObjects):
     for i in range(numB):
         trueFlux = f_mod[types[k], i](redshifts[k])
-        noise = trueFlux * noiseLevels[i]
+        noise = trueFlux * noiseLevel
         fluxes[k, i] = trueFlux + noise * np.random.randn()
         fluxesVar[k, i] = noise**2.
-data = np.zeros((numObjects, len(params['training_bandOrder'])))
+data = np.zeros((numObjects, 1 + len(params['training_bandOrder'])))
 bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
     refBandColumn = readColumnPositions(params, prefix="training_")
 for ib, pf, pfv in zip(bandIndices, bandColumns, bandVarColumns):
     data[:, pf] = fluxes[:, ib]
     data[:, pfv] = fluxesVar[:, ib]
 data[:, redshiftColumn] = redshifts
+data[:, -1] = types
 np.savetxt(params['trainingFile'], data)
 
 # Generate Target data
@@ -53,15 +54,16 @@ fluxes, fluxesVar = np.zeros((numObjects, numB)), np.zeros((numObjects, numB))
 for k in range(numObjects):
     for i in range(numB):
         trueFlux = f_mod[types[k], i](redshifts[k])
-        noise = trueFlux * noiseLevels[i]
+        noise = trueFlux * noiseLevel
         fluxes[k, i] = trueFlux + noise * np.random.randn()
         fluxesVar[k, i] = noise**2.
 
-data = np.zeros((numObjects, len(params['target_bandOrder'])))
+data = np.zeros((numObjects, 1 + len(params['target_bandOrder'])))
 bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
     refBandColumn = readColumnPositions(params, prefix="target_")
 for ib, pf, pfv in zip(bandIndices, bandColumns, bandVarColumns):
     data[:, pf] = fluxes[:, ib]
     data[:, pfv] = fluxesVar[:, ib]
 data[:, redshiftColumn] = redshifts
+data[:, -1] = types
 np.savetxt(params['targetFile'], data)

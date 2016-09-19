@@ -7,9 +7,8 @@ from delight.utils import *
 
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
-params = parseParamFile(sys.argv[1], verbose=False)
-bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
-    refBandColumn = readColumnPositions(params, prefix="target_")
+params = parseParamFile(sys.argv[1], verbose=False, catFilesNeeded=False)
+bandNames = params['bandNames']
 dir_seds = params['templates_directory']
 dir_filters = params['bands_directory']
 lambdaRef = params['lambdaRef']
