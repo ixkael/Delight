@@ -15,7 +15,7 @@ bandNames = params['bandNames']
 fmt = '.res'
 max_redshift = params['redshiftMax']  # for plotting purposes
 root = params['bands_directory']
-make_plots = True
+make_plots = False
 
 
 # Function we will optimize
