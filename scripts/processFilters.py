@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy.optimize import leastsq
 import sys
@@ -16,7 +15,8 @@ fmt = '.res'
 max_redshift = params['redshiftMax']  # for plotting purposes
 root = params['bands_directory']
 make_plots = False
-
+if make_plots:
+    import matplotlib.pyplot as plt
 
 # Function we will optimize
 def dfunc(p, x, yd):
