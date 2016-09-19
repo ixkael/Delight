@@ -29,7 +29,7 @@ install:
   - pip install -r requirements.txt
 script:
   - python setup.py build_ext --inplace
-  - python scripts/processFilters.py  tests/parametersTest.cfg
+  - python scripts/processFilters.py tests/parametersTest.cfg
   - coverage run --source delight -m py.test
   - pep8 delight/*py
   - pep8 tests/*py

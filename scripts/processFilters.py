@@ -1,7 +1,11 @@
+
+import sys
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import leastsq
-import sys
+import os
+print(os.path.dirname(os.path.abspath(__file__)))
+print(os.getcwd())
 from delight.io import *
 from delight.utils import *
 
@@ -17,6 +21,7 @@ root = params['bands_directory']
 make_plots = False
 if make_plots:
     import matplotlib.pyplot as plt
+
 
 # Function we will optimize
 def dfunc(p, x, yd):
