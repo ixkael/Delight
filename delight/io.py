@@ -93,6 +93,7 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     params['redshiftpdfFileComp'] = config.get('Target', 'redshiftpdfFileComp')
     params['redshiftpdfFileTemp'] = config.get('Target', 'redshiftpdfFileTemp')
     params['metricsFile'] = config.get('Target', 'metricsFile')
+    params['metricsFileTemp'] = config.get('Target', 'metricsFileTemp')
 
     # Parsing other parameters
     params['fluxLuminosityNorm']\

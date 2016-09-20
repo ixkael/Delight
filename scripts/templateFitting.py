@@ -67,10 +67,11 @@ for z, ell, bands, fluxes, fluxesVar in trainingDataIter:
         f_mod[:, :, bands]
     )
     localPDFs[loc, :] += like_grid.sum(axis=1)
-    localMetrics[loc, :] = computeMetrics(
-                                z, redshiftGrid,
-                                localPDFs[loc, :],
-                                params['confidenceLevels'])
+    if localPDFs[loc, :].sum() > 0:
+        localMetrics[loc, :] = computeMetrics(
+                                    z, redshiftGrid,
+                                    localPDFs[loc, :],
+                                    params['confidenceLevels'])
 
 comm.Barrier()
 if threadNum == 0:
@@ -102,4 +103,4 @@ if threadNum == 0:
     fmt = '%.2e'
     np.savetxt(params['redshiftpdfFileTemp'], globalPDFs, fmt=fmt)
     if redshiftColumn >= 0:
-        np.savetxt(params['metricsFile'], globalMetrics, fmt=fmt)
+        np.savetxt(params['metricsFileTemp'], globalMetrics, fmt=fmt)
