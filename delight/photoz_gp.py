@@ -16,7 +16,7 @@ class PhotozGP:
     """
     def __init__(self,
                  alpha, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
-                 lines_pos, lines_width, V_C, V_L, alpha_C, alpha_L,
+                 lines_pos, lines_width, var_C, var_L, alpha_C, alpha_L,
                  redshiftGridGP, use_interpolators=True,
                  lambdaRef=4.5e3, g_AB=1.0):
 
@@ -27,7 +27,7 @@ class PhotozGP:
             g_AB=g_AB, lambdaRef=lambdaRef, DL_z=DL)
         self.kernel = Photoz_kernel(
             bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
-            lines_pos, lines_width, V_C, V_L, alpha_C, alpha_L,
+            lines_pos, lines_width, var_C, var_L, alpha_C, alpha_L,
             g_AB=g_AB, DL_z=DL, redshiftGrid=redshiftGridGP,
             use_interpolators=use_interpolators)
         self.redshiftGridGP = redshiftGridGP
@@ -137,7 +137,7 @@ class PhotozGP:
         x0 = [0.0]
         z = self.X[0, 1]
         res = minimize(fun, x0, method='L-BFGS-B',
-                       bounds=[((1+2*z)*-4e-4, 4e-4)])
+                       bounds=[((1+2*z)*-1e-4, 4e-4)])
         if np.abs(res.x[0]) > 1e-2:
             raise Exception("Problem! Optimized alpha is ", res.x[0])
         self.mean_fct.alpha = res.x[0]
@@ -161,6 +161,33 @@ class PhotozGP:
         self.setData(self.X, self.Y, self.Yvar)  # Need to recompute core
 
         return self.mean_fct.alpha, self.X[0, 2]
+
+    def drawSED(self, z, ell, wavs):
+        """
+        Draw SED from GP model (prior only, no likelihood)
+        """
+        opz = 1 + z
+        meanfct = np.exp(self.mean_fct.alpha *
+                         (wavs/opz - self.mean_fct.lambdaRef))
+        dWav = wavs[:, None] - wavs[None, :]
+        cov_C = self.kernel.var_C *\
+            np.exp(-0.5*(dWav/opz/self.kernel.alpha_C)**2)
+        cov_L = 0*cov_C
+        for mu, sig in zip(self.kernel.lines_mu, self.kernel.lines_sig):
+            cov_L += self.kernel.var_L *\
+                np.exp(-0.5*(dWav/opz/self.kernel.alpha_L)**2) *\
+                np.exp(-0.5*((wavs[:, None]/opz-mu)/sig)**2) *\
+                np.exp(-0.5*((wavs[None, :]/opz-mu)/sig)**2)
+        fac = opz * ell / 4 / np.pi / self.kernel.DL_z(z)**2
+        sed = fac * np.random.multivariate_normal(meanfct, cov_C + cov_L)
+        numB = self.mean_fct.fcoefs_amp.shape[0]
+        filters = np.zeros((numB, wavs.size))
+        for i in range(numB):
+            for amp, mu, sig in zip(self.mean_fct.fcoefs_amp[i, :],
+                                    self.mean_fct.fcoefs_mu[i, :],
+                                    self.mean_fct.fcoefs_sig[i, :]):
+                filters[i, :] += amp * np.exp(-0.5*((wavs-mu)/sig)**2)
+        return sed, fac, cov_C + cov_L, filters
 
     def optimizeAlpha_GP(self):
         """
