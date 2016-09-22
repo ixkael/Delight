@@ -113,7 +113,7 @@ for it, sed_name in enumerate(sed_names):
         axs[1, i].set_xlim([redshiftGrid[0], redshiftGrid[-1]])
         axs[1, i].set_xlabel('Redshift')
 
-    axs[0, 0].set_ylabel('Measured fluxes')
-    axs[1, 0].set_ylabel('Predicted fluxes')
+    axs[0, 0].set_ylabel(r'Measured fluxes ($\times z^2$)')
+    axs[1, 0].set_ylabel(r'Predicted fluxes ($\times z^2$)')
     fig.tight_layout()
-    fig.savefig('data/sim-pdfs-'+str(it)+'.png')
+    fig.savefig('data/sim-fluxes-'+str(it)+'.png')
