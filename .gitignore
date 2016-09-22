@@ -1,5 +1,7 @@
 # Project specific
 *ipynb
+data/*.png
+data/*.pdf
 notebooks
 *fits
 *fluxredshiftmod.txt

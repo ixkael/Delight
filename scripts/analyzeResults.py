@@ -32,7 +32,7 @@ redshiftDistGrid, redshiftGrid, redshiftGridGP = createGrids(params)
 numZbins = redshiftDistGrid.size - 1
 numZ = redshiftGrid.size
 
-numObjectsTarget = np.sum(1 for line in open(params['metricsFile']))
+numObjectsTarget = np.sum(1 for line in open(params['metricsFileTemp']))
 
 firstLine = int(threadNum * numObjectsTarget / float(numThreads))
 lastLine = int(min(numObjectsTarget,
@@ -53,8 +53,8 @@ localBinlocs = np.zeros((numObjectsTarget, 2))
 
 # Now loop over target set to compute likelihood function
 loc = - 1
-fpdf = open(params['redshiftpdfFile'])
-fmet = open(params['metricsFile'])
+fpdf = open(params['redshiftpdfFileTemp'])
+fmet = open(params['metricsFileTemp'])
 iterpdf = itertools.islice(fpdf, firstLine, lastLine)
 itermet = itertools.islice(fmet, firstLine, lastLine)
 for loc in range(numLines):
@@ -129,12 +129,13 @@ if threadNum == 0:
                 pdf /= np.trapz(pdf, x=redshiftGrid)
             axs[i].plot(redshiftGrid, pdf,
                         label='Inferred', color='b')
-            density = stats.kde.gaussian_kde(globalBinlocs[ind, 1])
-            axs[i].plot(redshiftGrid, density(redshiftGrid),
-                        label='Data KDE', c='k')
-            axs[i].hist(globalBinlocs[ind, 1], 50, normed=True,
-                        range=[0, redshiftGrid[-1]], histtype='step',
-                        label='Data hist', color='gray')
+            if ind.sum() > 1:
+                density = stats.kde.gaussian_kde(globalBinlocs[ind, 1])
+                axs[i].plot(redshiftGrid, density(redshiftGrid),
+                            label='Data KDE', c='k')
+                axs[i].hist(globalBinlocs[ind, 1], 50, normed=True,
+                            range=[0, redshiftGrid[-1]], histtype='step',
+                            label='Data hist', color='gray')
             axs[i].axvline(redshiftDistGrid[i], ls='dashed', color='k')
             axs[i].axvline(redshiftDistGrid[i+1], ls='dashed', color='k')
     axs[0].legend(loc='upper right')

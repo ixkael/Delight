@@ -32,7 +32,7 @@ if threadNum == 0:
     print('Number of Target Objects', numObjectsTarget)
 
 V_C_grid = np.array([1e-1, 5e-1, 1e0, 2e0])
-alpha_C_grid = np.logspace(3, numThreads+2, numThreads)
+alpha_C_grid = np.logspace(2, numThreads+1, numThreads)
 numVC, numAlpha = V_C_grid.size, alpha_C_grid.size
 ialpha = 1*threadNum
 alpha_C = alpha_C_grid[ialpha]
@@ -47,7 +47,7 @@ localZspecmean = np.zeros((numVC, numAlpha, numZbins))
 comm.Barrier()
 
 V_C = V_C_grid[0]
-V_L = 1e3 * V_C
+V_L = 1 * V_C
 # Create Gaussian process mean fct and kernel
 gp = PhotozGP(0.0, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
               params['lines_pos'], params['lines_width'],
