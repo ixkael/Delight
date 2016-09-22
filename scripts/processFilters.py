@@ -4,6 +4,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import leastsq
 import os
+print(os.path.dirname(os.path.realpath(__file__)))
+print(os.getcwd())
 from delight.io import *
 from delight.utils import *
 
