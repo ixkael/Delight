@@ -29,11 +29,8 @@ numZ = redshiftGrid.size
 
 numObjectsTraining = np.sum(1 for line in open(params['training_catFile']))
 numObjectsTarget = np.sum(1 for line in open(params['target_catFile']))
-if threadNum == 0:
-    print('Number of Training Objects', numObjectsTraining)
-    print('Number of Target Objects', numObjectsTarget)
-Ncompress = params['Ncompress']
 redshiftsInTarget = ('redshift' in params['target_bandOrder'])
+Ncompress = params['Ncompress']
 
 firstLine = int(threadNum * numObjectsTarget / float(numThreads))
 lastLine = int(min(numObjectsTarget,
@@ -101,6 +98,8 @@ for chunk in range(numChunks):
             )
 
         localPDFs[loc, :] += like_grid.sum(axis=1)
+        # print(z, ell, bands, fluxes, fluxesVar)
+        # print(localPDFs[loc, :].sum())
         evidences = np.trapz(like_grid, x=redshiftGrid, axis=0)
 
         if not params['compressionFilesFound']:
@@ -117,7 +116,9 @@ for chunk in range(numChunks):
                 localCompressIndices[loc, :] = dind[sortind]
                 localCompEvidences[loc, :] = devi[sortind]
 
-        if chunk == numChunks - 1 and redshiftsInTarget:
+        if chunk == numChunks - 1\
+                and redshiftsInTarget\
+                and localPDFs[loc, :].sum() > 0:
             localMetrics[loc, :] = computeMetrics(
                                     z, redshiftGrid,
                                     localPDFs[loc, :],
