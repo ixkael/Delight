@@ -3,6 +3,7 @@
 data/*.png
 data/*.pdf
 notebooks
+*gpCV.txt
 *fits
 *fluxredshiftmod.txt
 *Indices.txt

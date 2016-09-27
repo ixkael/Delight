@@ -130,15 +130,16 @@ class PhotozGP:
         def fun(alpha):
             self.mean_fct.alpha = alpha[0]
             y_pred = self.mean_fct.f(X_pred).ravel()
-            pdf = scalefree_flux_likelihood(self.Y.ravel(), self.Yvar.ravel(),
-                                            y_pred[None, None, :])
-            return - np.log10(pdf)
+            y_pred *= np.mean(self.Y) / y_pred.mean()
+            chi2 = scalefree_flux_likelihood(self.Y.ravel(), self.Yvar.ravel(),
+                                                y_pred[None, None, :], returnChi2=True)
+            return chi2
 
         x0 = [0.0]
         z = self.X[0, 1]
-        res = minimize(fun, x0, method='L-BFGS-B',
+        res = minimize(fun, x0, method='L-BFGS-B', tol=1e-9,
                        bounds=[((1+2*z)*-1e-4, 4e-4)])
-        if np.abs(res.x[0]) > 1e-2:
+        if res.success is False or np.abs(res.x[0]) > 1e-2:
             raise Exception("Problem! Optimized alpha is ", res.x[0])
         self.mean_fct.alpha = res.x[0]
 
@@ -150,7 +151,7 @@ class PhotozGP:
 
         ell = self.X[0, 2]
         x0 = [ell]
-        res = minimize(fun, x0, method='L-BFGS-B',
+        res = minimize(fun, x0, method='L-BFGS-B', tol=1e-9,
                        bounds=[(1e-3*ell, 1e3*ell)])
         # bounds=[(1e-3*ell, 1e3*ell)])
         if res.x[0] < 0:
