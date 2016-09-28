@@ -17,6 +17,10 @@ class approx_DL():
         return self.__dict__ == other.__dict__
 
 
+def symmetrize(a):
+    return a + a.T - np.diag(a.diagonal())
+
+
 def random_X_bzl(size, numBands=5, redshiftMax=3.0):
     """Create random (but reasonable) input space for photo-z GP """
     X = np.zeros((size, 3))
@@ -55,7 +59,7 @@ def random_hyperparams():
     return var_C, var_L, alpha_C, alpha_L, alpha_T
 
 
-def scalefree_flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None):
+def scalefree_flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None, returnChi2=False):
     nz, nt, nf = f_mod.shape
     if f_mod_var is not None:
         var = 1./(1./f_obs_var[None, None, :] + 1./f_mod_var)
@@ -67,7 +71,10 @@ def scalefree_flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None):
     FOO = np.dot(invvar, f_obs**2)  # nz * nt
     chi2 = FOO - FOT**2.0 / FTT  # nz * nt
     like = np.exp(-0.5*chi2) / np.sqrt(FTT)  # nz * nt
-    return like
+    if returnChi2:
+        return chi2 + FTT
+    else:
+        return like
 
 
 def CIlevel(redshiftGrid, PDF, fraction, numlevels=100):
@@ -77,6 +84,11 @@ def CIlevel(redshiftGrid, PDF, fraction, numlevels=100):
         resint = np.trapz(PDF[ind], redshiftGrid[ind])
         if resint >= fraction*evidence:
             return level
+
+
+def kldiv(p, q):
+    """Kullback-Leibler divergence D(P || Q) for discrete distributions"""
+    return np.sum(np.where(p != 0, p * np.log(p / q), 0))
 
 
 def computeMetrics(ztrue, redshiftGrid, PDF, confIntervals):

@@ -24,6 +24,7 @@ bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
 numBands = bandCoefAmplitudes.shape[0]
 
 redshiftDistGrid, redshiftGrid, redshiftGridGP = createGrids(params)
+f_mod = readSEDs(params)
 numZbins = redshiftDistGrid.size - 1
 numZ = redshiftGrid.size
 
@@ -42,7 +43,7 @@ if threadNum == 0:
 comm.Barrier()
 print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
 
-gp = PhotozGP(0.0, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+gp = PhotozGP(f_mod, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
               params['lines_pos'], params['lines_width'],
               params['V_C'], params['V_L'],
               params['alpha_C'], params['alpha_L'],
@@ -63,13 +64,15 @@ for chunk in range(numChunks):
                       (chunk + 1) * numObjectsTarget / float(numChunks)))
     targetIndices = np.arange(TR_firstLine, TR_lastLine)
     numTObjCk = TR_lastLine - TR_firstLine
+    redshifts = np.zeros((numTObjCk, ))
     model_mean = np.zeros((numZ, numTObjCk, numBands))
     model_var = np.zeros((numZ, numTObjCk, numBands))
     loc = TR_firstLine - 1
     trainingDataIter = getDataFromFile(params, TR_firstLine, TR_lastLine,
                                        prefix="training_", ftype="gpparams")
     for loc, (z, ell, bands, X, B, flatarray) in enumerate(trainingDataIter):
-        gp.setCore(X, B, flatarray[0:1+B+B*(B+1)//2])
+        redshifts[loc] = z
+        gp.setCore(X, B, f_mod.shape[0], flatarray[0:f_mod.shape[0]+B+B*(B+1)//2])
         model_mean[:, loc, :], model_var[:, loc, :] =\
             gp.predictAndInterpolate(redshiftGrid, ell=ell)
 
@@ -79,8 +82,9 @@ for chunk in range(numChunks):
         itCompM = itertools.islice(fC, firstLine, lastLine)
         iterCompI = itertools.islice(fCI, firstLine, lastLine)
     targetDataIter = getDataFromFile(params, firstLine, lastLine,
-                                     prefix="target_", getXY=False)
-    for loc, (z, ell, bands, fluxes, fluxesVar) in enumerate(targetDataIter):
+                                     prefix="target_", getXY=False, CV=False)
+    for loc, (z, ell, bands, fluxes, fluxesVar, bCV, dCV, dVCV)\
+            in enumerate(targetDataIter):
 
         if params['compressionFilesFound']:
             indices = np.array(next(iterCompI).split(' '), dtype=int)
@@ -97,6 +101,7 @@ for chunk in range(numChunks):
                 f_mod_var=model_var[:, :, bands]  # model var
             )
 
+        #like_grid *= 4 * redshifts[None, :]
         localPDFs[loc, :] += like_grid.sum(axis=1)
         # print(z, ell, bands, fluxes, fluxesVar)
         # print(localPDFs[loc, :].sum())

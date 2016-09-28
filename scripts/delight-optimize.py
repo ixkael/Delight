@@ -7,10 +7,6 @@ from delight.utils import *
 from delight.photoz_gp import PhotozGP
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
-comm = MPI.COMM_WORLD
-threadNum = comm.Get_rank()
-numThreads = comm.Get_size()
-
 # Parse parameters file
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
@@ -22,154 +18,103 @@ bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
 numBands = bandCoefAmplitudes.shape[0]
 
 redshiftDistGrid, redshiftGrid, redshiftGridGP = createGrids(params)
+f_mod = readSEDs(params)
+
 numZbins = redshiftDistGrid.size - 1
 numZ = redshiftGrid.size
-
+numConfLevels = len(params['confidenceLevels'])
 numObjectsTraining = np.sum(1 for line in open(params['training_catFile']))
 numObjectsTarget = np.sum(1 for line in open(params['target_catFile']))
-if threadNum == 0:
-    print('Number of Training Objects', numObjectsTraining)
-    print('Number of Target Objects', numObjectsTarget)
+print('Number of Training Objects', numObjectsTraining)
+print('Number of Target Objects', numObjectsTarget)
 
-V_C_grid = np.array([1e-1, 5e-1, 1e0, 2e0])
-alpha_C_grid = np.logspace(2, numThreads+1, numThreads)
-numVC, numAlpha = V_C_grid.size, alpha_C_grid.size
-ialpha = 1*threadNum
-alpha_C = alpha_C_grid[ialpha]
-alpha_L = 1e2
+for alpha_C in [1e2, 1e3]:
+    alpha_L = 1e2
+    V_C, V_L = 1.0, 1.0
+    gp = PhotozGP(
+        f_mod,
+        bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+        params['lines_pos'], params['lines_width'],
+        V_C, V_L, alpha_C, alpha_L,
+        redshiftGridGP, use_interpolators=True)
 
-numConfLevels = len(params['confidenceLevels'])
-localNobj = np.zeros((numVC, numAlpha, numZbins))
-localConfFractions = np.zeros((numVC, numAlpha, numConfLevels, numZbins))
-localStackedPdfs = np.zeros((numVC, numAlpha, numZ, numZbins))
-localZspecmean = np.zeros((numVC, numAlpha, numZbins))
+    for extraFracFluxError in [2e-2, 5e-2]:
+        model_mean = np.zeros((numZ, numObjectsTraining, numBands))
+        model_var = np.zeros((numZ, numObjectsTraining, numBands))
+        params['training_extraFracFluxError'] = extraFracFluxError
+        params['target_extraFracFluxError'] = extraFracFluxError
 
-comm.Barrier()
+        for V_C in [1e-1, 1e0]:
 
-V_C = V_C_grid[0]
-V_L = 1 * V_C
-# Create Gaussian process mean fct and kernel
-gp = PhotozGP(0.0, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
-              params['lines_pos'], params['lines_width'],
-              V_C, V_L,
-              alpha_C, alpha_L,
-              redshiftGridGP, use_interpolators=True)
+            gp.var_C = V_C
+            gp.var_L = V_L
+            loc = - 1
+            trainingDataIter = getDataFromFile(
+                params, 0, numObjectsTraining,
+                prefix="training_", getXY=True)
+            for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV, X, Y, Yvar\
+                    in trainingDataIter:
+                loc += 1
+                gp.setData(X, Y, Yvar)
+                #alpha, ell = gp.estimateAlphaEll()
+                model_mean[:, loc, :], model_var[:, loc, :] =\
+                    gp.predictAndInterpolate(redshiftGrid, ell=ell, z=z)
 
-model_mean = np.zeros((numZ, numObjectsTraining, numBands))
-model_var = np.zeros((numZ, numObjectsTraining, numBands))
+            loc = - 1
+            targetDataIter = getDataFromFile(params, 0, numObjectsTarget,
+                                             prefix="target_", getXY=False)
 
-loc = - 1
-trainingDataIter = getDataFromFile(params, 0, numObjectsTraining,
-                                   prefix="training_", getXY=True)
-for z, ell, bands, fluxes, fluxesVar, X, Y, Yvar in trainingDataIter:
-    loc += 1
-    gp.setData(X, Y, Yvar)
-    alpha, ell = gp.estimateAlphaEll()
-    model_mean[:, loc, :], model_var[:, loc, :] =\
-        gp.predictAndInterpolate(redshiftGrid, ell=ell, z=z)
-
-for i_V_C, V_C in enumerate(V_C_grid):
-
-    fac = V_C / V_C_grid[0]
-    loc = - 1
-    targetDataIter = getDataFromFile(params, 0, numObjectsTarget,
-                                     prefix="target_", getXY=False)
-    for z, ell, bands, fluxes, fluxesVar in targetDataIter:
-        loc += 1
-        like_grid = scalefree_flux_likelihood(
-            fluxes / ell, fluxesVar / ell**2.,
-            model_mean[:, :, bands],  # model mean
-            f_mod_var=model_var[:, :, bands] * fac  # model var SCALED
-        )
-        pdf = like_grid.sum(axis=1)
-        if pdf.sum() == 0:
-            print("NULL PDF with galaxy", loc)
-        metrics\
-            = computeMetrics(z, redshiftGrid, pdf,
-                             params['confidenceLevels'])
-        ztrue, zmean, zmap, pdfAtZ, cumPdfAtZ = metrics[0:5]
-        confidencelevels = metrics[5:]
-        zmeanBinLoc = -1
-        for i in range(numZbins):
-            if zmean >= redshiftDistGrid[i]\
-                    and zmean < redshiftDistGrid[i+1]:
-                zmeanBinLoc = i
-                localNobj[i_V_C, ialpha, i] += 1
-                localZspecmean[i_V_C, ialpha, i] += ztrue
-        for i in range(numConfLevels):
-            if pdfAtZ >= confidencelevels[i]:
-                localConfFractions[i_V_C, ialpha, i, zmeanBinLoc] += 1
-        # pdf /= np.trapz(pdf, x=redshiftGrid)
-        localStackedPdfs[i_V_C, ialpha, :, zmeanBinLoc]\
-            += pdf / numObjectsTraining
-
-
-globalConfFractions = np.zeros_like(localConfFractions)
-globalNobj = np.zeros_like(localNobj)
-globalZspecmean = np.zeros_like(localZspecmean)
-globalStackedPdfs = np.zeros_like(localStackedPdfs)
-
-comm.Allreduce(localZspecmean, globalZspecmean, op=MPI.SUM)
-comm.Allreduce(localConfFractions, globalConfFractions, op=MPI.SUM)
-comm.Allreduce(localNobj, globalNobj, op=MPI.SUM)
-comm.Allreduce(localStackedPdfs, globalStackedPdfs, op=MPI.SUM)
-comm.Barrier()
-
-
-if threadNum == 0:
-    metric = np.zeros((numVC, numAlpha, numZbins))
-    zbias = np.zeros((numVC, numAlpha, numZbins))
-    zstd = np.zeros((numVC, numAlpha, numZbins))
-    globalConfFractions /= globalNobj[:, :, None, :]
-    globalZspecmean /= globalNobj
-    for i_V_C, V_C in enumerate(V_C_grid):
-        for ialpha, alpha_C in enumerate(alpha_C_grid):
-            print("")
-            print(" V_C", V_C, "alpha", alpha_C)
+            bias_zmap = np.zeros((redshiftDistGrid.size, ))
+            bias_zmean = np.zeros((redshiftDistGrid.size, ))
+            confFractions = np.zeros((numConfLevels, redshiftDistGrid.size))
+            binnobj = np.zeros((redshiftDistGrid.size, ))
+            bias_nz = np.zeros((redshiftDistGrid.size, ))
+            stackedPdfs = np.zeros((redshiftGrid.size, redshiftDistGrid.size))
+            for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV\
+                    in targetDataIter:
+                loc += 1
+                like_grid = scalefree_flux_likelihood(
+                    fluxes / ell, fluxesVar / ell**2.,
+                    model_mean[:, :, bands],  # model mean
+                    f_mod_var=model_var[:, :, bands] * V_C  # model var SCALED
+                )
+                pdf = like_grid.sum(axis=1)
+                if pdf.sum() == 0:
+                    print("NULL PDF with galaxy", loc)
+                if pdf.sum() > 0:
+                    metrics\
+                        = computeMetrics(z, redshiftGrid, pdf,
+                                         params['confidenceLevels'])
+                    ztrue, zmean, zmap, pdfAtZ, cumPdfAtZ = metrics[0:5]
+                    confidencelevels = metrics[5:]
+                    zmeanBinLoc = -1
+                    for i in range(numZbins):
+                        if zmean >= redshiftDistGrid[i]\
+                                and zmean < redshiftDistGrid[i+1]:
+                            zmeanBinLoc = i
+                            bias_zmap[i] += ztrue - zmap  # np.abs(ztrue - zmap)
+                            bias_zmean[i] += ztrue - zmean  # np.abs(ztrue - zmean)
+                            binnobj[i] += 1
+                            bias_nz[i] += ztrue
+                    for i in range(numConfLevels):
+                        if pdfAtZ >= confidencelevels[i]:
+                            confFractions[i, zmeanBinLoc] += 1
+                    # pdf /= np.trapz(pdf, x=redshiftGrid)
+                    stackedPdfs[:, zmeanBinLoc]\
+                        += pdf / numObjectsTraining
+            confFractions /= binnobj[None, :]
+            bias_nz /= binnobj
             for i in range(numZbins):
-                print(" N(z) bin", i,
-                      "zlo", redshiftDistGrid[i],
-                      "zhi", redshiftDistGrid[i+1],
-                      "nobj=", globalNobj[i_V_C, ialpha, i], end="")
-                if globalNobj[i_V_C, ialpha, i] > 0:
-                    pdfzmean = np.average(
-                        redshiftGrid,
-                        weights=globalStackedPdfs[i_V_C, ialpha, :, i])
-                    pdfzstd = np.sqrt(np.average(
-                        (redshiftGrid - pdfzmean)**2.,
-                        weights=globalStackedPdfs[i_V_C, ialpha, :, i]))
-                    zbias[i_V_C, ialpha, i]\
-                        = (globalZspecmean[i_V_C, ialpha, i]-pdfzmean)
-                    zstd[i_V_C, ialpha, i] = pdfzstd
-                    metric[i_V_C, ialpha, i] = \
-                        zbias[i_V_C, ialpha, i] / zstd[i_V_C, ialpha, i]
-                    print(globalZspecmean[i_V_C, ialpha, i], pdfzmean,
-                          'pdfzstd', pdfzstd)
-                    for k in range(numConfLevels):
-                        print("  > CI:", params['confidenceLevels'][k],
-                              '%.g' % globalConfFractions[i_V_C, ialpha, k, i],
-                              end="")
-                print("")
-
-    for i_V_C, V_C in enumerate(V_C_grid):
-        for ialpha, alpha_C in enumerate(alpha_C_grid):
+                if stackedPdfs[:, i].sum():
+                    bias_nz[i] -= np.average(redshiftGrid, weights=stackedPdfs[:, i])
+            ind = binnobj > 0
+            bias_zmap /= binnobj
+            bias_zmean /= binnobj
             print("")
-            print(" V_C", V_C, "alpha", alpha_C,
-                  "Nobj", globalNobj[i_V_C, ialpha, :].sum())
-            for i in range(numZbins):
-                print("  Redshift bias/std in", i,
-                      "th bin (", globalNobj[i_V_C, ialpha, i],
-                      "obj): %.2g" % zbias[i_V_C, ialpha, i],
-                      "%.2g" % zstd[i_V_C, ialpha, i],
-                      'metric = %.2g' % metric[i_V_C, ialpha, i])
-    print("")
-    for i_V_C, V_C in enumerate(V_C_grid):
-        for ialpha, alpha_C in enumerate(alpha_C_grid):
-            num = (globalNobj[i_V_C, ialpha, :] > 0).sum()
-            print(" V_C", V_C, "alpha", alpha_C, "Nobj",
-                  globalNobj[i_V_C, ialpha, :].sum(),
-                  "Average metric: %.2g" %
-                  (np.abs(metric[i_V_C, ialpha, :]).sum() / num),
-                  "Total metric: %.2g" %
-                  np.abs(metric[i_V_C, ialpha, :]).sum())
-    print("\n")
+            print("alphaC", alpha_C, "extraFracFluxError", extraFracFluxError, "V_C", V_C)
+            print(' >> bias_zmap %.3g' % np.abs(bias_zmap[ind]).mean(), 'bias_zmean %.3g' % np.abs(bias_zmean[ind]).mean(), 'N(z) bias %.3g' % np.abs(bias_nz[ind]).mean(), ' <<')
+            print(' > bias_zmap : ', ' '.join(['%.3g' % x for x in bias_zmap]))
+            print(' > bias_zmean : ', ' '.join(['%.3g' % x for x in bias_zmean]))
+            print(' > nzbias : ', ' '.join(['%.3g' % x for x in bias_nz]))
+            for i in range(numConfLevels):
+                print(' >', params['confidenceLevels'][i], ' :: ', ' '.join(['%.3g' % x for x in confFractions[i, :]]))

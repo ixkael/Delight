@@ -32,112 +32,94 @@ redshiftDistGrid, redshiftGrid, redshiftGridGP = createGrids(params)
 numZbins = redshiftDistGrid.size - 1
 numZ = redshiftGrid.size
 
-numObjectsTarget = np.sum(1 for line in open(params['metricsFileTemp']))
+fig, axs = plt.subplots(numZbins, 2, figsize=(10, 10))
 
-firstLine = int(threadNum * numObjectsTarget / float(numThreads))
-lastLine = int(min(numObjectsTarget,
-               (threadNum + 1) * numObjectsTarget / float(numThreads)))
-numLines = lastLine - firstLine
-if threadNum == 0:
-    print('Number of Target Objects', numObjectsTarget)
-comm.Barrier()
-print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
+for iax, extra in enumerate(['', 'Temp']):
+    numObjectsTarget = np.sum(1 for line in open(params['metricsFile'+extra]))
+    fpdf = open(params['redshiftpdfFile'+extra])
+    fmet = open(params['metricsFile'+extra])
 
-# Create local files to store results
-numConfLevels = len(params['confidenceLevels'])
-localNobj = np.zeros((numZbins, ))
-localConfFractions = np.zeros((numConfLevels, numZbins))
-localStackedPdfs = np.zeros((numZ, numZbins))
-localZspecmean = np.zeros((numZbins, ))
-localBinlocs = np.zeros((numObjectsTarget, 2))
+    # Create local files to store results
+    numConfLevels = len(params['confidenceLevels'])
+    # Now loop over target set to compute likelihood function
+    loc = -1
+    targetDataIter = getDataFromFile(params, 0, numObjectsTarget,
+                                     prefix="target_", getXY=False)
 
-# Now loop over target set to compute likelihood function
-loc = - 1
-fpdf = open(params['redshiftpdfFileTemp'])
-fmet = open(params['metricsFileTemp'])
-iterpdf = itertools.islice(fpdf, firstLine, lastLine)
-itermet = itertools.islice(fmet, firstLine, lastLine)
-for loc in range(numLines):
-    pdf = np.array(next(iterpdf).split(' '), dtype=float)
+    bias_zmap = np.zeros((redshiftDistGrid.size, ))
+    bias_zmean = np.zeros((redshiftDistGrid.size, ))
+    confFractions = np.zeros((numConfLevels, redshiftDistGrid.size))
+    binnobj = np.zeros((redshiftDistGrid.size, ))
+    binlocsz = np.zeros((numObjectsTarget, 2))
+    bias_nz = np.zeros((redshiftDistGrid.size, ))
+    stackedPdfs = np.zeros((redshiftGrid.size, redshiftDistGrid.size))
 
-    metrics = np.array(next(itermet).split(' '), dtype=float)
-    ztrue, zmean, zmap, pdfAtZ, cumPdfAtZ = metrics[0:5]
-    confidencelevels = metrics[5:]
+    # Now loop over target set to compute likelihood function
+    loc = - 1
+    iterpdf = itertools.islice(fpdf, 0, numObjectsTarget)
+    itermet = itertools.islice(fmet, 0, numObjectsTarget)
+    for loc in range(numObjectsTarget):
+        pdf = np.array(next(iterpdf).split(' '), dtype=float)
+        metrics = np.array(next(itermet).split(' '), dtype=float)
+        ztrue, zmean, zmap, pdfAtZ, cumPdfAtZ = metrics[0:5]
+        confidencelevels = metrics[5:]
+        zmeanBinLoc = -1
+        if np.abs(zmean - zmap) < 0.5:
+            for i in range(numZbins):
+                if zmap >= redshiftDistGrid[i]\
+                        and zmap < redshiftDistGrid[i+1]:
+                    zmeanBinLoc = i
+                    bias_zmap[i] += ztrue - zmap  # np.abs(ztrue - zmap)
+                    bias_zmean[i] += ztrue - zmean  # np.abs(ztrue - zmean)
+                    binnobj[i] += 1
+                    binlocsz[loc, 0] = i
+                    binlocsz[loc, 1] = ztrue
+                    bias_nz[i] += ztrue
+            for i in range(numConfLevels):
+                if pdfAtZ >= confidencelevels[i]:
+                    confFractions[i, zmeanBinLoc] += 1
+            # pdf /= np.trapz(pdf, x=redshiftGrid)
+            stackedPdfs[:, zmeanBinLoc]\
+                += pdf / numObjectsTarget
 
-    zmeanBinLoc = -1
+    confFractions /= binnobj[None, :]
+    bias_nz /= binnobj
     for i in range(numZbins):
-        if zmean >= redshiftDistGrid[i] and zmean < redshiftDistGrid[i+1]:
-            zmeanBinLoc = i
-            localBinlocs[loc, 0] = i
-            localBinlocs[loc, 1] = ztrue
-            localNobj[i] += 1
-            localZspecmean[i] += ztrue
+        if stackedPdfs[:, i].sum():
+            bias_nz[i] -= np.average(redshiftGrid, weights=stackedPdfs[:, i])
+    ind = binnobj > 0
+    bias_zmap /= binnobj
+    bias_zmean /= binnobj
 
+    print(' >> bias_zmap %.3g' % np.abs(bias_zmap[ind]).mean(), 'bias_zmean %.3g' % np.abs(bias_zmean[ind]).mean(), 'N(z) bias %.3g' % np.abs(bias_nz[ind]).mean(), ' <<')
+    print(' > bias_zmap : ', ' '.join(['%.3g' % x for x in bias_zmap]))
+    print(' > bias_zmean : ', ' '.join(['%.3g' % x for x in bias_zmean]))
+    print(' > nzbias : ', ' '.join(['%.3g' % x for x in bias_nz]))
     for i in range(numConfLevels):
-        if pdfAtZ >= confidencelevels[i]:
-            localConfFractions[i, zmeanBinLoc] += 1
-    # pdf /= np.trapz(pdf, x=redshiftGrid)
-    localStackedPdfs[:, zmeanBinLoc] += pdf / numObjectsTarget
+        print(' >', params['confidenceLevels'][i], ' :: ', ' '.join(['%.3g' % x for x in confFractions[i, :]]))
 
-comm.Barrier()
-if threadNum == 0:
-    globalConfFractions = np.zeros_like(localConfFractions)
-    globalStackedPdfs = np.zeros_like(localStackedPdfs)
-    globalNobj = np.zeros_like(localNobj)
-    globalZspecmean = np.zeros_like(localZspecmean)
-    globalBinlocs = np.zeros_like(localBinlocs)
-else:
-    globalConfFractions = None
-    globalStackedPdfs = None
-    globalNobj = None
-    globalZspecmean = None
-    globalBinlocs = None
-
-comm.Allreduce(localConfFractions, globalConfFractions, op=MPI.SUM)
-comm.Allreduce(localStackedPdfs, globalStackedPdfs, op=MPI.SUM)
-comm.Allreduce(localNobj, globalNobj, op=MPI.SUM)
-comm.Allreduce(localZspecmean, globalZspecmean, op=MPI.SUM)
-comm.Allreduce(localBinlocs, globalBinlocs, op=MPI.SUM)
-comm.Barrier()
-
-if threadNum == 0:
-
-    globalConfFractions /= globalNobj[None, :]
-    globalZspecmean /= globalNobj
-
-    fig, axs = plt.subplots(numZbins // 2 + 1, 2, figsize=(10, 10))
-    axs = axs.ravel()
     for i in range(numZbins):
         print("> N(z) bin", i, "zlo", redshiftDistGrid[i], "zhi",
-              redshiftDistGrid[i+1], "nobj=", globalNobj[i])
-        if globalNobj[i] > 0:
+              redshiftDistGrid[i+1], "nobj=", binnobj[i])
+        if binnobj[i] > 1:
             pdfzmean = np.average(redshiftGrid,
-                                  weights=globalStackedPdfs[:, i])
-            pdfzstd = np.sqrt(np.average((redshiftGrid - pdfzmean)**2.,
-                                         weights=globalStackedPdfs[:, i]))
-            print("  > zspecmean %.3g" % globalZspecmean[i],
-                  "pdfzmean %.3g" % pdfzmean,
-                  "bias %.3g" % np.abs(globalZspecmean[i] - pdfzmean),
-                  "pdfzstd %.3g" % pdfzstd)
-            for k in range(numConfLevels):
-                print("  > CI:", params['confidenceLevels'][k],
-                      '%.3g' % globalConfFractions[k, i], end="")
-            print("")
-            ind = (globalBinlocs[:, 0] == i)
-            pdf = globalStackedPdfs[:, i]
+                                  weights=stackedPdfs[:, i])
+            ind = (binlocsz[:, 0] == i)
+            pdf = stackedPdfs[:, i]
             if pdf.sum() > 0:
                 pdf /= np.trapz(pdf, x=redshiftGrid)
-            axs[i].plot(redshiftGrid, pdf,
+            axs[i, iax].plot(redshiftGrid, pdf,
                         label='Inferred', color='b')
             if ind.sum() > 1:
-                density = stats.kde.gaussian_kde(globalBinlocs[ind, 1])
-                axs[i].plot(redshiftGrid, density(redshiftGrid),
-                            label='Data KDE', c='k')
-                axs[i].hist(globalBinlocs[ind, 1], 50, normed=True,
+                density = stats.kde.gaussian_kde(binlocsz[ind, 1])
+                axs[i, iax].plot(redshiftGrid, density(redshiftGrid),
+                            label='Data KDE '+extra, c='k')
+                axs[i, iax].hist(binlocsz[ind, 1], 50, normed=True,
                             range=[0, redshiftGrid[-1]], histtype='step',
-                            label='Data hist', color='gray')
-            axs[i].axvline(redshiftDistGrid[i], ls='dashed', color='k')
-            axs[i].axvline(redshiftDistGrid[i+1], ls='dashed', color='k')
-    axs[0].legend(loc='upper right')
-    fig.tight_layout()
-    plt.show()
+                            label='Data hist '+extra, color='gray')
+            axs[i, iax].axvline(redshiftDistGrid[i], ls='dashed', color='k')
+            axs[i, iax].axvline(redshiftDistGrid[i+1], ls='dashed', color='k')
+
+axs[0, 0].legend(loc='upper right')
+fig.tight_layout()
+plt.show()

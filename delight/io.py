@@ -4,6 +4,7 @@ import collections
 import configparser
 import itertools
 from delight.utils import approx_DL
+from scipy.interpolate import interp1d
 
 
 def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
@@ -41,7 +42,6 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     # Parsing Training
     params['training_numChunks'] = config.getint('Training', 'numChunks')
     params['training_paramFile'] = config.get('Training', 'paramFile')
-    params['training_optimize'] = config.getboolean('Training', 'optimize')
     params['training_catFile'] = config.get('Training', 'catFile')
     if catFilesNeeded and not os.path.isfile(params['training_catFile']):
         raise Exception(params['training_catFile']+' : file does not exist')
@@ -50,6 +50,8 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
         raise Exception(params['training_referenceBand']+' : is not a valid')
     params['training_bandOrder']\
         = config.get('Training', 'bandOrder').split(' ')
+    params['training_extraFracFluxError']\
+        = config.getfloat('Training', 'extraFracFluxError')
     for band in params['training_bandOrder']:
         if (band not in params['bandNames'])\
                 and (band[:-4] not in params['bandNames'])\
@@ -58,6 +60,17 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
             raise Exception(band+' does not exist')
     if 'redshift' not in params['training_bandOrder']:
         raise Exception('redshift should be included in training')
+    params['training_crossValidate'] =\
+        config.getboolean('Training', 'crossValidate')
+    params['training_CV_bandOrder']\
+        = config.get('Training', 'crossValidationBandOrder').split(' ')
+    params['training_CVfile'] = config.get('Training', 'CVfile')
+    for band in params['training_CV_bandOrder']:
+        if (band not in params['bandNames'])\
+                and (band[:-4] not in params['bandNames'])\
+                and (band != '_')\
+                and (band != 'redshift'):
+            raise Exception(band+' does not exist')
 
     # Simulation
     params['trainingFile'] = config.get('Simulation', 'trainingFile')
@@ -66,6 +79,8 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     params['noiseLevel'] = config.getfloat('Simulation', 'noiseLevel')
 
     # Parsing Target
+    params['target_extraFracFluxError']\
+        = config.getfloat('Target', 'extraFracFluxError')
     params['target_catFile'] = config.get('Target', 'catFile')
     if catFilesNeeded and not os.path.isfile(params['target_catFile']):
         raise Exception(params['target_catFile']+' : file does not exist')
@@ -132,7 +147,7 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     return params
 
 
-def readColumnPositions(params, prefix="training_"):
+def readColumnPositions(params, prefix="training_", refFlux=True):
     """
     Read column/band information needed for parsing catalog file.
     """
@@ -147,10 +162,14 @@ def readColumnPositions(params, prefix="training_"):
         redshiftColumn = params[prefix+'bandOrder'].index('redshift')
     else:
         redshiftColumn = -1
-    refBandColumn = params[prefix+'bandOrder']\
-        .index(params[prefix+'referenceBand'])
-    return bandIndices, bandNames, bandColumns, bandVarColumns,\
-        redshiftColumn, refBandColumn
+    if refFlux:
+        refBandColumn = params[prefix+'bandOrder']\
+            .index(params[prefix+'referenceBand'])
+        return bandIndices, bandNames, bandColumns, bandVarColumns,\
+            redshiftColumn, refBandColumn
+    else:
+        return bandIndices, bandNames, bandColumns, bandVarColumns,\
+            redshiftColumn
 
 
 def readBandCoefficients(params):
@@ -185,13 +204,28 @@ def createGrids(params):
                              params['redshiftMax'],
                              params['redshiftBinSize'])
     redshiftGridGP = np.logspace(np.log10(params['redshiftMin']),
-                                 np.log10(params['redshiftMax']*1.1),
+                                 np.log10(params['redshiftMax']*1.01),
                                  params['redshiftNumBinsGPpred'])
     return redshiftDistGrid, redshiftGrid, redshiftGridGP
 
 
+def readSEDs(params):
+    redshiftGrid = np.arange(params['redshiftMin'],
+                             params['redshiftMax'],
+                             params['redshiftBinSize'])
+    f_mod = np.zeros((len(params['templates_names']),
+                      len(params['bandNames'])), dtype=object)
+    for it, sed_name in enumerate(params['templates_names']):
+        data = np.loadtxt(params['templates_directory'] +
+                          '/' + sed_name + '_fluxredshiftmod.txt')
+        for jf in range(len(params['bandNames'])):
+            f_mod[it, jf] = interp1d(redshiftGrid, data[:, jf],
+                                     kind='linear', bounds_error=False,
+                                     fill_value='extrapolate')
+    return f_mod
+
 def getDataFromFile(params, firstLine, lastLine,
-                    prefix="", ftype="catalog", getXY=True):
+                    prefix="", ftype="catalog", getXY=True, CV=False):
     """
     Returns an iterator to parse an input catalog file.
     Returns the fluxes, redshifts, etc, and also GP inputs if getXY=True.
@@ -225,6 +259,11 @@ def getDataFromFile(params, firstLine, lastLine,
                             .index(params[prefix+'referenceBand'])]
         DL = approx_DL()
 
+        if CV:
+            bandIndicesCV, bandNamesCV, bandColumnsCV,\
+                bandVarColumnsCV, redshiftColumnCV =\
+                readColumnPositions(params, prefix=prefix+'CV_', refFlux=False)
+
         with open(params[prefix+'catFile']) as f:
             for line in itertools.islice(f, firstLine, lastLine):
 
@@ -252,11 +291,31 @@ def getDataFromFile(params, firstLine, lastLine,
                         or (z < 0) or (numBandsUsed <= 1):
                     continue  # not valid data - skip to next valid object
 
+                fluxes = data[bandColumns[mask]]
+                fluxesVar = data[bandVarColumns[mask]] +\
+                    (params['training_extraFracFluxError'] * fluxes)**2
+
+                if CV:
+                    maskCV = np.isfinite(data[bandColumnsCV])
+                    maskCV &= np.isfinite(data[bandVarColumnsCV])
+                    maskCV &= data[bandColumnsCV] > 0.0
+                    maskCV &= data[bandVarColumnsCV] > 0.0
+                    bandsUsedCV = np.where(maskCV)[0]
+                    numBandsUsedCV = maskCV.sum()
+                    fluxesCV = data[bandColumnsCV[maskCV]]
+                    fluxesCVVar = data[bandVarColumnsCV[maskCV]] +\
+                        (params['training_extraFracFluxError'] * fluxesCV)**2
+
                 if not getXY:
 
-                    yield z, ell, bandIndices[mask],\
-                        data[bandColumns[mask]],\
-                        data[bandVarColumns[mask]]
+                    if CV:
+                        yield z, ell,\
+                            bandIndices[mask], fluxes, fluxesVar,\
+                            bandIndicesCV[maskCV], fluxesCV, fluxesCVVar
+                    else:
+                        yield z, ell,\
+                            bandIndices[mask], fluxes, fluxesVar,\
+                            None, None, None
 
                 if getXY:
 
@@ -267,10 +326,16 @@ def getDataFromFile(params, firstLine, lastLine,
                         X[off, 0] = iband
                         X[off, 1] = z
                         X[off, 2] = ell
-                        Y[off, 0] = data[bandColumns[off]]
-                        Yvar[off, 0] = data[bandVarColumns[off]]
+                        Y[off, 0] = fluxes[off]
+                        Yvar[off, 0] = fluxesVar[off]
 
-                    yield z, ell, bandIndices[mask],\
-                        data[bandColumns[mask]],\
-                        data[bandVarColumns[mask]],\
-                        X, Y, Yvar
+                    if CV:
+                        yield z, ell,\
+                            bandIndices[mask], fluxes, fluxesVar,\
+                            bandIndicesCV[maskCV], fluxesCV, fluxesCVVar,\
+                            X, Y, Yvar
+                    else:
+                        yield z, ell,\
+                            bandIndices[mask], fluxes, fluxesVar,\
+                            None, None, None,\
+                            X, Y, Yvar

@@ -13,6 +13,33 @@ from delight.utils import approx_DL
 kind = "linear"
 
 
+class Photoz_linear_sed_basis():
+    """
+    Mean function of photoz GP
+    """
+    def __init__(self, f_mod_interp):
+        """ Constructor."""
+        # If luminosity_distance function not provided, use approximation
+        self.f_mod_interp = f_mod_interp
+        self.alpha = 0
+        self.nt, self.nb = f_mod_interp.shape
+
+    def f(self, X):
+        """
+        Compute mean function.
+        """
+        b = X[:, 0].astype(int)
+        z = X[:, 1]
+        l = X[:, 2]
+        opz = 1. + z
+
+        hx = np.zeros((X.shape[0], self.nt))
+        for k in range(X.shape[0]):
+            for it in range(self.nt):
+                hx[k, it] = self.f_mod_interp[it, b[k]](z[k])
+        return hx
+
+
 class Photoz_mean_function():
     """
     Mean function of photoz GP

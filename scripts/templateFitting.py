@@ -60,7 +60,7 @@ localMetrics = np.zeros((numLines, numMetrics))
 loc = - 1
 trainingDataIter = getDataFromFile(params, firstLine, lastLine,
                                    prefix="target_", getXY=False)
-for z, ell, bands, fluxes, fluxesVar in trainingDataIter:
+for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in trainingDataIter:
     loc += 1
     like_grid = scalefree_flux_likelihood(
         fluxes / ell, fluxesVar / ell**2,

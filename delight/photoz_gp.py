@@ -4,8 +4,8 @@ from copy import copy
 import scipy.linalg
 from scipy.optimize import minimize
 
-from delight.utils import approx_DL, scalefree_flux_likelihood
-from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
+from delight.utils import approx_DL, scalefree_flux_likelihood, symmetrize
+from delight.photoz_kernels import *
 
 log_2_pi = np.log(2*np.pi)
 
@@ -14,17 +14,18 @@ class PhotozGP:
     """
     Photo-z Gaussian process, with physical kernel and mean function.
     """
-    def __init__(self,
-                 alpha, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+    def __init__(self, f_mod_interp,
+                 bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
                  lines_pos, lines_width, var_C, var_L, alpha_C, alpha_L,
                  redshiftGridGP, use_interpolators=True,
                  lambdaRef=4.5e3, g_AB=1.0):
 
         DL = approx_DL()
         self.bands = np.arange(bandCoefAmplitudes.shape[0])
-        self.mean_fct = Photoz_mean_function(
-            alpha, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
-            g_AB=g_AB, lambdaRef=lambdaRef, DL_z=DL)
+        self.mean_fct = Photoz_linear_sed_basis(f_mod_interp)
+        #self.mean_fct = Photoz_mean_function(
+        #    alpha, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+        #    g_AB=g_AB, lambdaRef=lambdaRef, DL_z=DL)
         self.kernel = Photoz_kernel(
             bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
             lines_pos, lines_width, var_C, var_L, alpha_C, alpha_L,
@@ -39,7 +40,27 @@ class PhotozGP:
         self.X = X
         self.Y = Y.reshape((-1, 1))
         self.Yvar = Yvar.reshape((-1, 1))
-        self.D = self.Y - self.mean_fct.f(X)
+        if isinstance(self.mean_fct, Photoz_mean_function):
+            mf = self.mean_fct.f(X)
+        elif isinstance(self.mean_fct, Photoz_linear_sed_basis):
+            mf = 0
+            if False:
+                hx = self.mean_fct.f(self.X).T
+                def fun(betas):
+                    chi2 = (np.dot(hx.T, betas) - self.Y[:, 0])**2 / self.Yvar[:, 0]
+                    return chi2.sum()
+                ell = self.X[:, 2].mean()
+                x0 = np.repeat(ell / self.mean_fct.nt, self.mean_fct.nt)
+                res = minimize(fun, x0, method='L-BFGS-B',
+                               bounds=[(0, 15*ell)] * self.mean_fct.nt)
+                if res.success is False > 1e-2:
+                    raise Exception("Problem!", res)
+                self.betas = res.x
+                mf = np.dot(hx.T, self.betas)[:, None]
+        else:
+            mf = 0
+        self.betas = np.zeros(self.mean_fct.nt)
+        self.D = self.Y - mf
         self.KXX = self.kernel.K(self.X)
         self.logdet = np.log(scipy.linalg.det(self.KXX))
         self.A = self.KXX + np.diag(self.Yvar.flatten())
@@ -51,22 +72,23 @@ class PhotozGP:
         Returns core matrices, useful to re-use the GP elsewhere.
         """
         B = self.D.size
+        nt = self.betas.size
         halfL = self.L[np.tril_indices(B)]
-        flatarray = np.zeros((1 + B + B*(B+1)//2, ))
-        flatarray[0] = self.mean_fct.alpha
-        flatarray[1:1+B*(B+1)//2] = halfL
-        flatarray[1+B*(B+1)//2:] = self.D.ravel()
+        flatarray = np.zeros((nt + B + B*(B+1)//2, ))
+        flatarray[0:nt] = self.betas
+        flatarray[nt:nt+B*(B+1)//2] = halfL
+        flatarray[nt+B*(B+1)//2:] = self.D.ravel()
         return flatarray
 
-    def setCore(self, X, B, flatarray):
+    def setCore(self, X, B, nt, flatarray):
         """
         Set core matrices
         """
         self.X = X
-        self.mean_fct.alpha = flatarray[0]
-        self.D = flatarray[1+B*(B+1)//2:].reshape((-1, 1))
+        self.betas = flatarray[0:nt]
+        self.D = flatarray[nt+B*(B+1)//2:].reshape((-1, 1))
         self.L = np.zeros((B, B))
-        self.L[np.tril_indices(B)] = flatarray[1:1+B*(B+1)//2]
+        self.L[np.tril_indices(B)] = flatarray[nt:nt+B*(B+1)//2]
         self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
 
     def margLike(self):
@@ -83,8 +105,33 @@ class PhotozGP:
         assert x_pred.shape[1] == 3
         KXXp = self.kernel.K(x_pred, self.X)
         KXpXp = self.kernel.K(x_pred)
-        y_pred = np.dot(KXXp, self.beta) + self.mean_fct.f(x_pred)
         v = scipy.linalg.cho_solve((self.L, True), KXXp.T)
+        if isinstance(self.mean_fct, Photoz_mean_function):
+            mf = self.mean_fct.f(x_pred)
+        elif isinstance(self.mean_fct, Photoz_linear_sed_basis):
+            hx = self.mean_fct.f(self.X).T
+            hx_pred = self.mean_fct.f(x_pred).T
+            if False:
+                mf = np.dot(hx_pred.T, self.betas)[:, None]
+            else:
+                R = hx_pred - np.dot(hx, v)
+                hkh = np.dot(hx, scipy.linalg.cho_solve((self.L, True), hx.T))
+                ell = self.X[:, 2].mean()
+                nt = self.mean_fct.nt
+                b = np.repeat(ell, nt)[:, None]
+                bvar = (b/2.)**2
+                vh = np.dot(hx, self.beta) + b / bvar
+                hkherr = hkh + np.diag(1./bvar.flatten())
+                betabar, _, _, _ = np.linalg.lstsq(hkherr, vh)
+                self.betas = betabar.ravel()
+                bis = scipy.linalg.solve(hkherr, R)
+                mf = np.dot(R.T, betabar)
+                KXpXp += np.dot(R.T, bis)
+            #print("betabar", betabar.ravel() / np.max(betabar))
+            #store: betabar
+        else:
+            mf = 0
+        y_pred = np.dot(KXXp, self.beta) + mf
         y_pred_fullcov = KXpXp - KXXp.dot(v)
         return y_pred, y_pred_fullcov
 
@@ -108,7 +155,6 @@ class PhotozGP:
         X_pred[:, 1] = xv.flatten()
         X_pred[:, 2] = ell
         y_pred, y_pred_fullcov = self.predict(X_pred)
-
         model_mean = np.zeros((redshiftGrid.size, numBands))
         model_var = np.zeros((redshiftGrid.size, numBands))
         for i in range(numBands):
@@ -138,7 +184,7 @@ class PhotozGP:
         x0 = [0.0]
         z = self.X[0, 1]
         res = minimize(fun, x0, method='L-BFGS-B', tol=1e-9,
-                       bounds=[((1+2*z)*-1e-4, 4e-4)])
+                       bounds=[((1+2*z)*-2e-4, 4e-4)])
         if res.success is False or np.abs(res.x[0]) > 1e-2:
             raise Exception("Problem! Optimized alpha is ", res.x[0])
         self.mean_fct.alpha = res.x[0]
