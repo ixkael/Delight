@@ -111,6 +111,7 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     params['metricsFileTemp'] = config.get('Target', 'metricsFileTemp')
 
     # Parsing other parameters
+    params['ellFracStd'] = config.getfloat('Other', 'ellFracStd')
     params['fluxLuminosityNorm']\
         = config.getfloat('Other', 'fluxLuminosityNorm')
     params['alpha_C'] = config.getfloat('Other', 'alpha_C')
@@ -284,8 +285,8 @@ def getDataFromFile(params, firstLine, lastLine,
                 numBandsUsed = mask.sum()
 
                 ell = refFlux * refBandNorm
-                ell = np.mean(data[bandColumns[mask]] *
-                              norms[bandColumns[mask]])
+                # ell = np.mean(data[bandColumns[mask]] *
+                #              norms[bandColumns[mask]])
                 ell *= DL(z)**2. * params['fluxLuminosityNorm']
 
                 if (refFlux <= 0) or (not np.isfinite(refFlux))\

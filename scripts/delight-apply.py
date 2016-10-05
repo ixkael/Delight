@@ -66,7 +66,7 @@ for chunk in range(numChunks):
     numTObjCk = TR_lastLine - TR_firstLine
     redshifts = np.zeros((numTObjCk, ))
     model_mean = np.zeros((numZ, numTObjCk, numBands))
-    model_var = np.zeros((numZ, numTObjCk, numBands))
+    model_covar = np.zeros((numZ, numTObjCk, numBands))
     loc = TR_firstLine - 1
     trainingDataIter = getDataFromFile(params, TR_firstLine, TR_lastLine,
                                        prefix="training_", ftype="gpparams")
@@ -74,8 +74,10 @@ for chunk in range(numChunks):
         redshifts[loc] = z
         gp.setCore(X, B, f_mod.shape[0],
                    flatarray[0:f_mod.shape[0]+B+B*(B+1)//2])
-        model_mean[:, loc, :], model_var[:, loc, :] =\
+        model_mean[:, loc, :], model_covar[:, loc, :] =\
             gp.predictAndInterpolate(redshiftGrid, ell=ell)
+        model_mean[:, loc, :] /= ell
+        model_covar[:, loc, :] /= ell**2
 
     if params['compressionFilesFound']:
         fC = open(params['compressMargLikFile'])
@@ -95,10 +97,18 @@ for chunk in range(numChunks):
             #    model_mean[:, :, bands][:, sel, :],
             #    f_mod_var=model_var[:, :, bands][:, sel, :]
             # )
-            like_grid = flux_likelihood(
-                fluxes, fluxesVar,
+            # like_grid = flux_likelihood(
+            #    fluxes, fluxesVar,
+            #    ell * model_mean[:, :, bands][:, sel, :],
+            #    ell**2 * model_covar[:, :, bands][:, sel, :]
+            # )
+            like_grid = approx_flux_likelihood(
+                fluxes,
+                fluxesVar,
                 ell * model_mean[:, :, bands][:, sel, :],
-                ell**2 * model_var[:, :, bands][:, sel, :]
+                ell**2 * model_covar[:, :, bands][:, sel, :],
+                1,
+                params['ellFracStd']**2.
             )
         else:
             # like_grid = scalefree_flux_likelihood(
@@ -106,14 +116,20 @@ for chunk in range(numChunks):
             #    model_mean[:, :, bands],  # model mean
             #    f_mod_var=model_var[:, :, bands]  # model var
             # )
-            like_grid = flux_likelihood(
-                fluxes, fluxesVar,
+            # like_grid = flux_likelihood(
+            #    fluxes, fluxesVar,
+            #    ell * model_mean[:, :, bands],
+            #    ell**2 * model_covar[:, :, bands]
+            # )
+            like_grid = approx_flux_likelihood(
+                fluxes,
+                fluxesVar,
                 ell * model_mean[:, :, bands],
-                ell**2 * model_var[:, :, bands]
+                ell**2 * model_covar[:, :, bands],
+                1,
+                params['ellFracStd']**2.
             )
-
         localPDFs[loc, :] += like_grid.sum(axis=1)
-        # print(z, ell, bands, fluxes, fluxesVar)
         evidences = np.trapz(like_grid, x=redshiftGrid, axis=0)
 
         if not params['compressionFilesFound']:

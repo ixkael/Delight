@@ -157,12 +157,18 @@ class PhotozGP:
         model_mean = np.zeros((redshiftGrid.size, numBands))
         model_var = np.zeros((redshiftGrid.size, numBands))
         for i in range(numBands):
-            y_pred_bin = y_pred[i*numZGP:(i+1)*numZGP].ravel() / ell
-            y_var_bin = np.diag(y_pred_fullcov)[i*numZGP:(i+1)*numZGP] / ell**2
+            y_pred_bin = y_pred[i*numZGP:(i+1)*numZGP].ravel()
+            y_var_bin = np.diag(y_pred_fullcov)[i*numZGP:(i+1)*numZGP]
             model_mean[:, i] = np.interp(redshiftGrid,
                                          redshiftGridGP_loc, y_pred_bin)
             model_var[:, i] = np.interp(redshiftGrid,
                                         redshiftGridGP_loc, y_var_bin)
+        #model_covar = np.zeros((redshiftGrid.size, numBands, numBands))
+        #for i in range(numBands):
+        #    for j in range(numBands):
+        #        y_covar_bin = y_pred_fullcov[i*numZGP:(i+1)*numZGP, :][:, j*numZGP:(j+1)*numZGP]
+        #        interp_spline = RectBivariateSpline(redshiftGridGP_loc, redshiftGridGP_loc, y_covar_bin)
+        #        model_covar[:, i, j] = interp_spline(redshiftGrid, redshiftGrid, grid=False)
         return model_mean, model_var
 
     def estimateAlphaEll(self):

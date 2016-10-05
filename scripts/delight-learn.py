@@ -72,8 +72,10 @@ for z, ell,\
     localData[loc, 3+lB:3+f_mod.shape[0]+lB+lB*(lB+1)//2+lB] = gp.getCore()
 
     if crossValidate:
-        model_mean, model_var\
+        model_mean, model_covar\
             = gp.predictAndInterpolate(np.array([z]), ell=ell_hat)
+        model_mean /= ell_hat
+        model_covar /= ell_hat**2
         if chi2sLocal is None:
             chi2sLocal = np.zeros((numObjectsTraining, bandIndicesCV.size))
         ind = np.array([list(bandIndicesCV).index(b) for b in bandsCV])

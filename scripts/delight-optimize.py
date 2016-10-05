@@ -40,7 +40,7 @@ for alpha_C in [1e2, 1e3]:
 
     for extraFracFluxError in [1e-2, 2e-2, 5e-2]:
         model_mean = np.zeros((numZ, numObjectsTraining, numBands))
-        model_var = np.zeros((numZ, numObjectsTraining, numBands))
+        model_covar = np.zeros((numZ, numObjectsTraining, numBands))
         params['training_extraFracFluxError'] = extraFracFluxError
         params['target_extraFracFluxError'] = extraFracFluxError
 
@@ -57,8 +57,10 @@ for alpha_C in [1e2, 1e3]:
                 loc += 1
                 gp.setData(X, Y, Yvar)
                 #alpha, ell = gp.estimateAlphaEll()
-                model_mean[:, loc, :], model_var[:, loc, :] =\
+                model_mean[:, loc, :], model_covar[:, loc, :] =\
                     gp.predictAndInterpolate(redshiftGrid, ell=ell, z=z)
+                model_mean[:, loc, :] /= ell
+                model_covar[:, loc, :] /= ell**2
 
             loc = - 1
             targetDataIter = getDataFromFile(params, 0, numObjectsTarget,
@@ -73,10 +75,18 @@ for alpha_C in [1e2, 1e3]:
             for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV\
                     in targetDataIter:
                 loc += 1
-                like_grid = scalefree_flux_likelihood(
-                    fluxes / ell, fluxesVar / ell**2.,
-                    model_mean[:, :, bands],  # model mean
-                    f_mod_var=model_var[:, :, bands] * V_C  # model var SCALED
+                #like_grid = scalefree_flux_likelihood(
+                #    fluxes / ell, fluxesVar / ell**2.,
+                #    model_mean[:, :, bands],  # model mean
+                #    f_mod_var=model_covar[:, :, bands, :][:, :, :, bands] * V_C  # model var SCALED
+                #)
+                ell_var = (params['ellFracStd'] * ell)**2
+                like_grid = flux_likelihood_approxscalemarg(
+                    fluxes, fluxesVar,
+                    model_mean[:, :, bands],
+                    model_covar[:, :, bands],
+                    ell,
+                    ell_var
                 )
                 pdf = like_grid.sum(axis=1)
                 if pdf.sum() == 0:
