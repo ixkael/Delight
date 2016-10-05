@@ -61,10 +61,11 @@ for iax, extra in enumerate(['', 'Temp']):
     for loc in range(numObjectsTarget):
         pdf = np.array(next(iterpdf).split(' '), dtype=float)
         metrics = np.array(next(itermet).split(' '), dtype=float)
-        ztrue, zmean, zmap, pdfAtZ, cumPdfAtZ = metrics[0:5]
-        confidencelevels = metrics[5:]
+        ztrue, zmean, zstdzmean, zmap, zstdzmap, pdfAtZ, cumPdfAtZ\
+            = metrics[0:7]
+        confidencelevels = metrics[7:]
         zmeanBinLoc = -1
-        if np.abs(zmean - zmap) < 0.5:
+        if True:#np.abs(zmean - zmap) < 2.5:
             for i in range(numZbins):
                 if zmap >= redshiftDistGrid[i]\
                         and zmap < redshiftDistGrid[i+1]:
