@@ -62,11 +62,11 @@ trainingDataIter = getDataFromFile(params, firstLine, lastLine,
                                    prefix="target_", getXY=False)
 for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in trainingDataIter:
     loc += 1
-    #like_grid = scalefree_flux_likelihood(
-    #    fluxes / ell, fluxesVar / ell**2,
-    #    f_mod[:, :, bands]
-    #)
-    like_grid = flux_likelihood(fluxes, fluxesVar, ell*f_mod[:, :, bands])
+    like_grid = scalefree_flux_likelihood(
+        fluxes / ell, fluxesVar / ell**2,
+        f_mod[:, :, bands]
+    )
+    # like_grid = flux_likelihood(fluxes, fluxesVar, ell*f_mod[:, :, bands])
     localPDFs[loc, :] += like_grid.sum(axis=1)
     if localPDFs[loc, :].sum() > 0:
         localMetrics[loc, :] = computeMetrics(
