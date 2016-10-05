@@ -59,7 +59,20 @@ def random_hyperparams():
     return var_C, var_L, alpha_C, alpha_L, alpha_T
 
 
-def scalefree_flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None, returnChi2=False):
+def flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None):
+    nz, nt, nf = f_mod.shape
+    df = f_mod - f_obs[None, :]  # nz, nf
+    if f_mod_var is None:
+        sigma = f_obs_var[None, None, :]
+    else:
+        sigma = f_mod_var + f_obs_var[None, None, :]
+    den = np.sqrt((2*np.pi)**nf * np.prod(sigma, axis=2))
+    return np.exp(-0.5*np.sum(df**2/sigma, axis=2)) / den
+
+
+def scalefree_flux_likelihood(f_obs, f_obs_var,
+                              f_mod, f_mod_var=None,
+                              returnChi2=False):
     nz, nt, nf = f_mod.shape
     if f_mod_var is not None:
         var = 1./(1./f_obs_var[None, None, :] + 1./f_mod_var)
@@ -77,7 +90,7 @@ def scalefree_flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None, returnChi
         return like
 
 
-def CIlevel(redshiftGrid, PDF, fraction, numlevels=100):
+def CIlevel(redshiftGrid, PDF, fraction, numlevels=200):
     evidence = np.trapz(PDF, redshiftGrid)
     for level in np.linspace(0, PDF.max(), num=numlevels):
         ind = np.where(PDF <= level)
@@ -94,9 +107,12 @@ def kldiv(p, q):
 def computeMetrics(ztrue, redshiftGrid, PDF, confIntervals):
     zmean = np.average(redshiftGrid, weights=PDF)
     zmap = redshiftGrid[np.argmax(PDF)]
+    zstdzmean = np.sqrt(np.average((redshiftGrid-zmean)**2, weights=PDF))
+    zstdzmap = np.sqrt(np.average((redshiftGrid-zmap)**2, weights=PDF))
     pdfAtZ = np.interp(ztrue, redshiftGrid, PDF)
     cumPdfAtZ = np.interp(ztrue, redshiftGrid, PDF.cumsum())
     confidencelevels = [
         CIlevel(redshiftGrid, PDF, 1.0 - confI) for confI in confIntervals
     ]
-    return [ztrue, zmean, zmap, pdfAtZ, cumPdfAtZ] + confidencelevels
+    return [ztrue, zmean, zstdzmean, zmap, zstdzmap, pdfAtZ, cumPdfAtZ]\
+        + confidencelevels

@@ -116,9 +116,8 @@ class PhotozGP:
             else:
                 R = hx_pred - np.dot(hx, v)
                 hkh = np.dot(hx, scipy.linalg.cho_solve((self.L, True), hx.T))
-                ell = self.X[:, 2].mean()
                 nt = self.mean_fct.nt
-                b = np.repeat(ell, nt)[:, None]
+                b = np.repeat(1.0, nt)[:, None]
                 bvar = (b/2.)**2
                 vh = np.dot(hx, self.beta) + b / bvar
                 hkherr = hkh + np.diag(1./bvar.flatten())

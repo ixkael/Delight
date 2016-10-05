@@ -38,13 +38,13 @@ for alpha_C in [1e2, 1e3]:
         V_C, V_L, alpha_C, alpha_L,
         redshiftGridGP, use_interpolators=True)
 
-    for extraFracFluxError in [2e-2, 5e-2]:
+    for extraFracFluxError in [1e-2, 2e-2, 5e-2]:
         model_mean = np.zeros((numZ, numObjectsTraining, numBands))
         model_var = np.zeros((numZ, numObjectsTraining, numBands))
         params['training_extraFracFluxError'] = extraFracFluxError
         params['target_extraFracFluxError'] = extraFracFluxError
 
-        for V_C in [1e-1, 1e0]:
+        for V_C in [1e-2, 1e-1, 5e-1]:
 
             gp.var_C = V_C
             gp.var_L = V_L
@@ -85,8 +85,9 @@ for alpha_C in [1e2, 1e3]:
                     metrics\
                         = computeMetrics(z, redshiftGrid, pdf,
                                          params['confidenceLevels'])
-                    ztrue, zmean, zmap, pdfAtZ, cumPdfAtZ = metrics[0:5]
-                    confidencelevels = metrics[5:]
+                    ztrue, zmean, zstdzmean, zmap, zstdzmean,\
+                        pdfAtZ, cumPdfAtZ = metrics[0:7]
+                    confidencelevels = metrics[7:]
                     zmeanBinLoc = -1
                     for i in range(numZbins):
                         if zmean >= redshiftDistGrid[i]\

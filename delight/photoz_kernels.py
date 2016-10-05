@@ -37,7 +37,7 @@ class Photoz_linear_sed_basis():
         for k in range(X.shape[0]):
             for it in range(self.nt):
                 hx[k, it] = self.f_mod_interp[it, b[k]](z[k])
-        return hx
+        return l[:, None] * hx
 
 
 class Photoz_mean_function():

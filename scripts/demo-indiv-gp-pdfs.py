@@ -161,27 +161,30 @@ for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in targetDataIter:
     like_grid_cww = alllike_grid_cww.sum(axis=1)  # [:, besttype]
     if like_grid.sum() > 0:
         zphotmean = np.average(redshiftGrid, weights=like_grid)
-        if zphotmean > 0.4 and zphotmean < 0.5 and z > 0.8:
+        if zphotmean > 0.0 and zphotmean < 2.5 and z < 2.8:
 
-            fig, ax = plt.subplots(1, 1, figsize=(6, 3))
+            fig, ax = plt.subplots(1, 1, figsize=(7, 4))
             for ii in sortind:
-                print(all_alphaell[ii, :])
-                ax.axvline(all_z[ii], c='gray', alpha=0.3)
-                ax.plot(redshiftGrid, fulllike_grid[:, ii], c='gray', alpha=0.3)
-            ax.plot(redshiftGrid, like_grid, c='k')
-            ax.plot(redshiftGrid, like_grid_cww / np.max(like_grid_cww) * np.max(like_grid), c='orange')
-            ax.plot(redshiftGrid, like_grid_comp, c='r', ls='dashed')
-            ax.axvline(z, c='k', lw=2)
+                ax.plot(redshiftGrid, fulllike_grid[:, ii], c='gray', alpha=0.6)
+            ax.plot(redshiftGrid, like_grid, c='k', lw=2, label='GP')
+            ax.plot(redshiftGrid, like_grid_cww, c='blue', lw=2, label='CWW')
+            #ax.plot(redshiftGrid, like_grid_cww / np.max(like_grid_cww) * np.max(like_grid), c='orange')
+            ax.plot(redshiftGrid, like_grid_comp, c='r', ls='dashed', label='Compressed GP')
+            ax.axvline(z, c='orange', lw=2, ls='dashed', label='True redshift')
 
-            ax.axvline(zphotmean, c='r', lw=2)
+            #ax.axvline(zphotmean, c='r', lw=2)
             #ax.axvline(np.average(redshiftGrid, weights=like_grid_comp), c='r', ls='dashed', lw=2)
             ax.set_ylabel('Likelihood')
             ax.set_xlabel('Redshift')
-            ax.set_xlim([0, redshiftGrid[-1]])
-            ax.set_ylim([0, 1.1*np.max(like_grid)])
+            ax.set_xlim([0, 2.])#redshiftGrid[-1]])
+            ylimax = 1.3*np.max(np.concatenate((like_grid, like_grid_cww)))
+            ax.set_ylim([0, ylimax])
+            for ii in sortind:
+                ax.scatter(all_z[ii], ylimax*0.99, c='gray', marker='x', s=10)
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.2e'))
+            ax.legend(loc='upper right', frameon=False, ncol=2)
             fig.tight_layout()
-            fig.savefig('data/data-pdfs-'+str(loc)+'.png')
+            fig.savefig('data/data-pdfs-'+str(loc)+'.pdf')
 
             usedBands = list(np.unique(np.concatenate((
                 bandIndices_TRN, bandIndices))))
@@ -228,7 +231,7 @@ for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in targetDataIter:
                     axs[i].set_xlim([redshiftGrid[0], redshiftGrid[-1]])
 
             fig.tight_layout()
-            fig.savefig('data/data-fluxes-'+str(loc)+'.png')
+            fig.savefig('data/data-fluxes-'+str(loc)+'.pdf')
 
     if loc > 2050:
         exit(1)
