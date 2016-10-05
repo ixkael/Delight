@@ -1,5 +1,6 @@
 # Project specific
 *ipynb
+*pdf
 data/*.png
 data/*.pdf
 notebooks
