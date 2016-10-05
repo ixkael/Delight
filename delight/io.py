@@ -224,6 +224,7 @@ def readSEDs(params):
                                      fill_value='extrapolate')
     return f_mod
 
+
 def getDataFromFile(params, firstLine, lastLine,
                     prefix="", ftype="catalog", getXY=True, CV=False):
     """
@@ -283,12 +284,14 @@ def getDataFromFile(params, firstLine, lastLine,
                 numBandsUsed = mask.sum()
 
                 ell = refFlux * refBandNorm
-                # ell = np.mean(data[bandColumns[mask]] *
-                #              norms[bandColumns[mask]])
+                ell = np.mean(data[bandColumns[mask]] *
+                              norms[bandColumns[mask]])
                 ell *= DL(z)**2. * params['fluxLuminosityNorm']
 
                 if (refFlux <= 0) or (not np.isfinite(refFlux))\
                         or (z < 0) or (numBandsUsed <= 1):
+                    print("Skipping galaxy: refflux=", refFlux,
+                          "z=", z, "numBandsUsed=", numBandsUsed)
                     continue  # not valid data - skip to next valid object
 
                 fluxes = data[bandColumns[mask]]
