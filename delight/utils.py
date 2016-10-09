@@ -70,30 +70,82 @@ def flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None):
     return np.exp(-0.5*np.sum(df**2/sigma, axis=2)) / den
 
 
+def approx_flux_likelihood_multiobj(
+        f_obs,  # no, nf
+        f_obs_var,  # no, nf
+        f_mod,  # no, nt, nf
+        ell_hat,  # 1
+        ell_var,  # 1
+        marginalizeEll=True,
+        normalized=True,
+        returnEllML=False):
+
+    assert len(f_obs.shape) == 2
+    assert len(f_obs_var.shape) == 2
+    assert len(f_mod.shape) == 3
+    no, nt, nf = f_mod.shape
+    f_obs_r = f_obs[:, None, :]
+    var = f_obs_var[:, None, :]
+    invvar = np.where(f_obs_r/var < 1e-6, 0.0, var**-1.0)  # nz * nt * nf
+    FOT = np.sum(f_mod * f_obs_r * invvar, axis=2)\
+        + ell_hat / ell_var  # no * nt
+    FTT = np.sum(f_mod**2 * invvar, axis=2)\
+        + 1. / ell_var  # no * nt
+    FOO = np.sum(f_obs_r**2 * invvar, axis=2)\
+        + ell_hat**2 / ell_var  # no * nt
+    sigma_det = np.prod(var, axis=2)
+    if returnEllML:
+        return FOT / FTT
+    chi2 = FOO - FOT**2.0 / FTT  # no * nt
+    denom = 1
+    if normalized:
+        denom = denom * np.sqrt(sigma_det * (2*np.pi)**(nf+1) * ell_var)
+    if marginalizeEll:
+        denom = denom * np.sqrt(FTT / (2*np.pi))
+    like = np.exp(-0.5*chi2) / denom  # no * nt
+    return like
+
+
+def dirichlet(alphas, rsize=1):
+    gammabs = np.array([np.random.gamma(alpha+1, size=rsize)
+                        for alpha in alphas])
+    fbs = gammabs / gammabs.sum(axis=0)
+    return fbs.T
+
+
 def approx_flux_likelihood(
         f_obs,  # nf
         f_obs_var,  # nf
         f_mod,  # nz, nt, nf
-        f_mod_covar,  # nz, nt, nf (, nf)
         ell_hat,  # 1
         ell_var,  # 1
-        returnChi2=False, normalized=False, marginalize=False):
+        f_mod_covar=None,  # nz, nt, nf (, nf)
+        marginalizeEll=True,
+        normalized=True,
+        returnEllML=False):
 
     assert len(f_obs.shape) == 1
     assert len(f_obs_var.shape) == 1
     assert len(f_mod.shape) == 3
     nz, nt, nf = f_mod.shape
-    if len(f_mod_covar.shape) == 4:
-        sigma = f_mod_covar + np.diag(f_obs_var)[None, None, :, :]  # nz,nt, nf, nf
+    if f_mod_covar is not None:
+        assert len(f_mod_covar.shape) == 4 or len(f_mod_covar.shape) == 3
+    if f_mod_covar is not None and len(f_mod_covar.shape) == 4:
+        # TODO: implement this case
+        sigma = f_mod_covar + np.diag(f_obs_var)[None, None, :, :]
+        # nz, nt, nf, nf
         sigma_det = np.linalg.det(sigma)
         sigmainv_f_mod = np.linalg.solve(sigma, f_mod)
         sigmainv_f_obs = np.linalg.solve(sigma, f_obs[:, None])[:, :, :, 0]
         FOT = np.dot(sigmainv_f_mod, f_obs) + ell_hat / ell_var  # nz * nt
         FTT = np.dot(sigmainv_f_mod, f_mod) + 1 / ell_var  # nz * nt
         FOO = np.dot(sigmainv_f_obs, f_obs) + ell_hat**2 / ell_var  # nz * nt
-    elif len(f_mod_covar.shape) == 3:
+    if f_mod_covar is None or len(f_mod_covar.shape) == 3:
         f_obs_r = f_obs[None, None, :]
-        var = f_obs_var[None, None, :] + f_mod_covar
+        if f_mod_covar is not None:
+            var = f_obs_var[None, None, :] + f_mod_covar
+        else:
+            var = f_obs_var[None, None, :]
         invvar = np.where(f_obs_r/var < 1e-6, 0.0, var**-1.0)  # nz * nt * nf
         FOT = np.sum(f_mod * f_obs_r * invvar, axis=2)\
             + ell_hat / ell_var  # nz * nt
@@ -102,20 +154,16 @@ def approx_flux_likelihood(
         FOO = np.sum(f_obs_r**2 * invvar, axis=2)\
             + ell_hat**2 / ell_var  # nz * nt
         sigma_det = np.prod(var, axis=2)
-    else:
-        raise Exception("Problem in flux_likelihood_approxscalemarg!")
+    if returnEllML:
+        return FOT / FTT
     chi2 = FOO - FOT**2.0 / FTT  # nz * nt
-    if marginalize:
-        denom = np.sqrt(FTT)
-    else:
-        denom = 1.
+    denom = 1
     if normalized:
-        denom *= np.sqrt(sigma_det * (2*np.pi)**nf * ell_var)
+        denom = denom * np.sqrt(sigma_det * (2*np.pi)**(nf+1) * ell_var)
+    if marginalizeEll:
+        denom = denom * np.sqrt(FTT / (2*np.pi))
     like = np.exp(-0.5*chi2) / denom  # nz * nt
-    if returnChi2:
-        return chi2
-    else:
-        return like
+    return like
 
 
 def scalefree_flux_likelihood(f_obs, f_obs_var,

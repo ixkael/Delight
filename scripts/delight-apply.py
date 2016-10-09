@@ -106,9 +106,9 @@ for chunk in range(numChunks):
                 fluxes,
                 fluxesVar,
                 ell * model_mean[:, :, bands][:, sel, :],
-                ell**2 * model_covar[:, :, bands][:, sel, :],
                 1,
-                params['ellFracStd']**2.
+                params['ellFracStd']**2.,
+                f_mod_covar = ell**2 * model_covar[:, :, bands][:, sel, :]
             )
         else:
             # like_grid = scalefree_flux_likelihood(
@@ -125,9 +125,9 @@ for chunk in range(numChunks):
                 fluxes,
                 fluxesVar,
                 ell * model_mean[:, :, bands],
-                ell**2 * model_covar[:, :, bands],
                 1,
-                params['ellFracStd']**2.
+                params['ellFracStd']**2.,
+                f_mod_covar = ell**2 * model_covar[:, :, bands]
             )
         localPDFs[loc, :] += like_grid.sum(axis=1)
         evidences = np.trapz(like_grid, x=redshiftGrid, axis=0)

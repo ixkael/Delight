@@ -62,11 +62,22 @@ trainingDataIter = getDataFromFile(params, firstLine, lastLine,
                                    prefix="target_", getXY=False)
 for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in trainingDataIter:
     loc += 1
-    like_grid = scalefree_flux_likelihood(
-        fluxes / ell, fluxesVar / ell**2,
-        f_mod[:, :, bands]
-    )
     # like_grid = flux_likelihood(fluxes, fluxesVar, ell*f_mod[:, :, bands])
+    # like_grid = scalefree_flux_likelihood(
+    #    fluxes / ell, fluxesVar / ell**2,
+    #    f_mod[:, :, bands]
+    # )
+    like_grid = approx_flux_likelihood(
+        fluxes,
+        fluxesVar,
+        ell * f_mod[:, :, bands],
+        1,
+        params['ellFracStd']**2.
+    )
+    b_in = np.array([0.25, 0.11, 0.14, 0.2, 0.15, 0.063, 0.072, 0.03])[None, :]
+    beta2 = np.array([0.18, 0.55, 0.62, 0.74, 0.66, 1.5, 0.58, 1.3])**2.0
+    p_z = b_in * redshiftGrid[:, None] * np.exp(-0.5 * redshiftGrid[:, None]**2 / beta2[None, :]) / beta2[None, :]
+    like_grid *= p_z
     localPDFs[loc, :] += like_grid.sum(axis=1)
     if localPDFs[loc, :].sum() > 0:
         localMetrics[loc, :] = computeMetrics(

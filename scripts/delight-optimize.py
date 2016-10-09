@@ -28,7 +28,7 @@ numObjectsTarget = np.sum(1 for line in open(params['target_catFile']))
 print('Number of Training Objects', numObjectsTraining)
 print('Number of Target Objects', numObjectsTarget)
 
-for alpha_C in [1e2, 1e3]:
+for alpha_C in [1e3]:
     alpha_L = 1e2
     V_C, V_L = 1.0, 1.0
     gp = PhotozGP(
@@ -38,13 +38,13 @@ for alpha_C in [1e2, 1e3]:
         V_C, V_L, alpha_C, alpha_L,
         redshiftGridGP, use_interpolators=True)
 
-    for extraFracFluxError in [1e-2, 2e-2, 5e-2]:
+    for extraFracFluxError in [1e-3, 1e-2]:
         model_mean = np.zeros((numZ, numObjectsTraining, numBands))
         model_covar = np.zeros((numZ, numObjectsTraining, numBands))
         params['training_extraFracFluxError'] = extraFracFluxError
         params['target_extraFracFluxError'] = extraFracFluxError
 
-        for V_C in [1e-2, 1e-1, 5e-1]:
+        for V_C in [1e-2, 1e-1, 1.0]:
 
             gp.var_C = V_C
             gp.var_L = V_L
@@ -62,70 +62,73 @@ for alpha_C in [1e2, 1e3]:
                 model_mean[:, loc, :] /= ell
                 model_covar[:, loc, :] /= ell**2
 
-            loc = - 1
-            targetDataIter = getDataFromFile(params, 0, numObjectsTarget,
-                                             prefix="target_", getXY=False)
+            for ellFracStd in [1e-2, 1e-1]:
 
-            bias_zmap = np.zeros((redshiftDistGrid.size, ))
-            bias_zmean = np.zeros((redshiftDistGrid.size, ))
-            confFractions = np.zeros((numConfLevels, redshiftDistGrid.size))
-            binnobj = np.zeros((redshiftDistGrid.size, ))
-            bias_nz = np.zeros((redshiftDistGrid.size, ))
-            stackedPdfs = np.zeros((redshiftGrid.size, redshiftDistGrid.size))
-            for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV\
-                    in targetDataIter:
-                loc += 1
-                #like_grid = scalefree_flux_likelihood(
-                #    fluxes / ell, fluxesVar / ell**2.,
-                #    model_mean[:, :, bands],  # model mean
-                #    f_mod_var=model_covar[:, :, bands, :][:, :, :, bands] * V_C  # model var SCALED
-                #)
-                ell_var = (params['ellFracStd'] * ell)**2
-                like_grid = flux_likelihood_approxscalemarg(
-                    fluxes, fluxesVar,
-                    model_mean[:, :, bands],
-                    model_covar[:, :, bands],
-                    ell,
-                    ell_var
-                )
-                pdf = like_grid.sum(axis=1)
-                if pdf.sum() == 0:
-                    print("NULL PDF with galaxy", loc)
-                if pdf.sum() > 0:
-                    metrics\
-                        = computeMetrics(z, redshiftGrid, pdf,
-                                         params['confidenceLevels'])
-                    ztrue, zmean, zstdzmean, zmap, zstdzmean,\
-                        pdfAtZ, cumPdfAtZ = metrics[0:7]
-                    confidencelevels = metrics[7:]
-                    zmeanBinLoc = -1
-                    for i in range(numZbins):
-                        if zmean >= redshiftDistGrid[i]\
-                                and zmean < redshiftDistGrid[i+1]:
-                            zmeanBinLoc = i
-                            bias_zmap[i] += ztrue - zmap  # np.abs(ztrue - zmap)
-                            bias_zmean[i] += ztrue - zmean  # np.abs(ztrue - zmean)
-                            binnobj[i] += 1
-                            bias_nz[i] += ztrue
-                    for i in range(numConfLevels):
-                        if pdfAtZ >= confidencelevels[i]:
-                            confFractions[i, zmeanBinLoc] += 1
-                    # pdf /= np.trapz(pdf, x=redshiftGrid)
-                    stackedPdfs[:, zmeanBinLoc]\
-                        += pdf / numObjectsTraining
-            confFractions /= binnobj[None, :]
-            bias_nz /= binnobj
-            for i in range(numZbins):
-                if stackedPdfs[:, i].sum():
-                    bias_nz[i] -= np.average(redshiftGrid, weights=stackedPdfs[:, i])
-            ind = binnobj > 0
-            bias_zmap /= binnobj
-            bias_zmean /= binnobj
-            print("")
-            print("alphaC", alpha_C, "extraFracFluxError", extraFracFluxError, "V_C", V_C)
-            print(' >> bias_zmap %.3g' % np.abs(bias_zmap[ind]).mean(), 'bias_zmean %.3g' % np.abs(bias_zmean[ind]).mean(), 'N(z) bias %.3g' % np.abs(bias_nz[ind]).mean(), ' <<')
-            print(' > bias_zmap : ', ' '.join(['%.3g' % x for x in bias_zmap]))
-            print(' > bias_zmean : ', ' '.join(['%.3g' % x for x in bias_zmean]))
-            print(' > nzbias : ', ' '.join(['%.3g' % x for x in bias_nz]))
-            for i in range(numConfLevels):
-                print(' >', params['confidenceLevels'][i], ' :: ', ' '.join(['%.3g' % x for x in confFractions[i, :]]))
+                loc = - 1
+                targetDataIter = getDataFromFile(params, 0, numObjectsTarget,
+                                                 prefix="target_", getXY=False)
+
+                bias_zmap = np.zeros((redshiftDistGrid.size, ))
+                bias_zmean = np.zeros((redshiftDistGrid.size, ))
+                confFractions = np.zeros((numConfLevels, redshiftDistGrid.size))
+                binnobj = np.zeros((redshiftDistGrid.size, ))
+                bias_nz = np.zeros((redshiftDistGrid.size, ))
+                stackedPdfs = np.zeros((redshiftGrid.size, redshiftDistGrid.size))
+                for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV\
+                        in targetDataIter:
+                    loc += 1
+                    #like_grid = scalefree_flux_likelihood(
+                    #    fluxes / ell, fluxesVar / ell**2.,
+                    #    model_mean[:, :, bands],  # model mean
+                    #    f_mod_var=model_covar[:, :, bands, :][:, :, :, bands] * V_C  # model var SCALED
+                    #)
+                    like_grid = approx_flux_likelihood(
+                        fluxes,
+                        fluxesVar,
+                        ell * model_mean[:, :, bands],
+                        1,
+                        ellFracStd**2.,
+                        f_mod_covar = ell**2 * V_C * model_covar[:, :, bands]
+                    )
+                    pdf = like_grid.sum(axis=1)
+                    if pdf.sum() == 0:
+                        print("NULL PDF with galaxy", loc)
+                    if pdf.sum() > 0:
+                        metrics\
+                            = computeMetrics(z, redshiftGrid, pdf,
+                                             params['confidenceLevels'])
+                        ztrue, zmean, zstdzmean, zmap, zstdzmean,\
+                            pdfAtZ, cumPdfAtZ = metrics[0:7]
+                        confidencelevels = metrics[7:]
+                        zmeanBinLoc = -1
+                        for i in range(numZbins):
+                            if zmean >= redshiftDistGrid[i]\
+                                    and zmean < redshiftDistGrid[i+1]:
+                                zmeanBinLoc = i
+                                bias_zmap[i] += ztrue - zmap  # np.abs(ztrue - zmap)
+                                bias_zmean[i] += ztrue - zmean  # np.abs(ztrue - zmean)
+                                binnobj[i] += 1
+                                bias_nz[i] += ztrue
+                        for i in range(numConfLevels):
+                            if pdfAtZ >= confidencelevels[i]:
+                                confFractions[i, zmeanBinLoc] += 1
+                        # pdf /= np.trapz(pdf, x=redshiftGrid)
+                        stackedPdfs[:, zmeanBinLoc]\
+                            += pdf / numObjectsTraining
+                confFractions /= binnobj[None, :]
+                bias_nz /= binnobj
+                for i in range(numZbins):
+                    if stackedPdfs[:, i].sum():
+                        bias_nz[i] -= np.average(redshiftGrid, weights=stackedPdfs[:, i])
+                ind = binnobj > 0
+                bias_zmap /= binnobj
+                bias_zmean /= binnobj
+                print("")
+                print("alphaC", alpha_C, "extraFracFluxError", extraFracFluxError, "\nV_C", V_C, "ellFracStd", ellFracStd)
+                print(' >>>>>> mean z bias %.3g' % np.abs(bias_zmean[ind]).mean(), 'mean N(z) bias %.3g' % np.abs(bias_nz[ind]).mean(), ' <<')
+                print(' >> max z bias %.3g' % np.abs(bias_zmean[ind]).max(), 'max N(z) bias %.3g' % np.abs(bias_nz[ind]).max(), ' <<')
+                #print(' > bias_zmap : ', ' '.join(['%.3g' % x for x in bias_zmap]))
+                print(' > z bias : ', ' '.join(['%.3g' % x for x in bias_zmean]))
+                print(' > nzbias : ', ' '.join(['%.3g' % x for x in bias_nz]))
+                for i in range(numConfLevels):
+                    print(' >', params['confidenceLevels'][i], ' :: ', ' '.join(['%.3g' % x for x in confFractions[i, :]]))

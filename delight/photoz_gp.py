@@ -98,7 +98,7 @@ class PhotozGP:
         return 0.5 * np.sum(self.beta * self.D) +\
             0.5 * self.logdet + 0.5 * self.D.size * log_2_pi
 
-    def predict(self, x_pred):
+    def predict(self, x_pred, b_in):
         """
         Raw way to predict outputs with the GP
         """
@@ -117,8 +117,8 @@ class PhotozGP:
                 R = hx_pred - np.dot(hx, v)
                 hkh = np.dot(hx, scipy.linalg.cho_solve((self.L, True), hx.T))
                 nt = self.mean_fct.nt
-                b = np.repeat(1.0, nt)[:, None]
-                bvar = (b/2.)**2
+                b = b_in[:, None]  # (np.arange(1, nt+1)/nt)[::-1, None]
+                bvar = (b/5.)**2
                 vh = np.dot(hx, self.beta) + b / bvar
                 hkherr = hkh + np.diag(1./bvar.flatten())
                 betabar, _, _, _ = np.linalg.lstsq(hkherr, vh)
@@ -126,7 +126,8 @@ class PhotozGP:
                 bis = scipy.linalg.solve(hkherr, R)
                 mf = np.dot(R.T, betabar)
                 KXpXp += np.dot(R.T, bis)
-            #print("betabar", betabar.ravel() / np.max(betabar))
+            #print("bprior", b.ravel())
+            #print("betabar", betabar.ravel())
             #store: betabar
         else:
             mf = 0
@@ -153,7 +154,14 @@ class PhotozGP:
         X_pred[:, 0] = yv.flatten()
         X_pred[:, 1] = xv.flatten()
         X_pred[:, 2] = ell
-        y_pred, y_pred_fullcov = self.predict(X_pred)
+        zZmax = self.X[0, 1] / redshiftGrid[-1]
+        alphas0 = np.array([0.11, 0.19, 0.2, 0.13, 0.14, 0.17, 0.047, 0.013])
+        alphas1 = np.array([0.24, 0.15, 0.16, 0.11, 0.086, 0.22, 0.022, 0.012])
+        b_in = zZmax * (alphas1 - alphas0) + alphas0  # no, nt
+        b_in = np.arange(1, 8+1)[::-1]
+        b_in = b_in / np.sum(b_in)
+        #print("b_in", b_in)
+        y_pred, y_pred_fullcov = self.predict(X_pred, b_in)
         model_mean = np.zeros((redshiftGrid.size, numBands))
         model_var = np.zeros((redshiftGrid.size, numBands))
         for i in range(numBands):

@@ -284,8 +284,8 @@ def getDataFromFile(params, firstLine, lastLine,
                 bandsUsed = np.where(mask)[0]
                 numBandsUsed = mask.sum()
 
-                ell = refFlux * refBandNorm
-                # ell = np.mean(data[bandColumns[mask]] *
+                ell = refFlux / refBandNorm
+                # ell = np.mean(data[bandColumns[mask]] /
                 #              norms[bandColumns[mask]])
                 ell *= DL(z)**2. * params['fluxLuminosityNorm']
 
