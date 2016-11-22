@@ -27,8 +27,8 @@
 \usepackage{amssymb}
 \usepackage{multirow}
 \usepackage{color}	
-\usepackage[breaklinks, colorlinks, citecolor=blue, linkcolor=black, urlcolor=black]{hyperref}%with colours
-%\usepackage{hyperref}%without colours
+\usepackage[breaklinks, colorlinks, citecolor=blue, linkcolor=black, urlcolor=black]{hyperref}%with colors
+%\usepackage{hyperref}%without colors
 
 
 \input{macros.tex}
@@ -39,26 +39,16 @@
 \newcommand{\bl}[1]{\textcolor{blue}{[BL: #1]}}
 \newcommand{\dwh}[1]{\textcolor{cyan}{[DWH: #1]}}
 
-%\setlength{\skip\footins}{0.6cm}
-%\interfootnotelinepenalty=10000
-%\pagerange{\pageref{firstpage}--\pageref{lastpage}} \pubyear{2015}
-%\def\LaTeX{L\kern-.36em\raise.3ex\hbox{a}\kern-.15em
-%    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}
-%\newtheorem{theorem}{Theorem}[section]
-
 
 \begin{document}
 
  
-%\title{Accurate \& physical photometric redshifts from heterogeneous, incomplete spectroscopic training}
-%\title{Accurate \& physical photometric redshifts for deep galaxy and quasar surveys with heterogeneous training data}
-\title{Data-driven, interpretable photometric redshifts % for galaxy and quasar surveys\\ 
-with unrepresentative training data}
+\title{Data-driven, interpretable photometric redshifts with unrepresentative training data}
 
 \author{Boris~Leistedt}
   \email{boris.leistedt@nyu.edu}
   \affiliation{Center for Cosmology and Particle Physics, Department of Physics, New York University, New York, NY 10003, USA}
-  \affiliation{Einstein Fellow}
+  \affiliation{NASA Einstein Fellow}
   
 \author{David~W.~Hogg}
   \email{david.hogg@nyu.edu}
@@ -66,12 +56,18 @@ with unrepresentative training data}
   
   
 \begin{abstract}
-We present a new method for deriving photometric redshifts for deep galaxy and quasar surveys, based on a physical, data driven model of photometric flux measurements with a latent model of spectral energy distributions (SEDs).
-This conceptually novel approach combines the advantages of machine learning and template fitting methods, and alleviates the need of acquiring representative training data or constructing detailed galaxy SED models. 
-It involves constructing a latent space of template SEDs directly from the training data using a Gaussian Process, the kernel of which encodes the physics of cosmological redshift. 
-The training data can consist of a combination of spectroscopic data sets which not need to overlap or involve the same instrument as the target photometric survey of interest. 
-We consider the latest SDSS data and demonstrate that we obtain accurate redshift point estimates and probability distributions even with non representative training data. 
-Finally, we show how this method addresses the computational challenges offered by ongoing and future photometric surveys, via the ability to quickly enhance the training data and re-calculate redshift probability distributions, for example.
+We present a new method for deriving photometric redshifts for deep galaxy and quasar surveys, based on a data driven model of latent spectral energy distributions (SEDs) and a physical model of photometry given Doppler shift.
+This conceptually novel approach combines the advantages of both machine learning and template fitting methods by building template SEDs directly from the training data. 
+This is made computationally tractable via Gaussian Processes operating in flux--redshift space, encoding the Doppler shift and projection of galaxy SEDs onto photometric bandpasses.  
+This physical, data-driven approach alleviates the need of acquiring representative training data or constructing detailed galaxy SED models.
+The method requires only that the bandpasses and calibrations be known (or have parameterized unknowns) for the photometry of the training and target galaxies.
+It can exploit more data than existing methods, since the training data can consist of a combination of spectroscopic and deep many-band photometric data.
+Those do not need to entirely spatially overlap with the target survey of interest or even involve the same photometric bands. 
+We showcase our method on the $i$-magnitude-selected, spectroscopically-confirmed galaxies in the COSMOS field. 
+We train the model on the deepest bands (optical and infrared from SUBARU and HST) and derive photometric redshifts for the shallower SDSS optical bands.
+We demonstrate that we obtain accurate redshift point estimates and probability distributions despite the training and target sets having very different redshift distributions, noise properties, and even photometric bands.
+We also show how our model can be used to infer missing photometric fluxes and rest-frame colors, or to simulate populations of galaxies with realistic fluxes and redshifts, for example.
+Our method opens a new era in which photometric redshifts for large photometric surveys are derived using a flexible yet physical model of the data trained on all available surveys (spectroscopic and photometric).
 \end{abstract}
 
 \pacs{TODO}
@@ -82,38 +78,71 @@ Finally, we show how this method addresses the computational challenges offered 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 
-Three main methods exist for obtaining redshifts from photometric fluxes, and all of them require external data.
+Ongoing and future photometric galaxy surveys such as the Dark Energy Survey \citep[DES,][]{Abbott:2005bi}, The Kilo-Degree Survey \citep[KIDS,][]{deJong:2013}, and LSST \citep{Abell:2009aa} will allow us to probe the content, dynamics, origins, and fate of the universe at unprecedented accuracy \citep[see \eg][]{Peacock:2006kj, Weinberg:2012es}. 
+In particular, they will be essential to uncover the properties of dark matter and its detailed impact on galaxies, to measure the properties of high-energy particles such as neutrinos, and to test models of the early universe, gravity, and the late-time accelerated expansion.
 
-In machine learning methods, the flux-redshift relation is fitted using a very flexible model which depends on the algorithm under consideration and has to be trained on the available training data (where spectroscopic redshifts are available).
-This approach is very powerful for learning relationships in the data.
-For this reason it usually provides excellent redshift estimates in the regions with good training data, even in the presence of imperfect fluxes (\ie biased or with underestimated errors).
+The exploitation of galaxy surveys for cosmological tests requires estimating the redshifts of each extragalactic object from a handful of noisy photometric flux measurements.
+This task is commonly known as photometric redshift (\photoz) estimation.
+\photoz estimates are typically used to group galaxies into bins of redshift and other informative properties such as color or morphology.
+It is by measuring the statistical properties of those groups and confronting them with theoretical predictions that cosmological models can be tested.
+Typical observables of interest include the auto-and cross-correlation of galaxy positions and shapes as a function or sky separation, redshift, color, or luminosity.
+
+Photometric redshifts are currently the dominant source of both statistical and systematic errors in the analysis of ongoing photometric galaxy surveys.
+This is because the number of objects and the physical volume probed by those surveys have steadily grown in the past decades, and we have reached the stage where statistical uncertainties no longer dominate error budgets.
+Instead, it is the systematic errors made while processing and exploiting the data which limit our exploitation of those surveys.
+For instance, those can result from the complicated reduction of raw images, the imperfect discrimination between various types of objects (\eg stars, galaxies, quasars), the incomplete understanding of the survey selection function, or the inaccurate estimation of efficient statistics such as 2-pt correlation functions.
+Yet, imperfect photometric redshift estimation significantly exceeds all other sources of statistical and systematic errors.
+This is fueled by the unavailability of validation data sets or realistic survey simulations for improving and validating \photoz algorithms at the precision needed.
+Those issues raise difficult challenges for the exploitation of ongoing experiments (DES, KIDS) and may jeopardize future surveys (LSST) if they are not overcome.
+We now briefly outline the advantages and limitations of the two main classes of algorithms used for estimating redshifts from photometric fluxes: template fitting and machine learning methods.
+Note that in what follows we will focus on galaxies, but it should be clear that the discussions and methods below are equally applicable to other extragalactic objects such as quasars.
+
+In machine learning methods, the relation between galaxy fluxes, colors, and redshifts is fitted using a very flexible model, the details of which depend on the algorithm under consideration (\eg neural networks, random forests, etc).
+This model must be trained on ancillary data where true redshifts are available; those are typically high-quality estimates from a spectroscopic survey.
+This approach is very powerful for learning complicated relationships within the data without designing and validating a potentially complex physical model.
+For this reason, it usually provides excellent redshift estimates in the regions with good training data, even in the presence of imperfect fluxes (\ie biased or with underestimated errors).
 In other words, in the interpolation regime, machine learning methods excel.
-However, they perform poorly in regions with fewer or no training data, mostly because the constructed model is very flexible and gives more weight to dense training regions.
-In addition, it does not know about the physics of redshift or fluxes. 
-It will, of course, partially learn it from the training data, but because is not at all constrained to satisfy the physics of the problem, the flux-redshift model performs poorly when extrapolating outside of the training data.
+However, they require the training data to be representative of the target data, \ie to have similar redshift, flux and color distributions (both signal and noise).
+As a result, they perform poorly in regions with few or no training data.
+This is a significant issue since training set (\ie galaxy surveys with spectroscopic redshifts) are much shallower than the target photometric surveys.
+This can be alleviated via re-weighting methods, but still requires the training to be similar to the target data, and to be based on the same photometric band-passes.
+In other words, it is not possible to use a training set involving a different set of photometric bands.
+Furthermore, most of those methods do not support missing bands, and underestimated errors or outliers in the fluxes and redshifts.
+Generally speaking, this is because they do not know about the underlying physics of the problem: flux measurements arise from observing a galaxy spectrum in the photometric band-passes.
+In addition, the effect of redshift on galaxy spectra is known and deterministic.
+Machine learning algorithms will partially learn those effects from the training data, but they are not required to. 
+Thus, they will not learn the flux--redshift relationship in a way that is constrained to correspond to possible galaxy spectra. 
+This is one of the reasons these models do not provide meaningful results outside of the training data.
 
-A second method, template-fitting, directly addresses this problem. If a library of galaxy spectra (\ie templates for the spectral energy distributions of various galaxy types) is available, then one can solve for the redshift and type of a galaxy given the observed photometric fluxes.
-A significant advantage over machine learning methods is the ability to perform the fit in a fully probabilistic fashion, with explicit priors over the types and redshifts of galaxies\footnote{While the outputs of some machine learning methods can be interpreted in probabilistic terms, most implicitly construct complicated priors from the training data and algorithm under consideration, making any probabilistic interpretation difficult.}.
+The second class of methods, template-fitting, directly addresses this issue. 
+If a library of galaxy spectra (\ie templates for the spectral energy distributions of various galaxy types) is available, then one can solve for the redshift and type of a galaxy given the observed photometric fluxes.
+A significant advantage over machine learning methods is the ability to perform the fit in a fully probabilistic fashion, with explicit priors over the types and redshifts of galaxies.
+While the outputs of some machine learning methods can be interpreted in probabilistic terms, most of them implicitly construct complicated priors from the training data (related to the representativeness issue mentioned above), making the probabilistic interpretation difficult.
 While template fitting approaches provide an elegant solution to estimate photometric redshifts and also other galaxy properties (\eg star formation history), they are very restrictive compared to machine learning methods.
-One the one hand, one has to assume that all the observed galaxies live in the space of spectral templates. 
+One has to assume that all galaxies observed in the survey of interest can be described by the library of templates. 
 While methods have been developed to relax this constrain (\eg by introducing correction terms to existing template libraries or adopting very flexible spectral template with numerous physical parameters) this is insufficient.
-On the other hand, the complexity and imperfections of observed fluxes cannot easily be captured.
-As a consequence of these two limitations, template fitting methods fail to provide reliable redshift estimates for deep photometric surveys.
-The method presented here will solve both of those problems, while also harnessing the flexibility of machine learning.
+In addition, the complexity and imperfections of observed fluxes (\eg biases or underestimated errors) cannot easily be captured either.
+Thus, template fitting methods also deliver unsatisfactory results in the light of modern galaxy surveys.
 
-The third class of methods for estimating photometric redshifts is referred to as ``clustering redshifts" and rely on spatial information to constrain the redshifts of galaxies.
-It comes in several incarnations and can complement other redshift estimates, for example provided by the methods described above and also the method presented in this paper.
-Given its different nature (using spatial information, not fluxes) and its complementarity with other methods, we will not discuss this in further detail.
+A third class of methods for estimating photometric redshifts exists, and is sometimes referred to as ``clustering redshifts" \citep[\eg][]{Matthews:2010an}.
+It exploits spatial information and the proximity of galaxies in real space (sky position and redshift) to constrain the redshifts of galaxies.
+It comes in several incarnations and can both complement other redshift estimates or stand as an independent \photoz method.
+Given hat it does not directly uses flux information we will not discuss it in further detail below, and we will assume that any flux-based \photoz method (such as the one presented below) can be improved by adding spatial information.
 
-%A robust solution to estimate photometric redshifts is to marginalise over the templates compatible with the training data, so that the photometric redshifts of much fainter galaxies only use that information in a physically meaningful way. 
+Recent analyses of galaxy surveys (DES, KIDS) and various detailed \photoz investigations have highlighted the advantages and drawbacks discussed above \citep[see \eg][]{Newman:2013cac, Dahlen:2013fea, Sanchez:2014zgq, Schmidt:2014ela, Bonnett:2015pww}. 
+Typically, machine learning methods \citep[\eg][]{Kind:2013eka, Collister:2003cz, Sadeh:2015lsa} provide accurate redshift estimates for bright, low redshift galaxies, but are unreliable at high redshift or faint magnitudes due to the lack of training data.
+Template fitting methods \citep[\eg][]{Benitez:1998br, Brammer:2008qv, Feldmann:2006wg} behave well at high redshift due to the underlying physical model allowing to extrapolate.
+However, their redshift estimates suffer from various systematics due to the limitations of the template sets in existence, which are small and constructed from low redshift galaxies.
+They are also very sensitive to the prior knowledge about the abundance and redshift dependence of the various types modeled.
+Most of the issues discussed here could be (and are being) resolved via time-consuming validation and ad-hoc corrections, but they demonstrate the limitation of standard \photoz techniques.
 
-The scope of this paper is as follows: we define a generic approach to use gaussian processes to fit fluxes and redshifts using kernels capturing the known physics of cosmological redshift.
-We adopt specific kernels making this construction fast and flexible.
+The method presented is an attempt at addressing those issues alltogether and harnessing the flexibility of both machine learning and template fitting, via the construction of a large collection of templates directly from the training data.
+We will present a generic approach to perform this construction right in flux--redshift space without explicitly going through galaxy spectra, by exploiting Gaussian Processes with kernels capturing the effect of cosmological redshift and the projection of galaxy spectra on photometric band-passes.
+Our approach can be seen as a computationally efficient method for constructing a large set of physical flux-color-redshift models.
+This is similar to the K-correct model \citep{Blanton:2007} but incorporating model uncertainties and derived from a much larger data set consisting of photometric data with spectroscopic redshifts.
+As demonstrated below, this model is straightforward to train and validate, and can exploit more data than existing methods since it does not require the training data to have the same photometric bands or redshift and noise distributions as the target data.
 
-
-In what follows we will focus on galaxies although quasars and other extragalactic objects could be used.
-
-The remainder of this paper is structured as follows: In \secref{sec:methods}, we present our novel \photoz inference method and we discuss its advantages and limitations. We illustrate its performances on real data in \secref{sec:data}. We conclude in \secref{sec:concl}. The Appendices of this paper provide more details about our implementation of the method.
+The remainder of this paper is structured as follows: In \secref{sec:methods}, we present our novel \photoz inference method and we discuss its advantages and limitations. We illustrate its performances on real data in \secref{sec:data}, and we conclude in \secref{sec:concl}. The Appendices of this paper provide useful technical details about our implementation of the method.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -123,301 +152,585 @@ The remainder of this paper is structured as follows: In \secref{sec:methods}, w
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Background and assumptions}
 
-\todo{add units}
 For the purpose of this work, a galaxy is fully described by its rest-frame luminosity density or spectral energy distribution (SED), denoted by $L_\nu(\lambda_\mathrm{em})$ at the emitted wavelength $\lambda_\mathrm{em}$.
-If this galaxy lies at redshift $z$, the energy density of the flux measured at redshift $0$ (\eg on Earth, in the absence of extra doppler shift terms) at a wavelength $\lambda_\mathrm{obs}$ reads
+For this same galaxy at redshift $z$, the flux observed today at a wavelength $\lambda_\mathrm{obs}$ reads
 \equ{
 	f_\nu(\lambda_\mathrm{obs}, z) = \frac{(1+z)}{4\pi D^2(z)}  \ L_\nu\left(\frac{\lambda_\mathrm{obs}}{1+z}\right)
 }
 where $D(z)$ is the luminosity distance. 
-Three effects are in play here: the doppler shift of photons, the dimming of the flux due to distance, and its amplification due to the background expansion of the universe. 
-We are interested in photometric measurements of the flux $f_\nu$, in a  set of bands $b=1, \dots, N_b$ described by a set of filter responses $\{ W_b(\lambda) \}$, which we assumed to be known.
+Three effects are in play: the doppler shift of photons, the dimming of the flux due to distance, and its amplification due to the background expansion of the universe. 
+We are interested in photometric measurements of the flux $f_\nu$ in a  set of bands $b=1, \dots, N_b$ described by a set of filter responses $\{ W_b(\lambda) \}$, which we assume to be perfectly known.
 The photometric flux measured in the $b$-th band is
 \eqn{
 	F_b(z) &=& \frac{(1+z) \ \ell}{4\pi D^2(z) g^\mathrm{AB} C_b}   \int_0^\infty f_\nu(\lambda_\mathrm{obs}, z) \ W_b(\lambda_\mathrm{obs}) \frac{\d\lambda_\mathrm{obs}}{\lambda_\mathrm{obs}}  \\
 		&=& \frac{(1+z)^2 \ \ell}{4\pi D^2(z) g^\mathrm{AB} C_b}   \int_0^\infty L_\nu(\lambda_\mathrm{em}, z) \ V_b\bigl(\lambda_\mathrm{em}(1+z)\bigr) \ \d\lambda_\mathrm{em} \label{fluxredshift}
 }
+where $g^{AB}$ is the zero point of the AB photometric system, and $C_b$ is the filter normalization constant $C_b = \int_0^\infty W_b(\lambda) \d\lambda / \lambda$. The change of convention from $W_b$ to  $V_b(\lambda) = W_b(\lambda)/\lambda$ will simplify some of the calculations below.
 
-where $g^{AB}$ is the zero point of the AB photometric system, and $C_b$ is the filter normalization constant $C_b = \int_0^\infty W_b(\lambda) \d\lambda / \lambda$. The change of convention from $W_b$ to  $V_b(\lambda) = W_b(\lambda)/\lambda$ will make some of the calculations below easier.
+We are interested in estimating the redshifts of a set of {\bf target galaxies}, for which we have noisy photometric flux measurements $\hat{\mat{F}}=(\hat{F}_1, \dots, \hat{F}_{N_b})$ with known variance (\eg Gaussian errors). 
+We assume that a {\bf training set} is available, \ie an other set of galaxies with noisy photometric flux measurements.
+Furthermore, we assume that the redshifts of those training galaxies are available.
+Those are typically obtained via high-resolution measurement of $f_\nu$ and subsequent estimation of the type and redshift of the object.
+Those high-quality estimates are often called spectroscopic redshifts.
+In what follows they are assimilated to the true redshifts, although the method could (and will) be extended to support redshift errors, as discussed in \secref{sec:discussion}. 
 
-We are interested in estimating the redshifts of a set of {\bf target galaxies}, for which we have noisy photometric flux measurements $\hat{\mat{F}}=(\hat{F}_1, \dots, \hat{F}_{N_b})$ with Gaussian errors ${\bf \sigma}_{\hat{F}}=(\sigma_{\hat{F}_1}, \dots, \sigma_{\hat{F}_{N_b}})$. 
-We assume that a {\bf training set} is available, \ie an other set of galaxies with noisy photometric flux measurements, but where the redshifts are available (\eg via high measurement of the $f_\nu$ and subseqeunt estimation of the type and redshift of the object). 
-We also assume that a set of template SEDs are available.
-Standard machine learning methods would only rely on the training set, while template fitting methods would only exploit the SED template library to estimate the redshifts of the target galaxies.
-The method presented here uses both the training set and the template SEDs, but is less sensitive to their redshift coverage and validity, unlike existing methods.
+We also assume that a set of library of galaxy SED templates is available. 
+Standard template fitting methods would directly rely on it to estimate redshifts for the target galaxies. 
+Typical machine learning methods wouldn't exploit it at all. 
+The method presented here weakly relies on the template SED library to guide the learning of the model. 
+This point will be extensively discussed in \secref{sec:discussion}, where we will also detail the other assumptions of the method, such as the absence of significant biases in the flux measurements.
 
-Note that we implicitly assume that there are no significant biases or outliers in the fluxes, flux errors, and spectroscopically confirmed redshifts, in both the training and target galaxy samples. 
-However, these assumptions could be relaxed, as discussed below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Inference}
 
-As in template fitting methods, we introduce a variable $t$ labelling galaxy types or classes, described by a (continuous or discrete) ensemble of SEDs $L_\nu(\lambda, t)$, so that the the photometric flux becomes $F_b(z, t)$.
+We introduce a variable $t$ labelling galaxy types, described by a (continuous or discrete) ensemble of SEDs $L_\nu(\lambda, t)$, so that the photometric fluxes become $F_b(z, t)$. 
 For a target galaxy of interest, the posterior distribution on its redshift given noisy photometric flux measurements $\hat{\mat{F}}$ is
 \eqn{
 	p(z | \hat{\mat{F}}) \propto \int \mathrm{d}t\  p\bigl(\hat{\mat{F}}| z, t\bigr)\ p(z, t)
-  \approx \sum_{i} w_i \ p\bigl( \hat{\mat{F}}| z, t_i\bigr)
+  \approx \sum_{i}   p\bigl( \hat{\mat{F}}| z, t_i\bigr) \ p(z | t_i) \ p(t_i) \label{eq:redshiftposterior}
   }
- The discretization arises because we seek to model a finite number of types from a training set itself, with the weights capturing prior information. 
- The type $t_i$ is constructed from the $i$-th training galaxy, with noisy photometric fluxes $\hat{\mat{F}}_i$ and redshift $z_i$. 
- Hence, for each pair of target and training galaxies, we can compute 
+This is identical to the approach adopted in standard template fitting methods, where $t_i$ with $i=1, \cdots, N_T$ labels the SED templates, and $p(z | t_i) p(t_i)$ capture prior information about their redshift distributions and abundances (often calibrated on training data).
+  
+We take a different approach and construct a set of templates from the training set itself. 
+The type $t_i$ is constructed from the $i$-th training galaxy, \ie with its noisy photometric fluxes $\hat{\mat{F}}_i$ and the spectroscopic redshift $z_i$. 
+
+Hence, for each pair of target and training galaxies, we can write 
  \eqn{ 
  	p\bigl(\hspace*{-2pt}\underbrace{\hat{\mat{F}}| z}_{\mathrm{target}}, t_i \bigr) &=& p\bigl(\hat{\mat{F}}| z, \underbrace{z_i, \hat{\mat{F}}_i}_{\mathrm{training}} \bigr) \\
 	&=& p\bigl(\hat{\mat{F}}| \mat{F}(z, t_i)\bigr) \ p\bigl( \mat{F}(z, t_i)| z_i, \hat{\mat{F}}_i\bigr).\label{eq:traintarpair}
 	}
-The first term is the flux likelihood function, \eg a multivariate Gaussian in the case of Gaussian errors.
-\equ{
-	p\bigl(\hat{\mat{F}}| \mat{F}(z, t_i)\bigr) = \prod_b \mathcal{N}\left( \hat{F}_b - F_b(z, t_i); \sigma_{\hat{F}_b}  \right)
+The first term is the flux likelihood function, comparing the noisy fluxes of the target galaxy with the (noiseless) model fluxes computed from the training galaxy. 
+The second term is a prediction for the fluxes of the training galaxy {\it at a different redshift} $z$ (not $z_i$!). 
+It will be discussed in the next section; we first discuss the likelihood function.
+
+The simplest likelihood function we could write has uncorrelated Gaussian flux errors on the observations, and becomes a simple product of univariate Gaussian distributions.
+However, this likelihood function is too simplistic.
+First, it ignores model uncertainties, which will arise from the model fluxes $\mat{F}(z, t_i)$ we will construct in the next section from the second term of \equref{eq:traintarpair}.
+Second, we must introduce a factor $\ell$ scaling the model and its uncertainties. 
+This is to account for the potential difference in absolute luminosity of galaxies of the same type (\ie different normalization of the same SED).
+One extreme way to implement this step would be to proceed with a likelihood relying on colors, \ie ratio of fluxes.
+However, the absolute luminosities of the target and the training galaxies carry a significant amount of information, which we will exploit in the pairwise comparison performed in \equref{eq:traintarpair}.
+So without any loss of generality we write flux likelihood function as
+\eqn{
+	p\bigl(\hat{\mat{F}}| \mat{F}(z, t_i)\bigr) &=& \int \d\ell \ p\bigl(\hat{\mat{F}}| \mat{F}(z, t_i), \ell \bigr) \ p\bigl(\ell | \mat{F}(z, t_i)\bigr). \label{eq:likelihood}
 }
-The extension to correlated flux errors is straightforward.
-Note that this likelihood function could be improved by including more informative prior information about the absolute scaling of the template, but we don't consider this extension here.
-\todo{Include model uncertainties and correct ell scaling in both parts of \eqref{eq:traintarpair}}
- \eqn{ 
- 	p\bigl(\hspace*{-2pt}\underbrace{\hat{\mat{F}}| z}_{\mathrm{target}}, t_i \bigr) = p\bigl(\underbrace{\hat{\mat{F}}| \hat{\ell}, z}_\mathrm{target}, \underbrace{\hat{\mat{F}}_i, z_i, \hat{\ell}_i}_\mathrm{training} \bigr) 
-	}
+We assume that the errors on the observations and the model are Gaussian and described by covariance matrices $\mat{\Sigma}_{\hat{\mat{F}}}$ and $\mat{\Sigma_{{\mat{F}}}}$, respectively. 
+In this case, the first term of \equref{eq:likelihood} is a multidimensional Gaussian 
+\equ{
+	p\bigl(\hat{\mat{F}}| \mat{F}(z, t_i), \ell \bigr) = \mathcal{N}\left( \hat{\mat{F}} - \ell\  \mat{F}(z, t_i); \mat{\Sigma}_{\hat{\mat{F}}} + \ell^2 \mat{\Sigma_{{\mat{F}}}}  \right), \label{eq:multivariategaussianlike}
+}
+where $\mathcal{N}(a;A)$ denotes the Gaussian distribution of mean $a$ and covariance $A$ (we will use this convention for univariate and multivariate distributions).
+The second term, $p\bigl(\ell | \mat{F}(z, t_i)\bigr)$, is a prior on the scaling factor $\ell$ given the fluxes of the training galaxy. 
+While this could be arbitrarily complicated, a reasonable option is to choose one of the fluxes as a reference and obtain a rough estimate of the absolute luminosity $\hat{\ell}$ of the galaxy as a function of redshift by multiplying by $ 4\pi D^2(z) g^\mathrm{AB} C_b (1+z)^{-1}$.  
+In our experiments we found that adopting a Gaussian $p\bigl(\ell | \mat{F}(z, t_i)\bigr) =  \mathcal{N}(\hat{\ell}; \sigma_\ell)$ is a good approach since $\hat{\ell}$ is a simple but robust estimator, and $\sigma_\ell$ can be optimized on the training data.
+The optimization of hyperparameters such as $\sigma_\ell$ will be discussed below. 
+Further details about our implementation of \equref{eq:likelihood} are provided in \appref{app:fluxlikelihood}.
+
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Gaussian process in redshift-flux space}
+\subsection{Gaussian Process in redshift-flux space}
 
-The second term of \equref{eq:traintarpair} requires to use the noisy fluxes of the training galaxy $\hat{\mat{F}}_i$ at redshift $z_i$ and predict (noiseless) fluxes at a different redshift $z$.
-An elegant way to address this problem could be to explore the set of SEDs compatible with the photometry $\hat{\mat{F}}_i$ at redshift $z_i$, then redshift those individually at redshift $z$, and compute the mean and variance of the predicted fluxes.
-The SED model could be derived from a model of galaxy formation, data-driven templates, etc. 
-However, this approach is computationally intractable since it requires to simulate large numbers of SEDs (\eg via a MCMC sampling method) and integrating those for comparison to each training galaxy and for predicting fluxes at several other redshifts. 
-In addition, given the broadness of photometric bands and the typical flux errors, the predicted fluxes are most likely to be less sensitive to the details of the SED model.
-To resolve these issues all at once, we will use a Gaussian Process $F(b, z) \sim \mathcal{GP}\bigl( \mu^F, \ k^F\bigr)$, and encode both the SED model and the physics of redshift in the mean function $\mu^F$ and the kernel $k^F$.
+Let us consider the second term of \equref{eq:traintarpair}, which requires to use the noisy fluxes of the training galaxy $\hat{\mat{F}}_i$ at redshift $z_i$ and predict (noiseless, model) fluxes at a different redshift $z$.
+In other words, we must compute the probability that the target galaxy has the same SED as the training galaxy but at a different redshift. 
+An elegant way to address this problem could be to explore the set of SEDs compatible with the photometry $\hat{\mat{F}}_i$ at redshift $z_i$, then redshift all of those individually at redshift $z$. Finally, we could compute the mean and variance of the predicted fluxes, and compare them to the noisy fluxes of the training galaxy.
+The SED model could be arbitrarily complex, \eg derived from a model of galaxy formation, synthetic templates, etc. 
+However, this approach is computationally intractable since it requires to simulate large numbers of SEDs and integrating those for comparison to each training galaxy and for predicting fluxes at several other redshifts (\eg via MCMC sampling methods). 
+In addition, given the broadness of photometric bands and the typical flux errors, the predicted fluxes are likely to be relatively insensitive to the details of the SED model. 
+In other words, a complicated SED model is probably unnecessary for the purpose of estimating redshifts for wide-area broad-band surveys such as DES and LSST.
+To resolve these issues, we will use a Gaussian Process $F(b, z) \sim \mathcal{GP}\bigl( \mu^F, \ k^F\bigr)$, and encode the SED model, its redshifting, and its projection onto the photometric band-passes in the mean function $\mu^F$ and the kernel $k^F$. 
 
-Gaussian Processes are a flexible model to fit noisy observations and make predictions, in both the interpolation and extrapolation regimes, with the uncertainties resulting from the fit.
-When the likelihood function is Gaussian, most operations (including marginalization and posterior predictions) are analytically tractable, which makes them very appealing.
-Their main drawback is the large matrix operations, which is not a problem here since we fit each training galaxy with a separate Gaussian Process (thus, the number of data points to fit is the number of photometric bands).
-An excellent introduction to Gaussian Processes is provided in REF.
+Gaussian Processes are a flexible method for fitting noisy data and making predictions in both the interpolation and extrapolation regimes (\ie where there is and isn't training data).
+In fact, they encompass a wide class of widespread methods, from simple linear models to neural networks, and produce well-defined model uncertainties.
+When the likelihood function is Gaussian (\eg with Gaussian noise), most operations on Gaussian Processes, including posterior distribution and marginal likelihood calculations, are analytically tractable.
+This makes them extremely appealing.
+In particular, the posterior distribution is a multivariate Gaussian, which is adequate for the flux likelihood function we discussed in \equref{eq:likelihood}. 
+One of their main drawback is the potentially large matrix operations to predict the mean and the covariance of the outputs (here $\mat{F}(z, t_i)$ and $\mat{\Sigma_{{\mat{F}}}}$). 
+However, this will not be a problem here since we fit each training galaxy with a separate Gaussian Process.
+Thus, the number of data points to fit is merely the number of photometric bands, which is small (from a few to tens).
+For further details about Gaussian Processes, we direct the reader to the excellent introduction of Ref.~\cite{Rasmussen:2005}.
 
-While classical mean functions and kernels could be used here, they would predict fluxes $F_b(z, t_i)$ that wouldn't correspond to an SED being redshifted.
-Instead, we will impose the mean function $\mu^F$ and the kernel $k^F$ to capture the expected correlations across redshift and bands resulting from the know setup and physics of the problem: the bands have known responses $\{ W_b(\lambda)\}$, and galaxy SEDs are redshifted according to \equref{fluxredshift}.  
+A significant advantage of Gaussian Process is the ability to specify a mean function and a covariance kernel that capture the known or expected correlations of the problem under consideration, for both the signal and the noise.
+While classical mean functions and kernels could be used here, they would predict fluxes $F_b(z, t_i)$ that wouldn't correspond to an SED being redshifted and projected onto the band-pass $W_b$.
+Instead, we will impose the mean function $\mu^F$ and the kernel $k^F$ to capture the expected correlations across redshift and bands resulting from the know setup and physics of the problem: the fluxes result from observing SEDs through filter responses $\{ W_b(\lambda)\}$, and those SEDs are redshifted according to \equref{fluxredshift}.  
 Concretely, we want to define a mean function and a kernel that implicitly solve the same procedure described above: constructing SEDs compatible with the $\hat{\mat{F}}_i$, redshifting and integrating them to obtain flux predictions $\mat{F}(z, t_i)$. 
 It is possible under certain assumptions and descriptions of the SEDs, as described below.
 
-We model the latent, underlying SED of each training galaxy as a linear sum of templates $T^k_\nu(\lambda)$ (\eg taken from a standard template fitting method) and residuals that take the form of a zero-mean Gaussian Process $R_\nu \sim \mathcal{GP}\bigl(0, k^\lambda(\lambda,\lambda') \bigr)$.
+We model the latent, underlying SED of each training galaxy as a linear mixture of templates $T^k_\nu(\lambda)$ (taken from the existing template library) and residuals that take the form of a zero-mean Gaussian Process $R_\nu \sim \mathcal{GP}\bigl(0, k^\lambda(\lambda,\lambda') \bigr)$. In other words,
 \eqn{
-	L_\nu(\lambda, \bm{\alpha}, \ell) =  \underbrace{\sum_{k=1}^{N_T} \alpha_k\ T_\nu^k(\lambda)}_{\rm templates} + \ \underbrace{ \ell R_\nu(\lambda)}_{\rm residuals} \ \sim \ \mathcal{GP}\Bigl(\sum_k \alpha_k T^k_\nu(\lambda), \ \ell k(\lambda, \lambda')\Bigr)\nonumber
+	L_\nu(\lambda, \bm{\alpha}, \ell) \ = \  \underbrace{\ell \ \sum_{k=1}^{N_T} \alpha_k\ T_\nu^k(\lambda)}_{\rm templates} + \ \underbrace{ \ell \ R_\nu(\lambda)}_{\rm residuals} \ \ \sim \ \ \mathcal{GP}\Bigl(\ell \ \sum_k \alpha_k T^k_\nu(\lambda), \ \ell \ell' \ k(\lambda, \lambda')\Bigr), \label{eq:sedmodel},
 }
 with $\bm{\alpha}=(\alpha_1, \dots, \alpha_{N_T})$ the template coefficients. 
 $\ell$ is the absolute luminosity and allows us to scale the residuals for each galaxy. 
+As in the flux likelihood, we will fix $\ell$ to an estimate $\hat{\ell} = 4\pi D^2(z) g^\mathrm{AB} C_b (1+z)^{-1} F_{i, \mathrm{ref}}$ with $F_{i, \mathrm{ref}}$ the flux of the training galaxy in one of the bands, taken as reference.
+We found that this approximation is sufficient for making sure the residuals are correctly normalized and have roughly the same amplitude for all training galaxies. 
+Without the extra factor $\ell$, the prior on the Gaussian Process residuals (\eg its variance) would affect low-luminosity galaxies more than high-luminosity ones.
 
-Propagating this model in \equref{fluxredshift}, we find that the photometric flux is also a Gaussian Process,
+Inserting the model of \equref{eq:sedmodel} in \equref{fluxredshift}, we find that the photometric fluxes are also a Gaussian Process,
 \equ{
-	F_b(z, \bm{\alpha}, \ell) \sim \ \mathcal{GP}\Bigl( \mu^F(b, z, \bm{\alpha}), k^F(b,b',z,z',\ell,\ell')\Bigr).
+	F_b(z, \bm{\alpha}, \ell) \sim \ \mathcal{GP}\Bigl( \mu^F(b, z, \bm{\alpha}), \ k^F(b,b',z,z',\ell,\ell')\Bigr). \label{eq:fluxgp}
 	}
-Note that we will marginalize over the $\bm{\alpha}$ coefficients and use a point estimate for $\ell$, as explained below.
-
 It is straightforward to show that the mean function is
 \eqn{
-	\mu^F(b, z, \bm{\alpha}) = \frac{(1+z)^2 }{4\pi D^2(z)g^\mathrm{AB} C_b}  \sum_{k=1}^{N_T} \alpha_k \int_0^\infty T_\nu^k(\lambda) \ V_b\Bigl((1+z)\lambda\Bigr) \ {\d\lambda}   =   \sum_{k=1}^{N_T}  \alpha_k F^k_b(z) 
+	\mu^F(b, z, \bm{\alpha}) &=& \frac{\ell (1+z)^2 }{4\pi D^2(z)g^\mathrm{AB} C_b}  \sum_{k=1}^{N_T} \alpha_k \int_0^\infty T_\nu^k(\lambda) \ V_b\Bigl((1+z)\lambda\Bigr) \ {\d\lambda}   \\ 
+	&=&   \ell \sum_{k=1}^{N_T}  \alpha_k F^k_b(z) . \label{eq:gpmeanfct}
 }
-and does not depend on type or photometric band, where $F^k_b(z)$ is the $b$-th flux of the $k$-th template at redshift $z$.
-The covariance function or kernel is
-\eqn{
-	k^F(b,b',z,z',\ell,\ell') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2  \frac{\ell\ell'}{C_bC_{b'}} \int_0^\infty \ V_b\Bigl((1+z)\lambda\Bigr) \ V_{b'}\Bigl((1+z')\lambda'\Bigr) \ k(\lambda, \lambda') \ \d\lambda\d\lambda' 
-}.
+ $F^k_b(z)$ denotes the $b$-th flux of the $k$-th template at redshift $z$, which can be pre-computed once the initial library of templates is chosen. 
+In fact, this is the cornerstone of standard template fitting methods, which would simply use $F^k_b(z)$ in the flux likelihood function.
 
-This is the generic kernel for fluxes given a kernel in SED space. 
-In general, it must be numerically evaluated, which can be challenging. 
-But for some specific choices of $k$ and representations of $V_b$, close analytical forms will exist. 
+The covariance function or kernel of the Gaussian Process is
+\eqn{
+	k^F(b,b',z,z',\ell,\ell') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2  \frac{\ell\ell'}{C_bC_{b'}} \int_0^\infty \ V_b\Bigl((1+z)\lambda\Bigr) \ V_{b'}\Bigl((1+z')\lambda'\Bigr) \ k(\lambda, \lambda') \ \d\lambda\d\lambda' . \label{eq:gpgenkernel} 
+}
+This is the general form for a kernel acting on fluxes as a function of band and redshift, corresponding to the conversion of a kernel $k(\lambda, \lambda')$ living in SED space. 
+While the mean function of \equref{eq:gpmeanfct} is trivial since $F^k_b(z)$ is pre-computed, the kernel of \equref{eq:gpgenkernel} must be numerically evaluated since the photometric filter responses are usually experimentally measured and tabulated. 
+This calculation is challenging since it must be performed for all pairs of fluxes and all training galaxies. 
+But for some specific choices of $k$ and representations of $V_b$, closed analytical forms of $k^F$ will exist. 
 We give such form in \appref{sec:rbfgp}, which we use in the remainder of this paper. 
-It is based on a radial basis kernel $k\propto \exp(-\beta(\lambda-\lambda')^2)$ and approximations of the filter responses with Gaussian mixtures.
+It is based on a radial basis function (RBF) kernel $k\propto \exp(-\beta(\lambda-\lambda')^2)$ and approximations of the filter responses with Gaussian mixtures.
+In this case, one can exactly compute $k^F$ for any inputs without resorting to numerical integration methods.
 
 Now that we derived a suitable Gaussian Process, we can write $p\bigl( \mat{F}(z,t_i) | z_i, \hat{\mat{F}}_i\bigr)$ as the flux predictions when fitting the $i$-th training set galaxy. 
-This is a standard Gaussian Process prediction, where we marginalize over the $\bm{\alpha}$ since with Gaussian priors then can be included in the GP. 
-Both the prediction and marginalization procedures and standard and follow REF. 
-We include the exact equations we solve in \appref{sec:gppred} for completeness.
+It is a multivariate Gaussian, a standard Gaussian Process prediction, \eg following the techniques described in Ref.~\cite{Rasmussen:2005}. 
+For completeness we provide its full form as well as further technical details in \appref{sec:gppred}.
 
-\begin{figure}
-\caption{GP applied to one simulated galaxy, compared to real spectrum}
-\label{fig:simgpfluxes}
-\end{figure}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Discussion}
+\subsection{Discussion}\label{sec:discussion}
 
-We first discuss the assumptions and limitations of our method.
+Our method can be summarized as follows.
+The posterior distribution on the redshift of a target galaxy is obtained via a pairwise comparison with training galaxies, following \equref{eq:redshiftposterior}. 
+In other words, the probability of the training galaxy being at some redshift $z$ is a sum over the training galaxies (in fact, it is a Gaussian Mixture model).
+For each training-target pair, we evaluate \equref{eq:traintarpair}, the probability that the training and the target galaxies actually have the same SED, but they may simply be at different redshifts.
+The predictions for the fluxes of the training galaxy at $z$ are calculated via a Gaussian Process. 
+Finally, the likelihood function compares the noisy fluxes of the target with the model fluxes of the training galaxy, following \equref{eq:likelihood}.
+
+The method is flexible in multiple ways: the Gaussian Process has several parameters (see \appref{sec:gppred}), so do the luminosity and redshift priors appearing in \equrefs{eq:redshiftposterior}{eq:likelihood}.
+Those can all be optimized on the training data to improve the quality of the resulting redshift estimates according to various metrics of interest (\eg mean redshift, confidence intervals, etc).
+This will be presented in detail in \secref{sec:data} in the context of a specific data set.
+
+\smallskip
+We now discuss the assumptions and limitations of our method.
+\smallskip
 
 \paragraph{Flux biases} 
 We have assumed that the fluxes measurements are unbiased, and that their errors are Gaussian and correctly characterized.
-However, real flux measurements and their error estimates display small magnitude-, type- and redshift-dependent biases.
-Since this method is trained on real fluxes, it will absorb some of these biases. 
-In addition, it is straightforward to add (hyper)parameters describing such biases, and fit or marginalize for those while training or applying the method.
-In the data example below, we have included a parameter describing an extra flux error term to be added in quadrature to all flux errors.
+However, real flux measurements and their error estimates exhibit magnitude-, type- and redshift-dependent biases.
+Furthermore, photometric filter curves may be mischaracterized, which introduces extra biases.
+Since this method is trained on real fluxes, it will be able to absorb some of these biases. 
+In addition, it is straightforward to add (hyper)parameters describing such biases.
+One can then fit or marginalize for those while training or applying the method.
+For example, in the demonstration of the next section we have included a parameter describing an extra flux error term added in quadrature to all flux errors.
 
 \paragraph{Negative flux predictions}
-In the description above, the latent SED and the fluxes are not constrained to be positive. 
-However, this is not really a problem since the flux will go negative in regimes where the SED is not constrained.
+In the description above, the latent SED and the fluxes are not formally constrained to be positive. 
+However, this is not really a problem since fluxes will go only negative in regimes where the SED is not constrained.
 The large errors will prevent those negative fluxes from having any effect on the results, since their contribution to the likelihood function is basically zero.
 
+\paragraph{Availability of templates} 
+The use of a template library in the SED model of \equref{eq:sedmodel} (or equivalently, using a non-zero mean function for the Gaussian Process) is not at all necessary.
+Gaussian Processes with only residuals could well be used to model the entire SED, which we have checked in  various experiments.
+This is because the posterior distributions obtained using a zero-mean Gaussian Process is non-zero.
+However, we find that including the template library in the mean function helps guiding the Gaussian Process and minimizing the amount of residuals needed to fit each training galaxy.
+
+\paragraph{Simple SED model}
+Our SED model is simple and assumes that the SEDs of all galaxies in the training and target data can be described by a linear mixture of templates with correction terms following a simple kernel.
+This kernel only includes broad, smooth corrections as well as lines at specific locations, all drawn from RBF kernels in wavelength space.
+While this model is very restrictive, it encompasses a large space of galaxy SEDs; we find that opting for smaller correlation lengths and more lines does not affect the quality of the results shown below.
+However, the model can easily be extended to more complicated forms: the mean function can include a larger library of templates, and the kernels could be improved in various ways. 
+In fact, both could be directly learned on real galaxy spectra, for example.
+
+\paragraph{Availability of redshifts} 
+At present our method requires photometric fluxes and spectroscopic redshifts for all training galaxies. 
+In future work it will be extended to support redshift errors. 
+
 \paragraph{Use of galaxy spectra}
-Our approach ignores the fact that for most training objects high(er) resolution spectroscopic measurements of $f_\nu$ are available, and that those could be used in the model. 
-Some methods explicitly rely on available spectroscopic measurements to construct a latent space of template SEDs and produce photometric redshifts.
-However, we decide to focus on photometric flux measurements and not to include high(er) resolution spectra for two reasons.
-First, real fluxes don't always easily relate to SEDs via \eqref{fluxredshift}, for example due to the way they are measured and because of the non-uniform distribution of the light emission in galaxies. 
-Having a data-driven model of the mapping between fluxes and SEDs as implemented in this method is a flexible way to overcome these issues.
-Second, in the future, training sets will consists of many band data.
+In its first incarnation, our approach does not exploit spectroscopic measurements of $f_\nu$ for the training galaxies, unlike methods such as K-correct \cite{Blanton:2007}.
+Those could be used in place of the latent SED model inferred by the Gaussian Process. 
+However, the mapping between measured photometric fluxes and spectroscopic SEDs can be complicated and not satisfy \equref{fluxredshift}, for example due to the way they are measured and to the complicated spatial profile of the light emission in galaxies. 
+For this reason, we currently focus on using photometric flux measurements only.
 
-\bigskip
-We now turn to the advantages of the novel approach presented here.
+\smallskip
+We now turn to the advantages of our novel approach.
+\smallskip
 
-\paragraph{Heterogeneous, incomplete training sets} 
-Use heterogeneous data sets
+\paragraph{Data-driven, physical modelling of photometric fluxes}
+The approach described here is similar to doing machine learning constrained by the known physics of the problem: the effect of redshifts on galaxy SEDs.
+In other words, correlations between fluxes at various redshifts and bands are predictable since fluxes are deterministically connected to SEDs.
+Most machine learning methods will ignore this and fit for redshifts and fluxes in the training data with extremely flexible functions.
+However, not all combinations of fluxes are allowed; in fact, given observations of a training galaxy, the space of possible fluxes at other redshifts and band is drastically reduced.
+Our method correctly incorporates this information because it implicitly (via the Gaussian Process) models SEDs and only produce fluxes that result from integrating those SEDs.
+Assuming there are no biases in the fluxes or the redshifts of the training galaxies (see remarks above), this is a provably correct scheme for constructing a data-driven model from the training data with an implicit system of templates.
 
-\paragraph{Machine learning with physical interpolation/extrapolation} 
-Correct interpolation scheme incorporating the physics of the problem. 
-
-\paragraph{Meaningful probabilities} 
-Producing real probability distributions and very robust PDFs
+\paragraph{Interpretable model and probabilities} 
+As obvious by our presentation of the method, it produces valid probability distributions regardless of the training or target galaxies under consideration, or the values of the various (hyper)parameters.
+This is a powerful property: the model is flexible, yet physical.
+It consists of SEDs (in fact, flux--redshift relations corresponding to SEDs) constructed from the measured fluxes and redshifts of the training galaxies.
+The probabilities this model provides for the redshifts of target galaxies are governed by a few equations and easily interpretable. 
+For instance, one can isolate the contribution of each training galaxy, which will be illustrated in the next section.
+Furthermore, the probabilities are correctly normalised; the marginalized likelihood or evidence can be calculated by integrating \equref{eq:redshiftposterior}. 
+This provides a measure of the goodness of the prediction for each target galaxy.
+One could consider a different training set and run standard Bayesian model comparison tests. 
 
 \paragraph{Flexible (hyper)parameters}
- Hyperparameters and weighting can be optimized without affecting the rightness of the model, to optimize any quantity of interest: PDF robustness, N(z), etc.
-
-\paragraph{New training data or use of other training sets}
- New training data can be added at virtually no cost. without 
+The various hyperparameters can be optimized to improve any metric of interest.
+Obvious metrics include the quality of the mean or MAP (peak) of the redshift posterior distribution of \equref{eq:redshiftposterior}, over the entire training set or an external validation set.
+But less standard metrics could be adopted, such as the quality of the confidence intervals or the redshift distributions.
 
 \paragraph{Speed and storage}
- Massively parallel, very cheap recalculations of the PDF and no need to store them.
+When expanding the training set, the posterior distribution of each target galaxy can simply be updated by adding terms corresponding to the new training galaxies since \equref{eq:redshiftposterior} is linear.
+Of course, one may wish to re-optimize the hyperparameters of the method if the training set significantly changes. 
+Another powerful property resulting from \equref{eq:redshiftposterior} is the ability to truncate the sum and only keep the training galaxies that significantly contribute to the result.
+We find that this compression can be very efficient: typically, only a few (\ie a fraction of the full set) training galaxies contribute to the posterior distribution of each target galaxy.
+By remembering which ones, one can in fact quickly compute a very good approximation of the posterior distribution. 
+In fact, this one can also identify which training galaxies do not contribute to any targets and could be dropped from the training set without affecting the results.
+Finally, all operations, from the construction of GP models to the training-target pairwise comparisons, can be performed in parallel; only \equref{eq:redshiftposterior} requires an aggregation of the results.
+\todo{discuss LSST requirements}
+ 
+\paragraph{Heterogeneous, incomplete training sets} 
+One of the most important features of this approach is the ability to exploit heterogeneous data sets for the training set.
+This is because \eqref{eq:traintarpair} does not require the training and target galaxies to share properties such as photometric bands or noise.
+In other words, the Gaussian Process we constructed is agnostic to the actual bands and noise in both the training and the data: as long as the filter responses of all the bands considered are known, one can fit and predict any combination of interest.
+Of course, for any given training galaxy, the variance of the flux predictions as a function of redshift will strongly depend on the bands and noise under consideration. 
+For instance, the availability of a flux will inform the flux predictions in redder bands at higher redshift.
 
-
-
+\todo{say more + transition}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Demonstration on SDSS data}\label{sec:data}
 
+We now showcase the features and flexibility of the novel method on data. 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Setup}
 
-Description of data and GP setup/parameters.
-Priors, luminosities, likelihood, 
+We consider the G10/COSMOS data \citep{Davies:2015}, publicly available at \url{http://cutout.icrar.org/G10/dataRelease.php}. 
+It is the latest compilation of data covering the COSMOS field, which involves a rich set of deep photometric observations as well as a spectroscopically confirmed objects.
+We do not consider the reprocessed version of those data \citep{Andrews:2016}; instead we consider the version of Ref.~\citep{Davies:2015}, where flux measurements from various surveys are collated without further adjustments or reprocessing.
+We make this choice to demonstrate that we can deal with the challenging systematics arising from combining fluxes from various sources, thus with heterogeneous calibration and noise properties.
+Few surveys have the opportunity to fully reprocess existing data to produce consistent flux measurements.  
+We consider the subset of objects with good spectroscopic redshifts, which are mostly from the SDSS, VVDS, and PRIMUS surveys, as detailed in Ref.~\citep{Davies:2015}.
+We select 9,930 training and 8,704 target galaxies, according to the criteria below.
+
+For the training set, we consider the following bands, shown in \figref{fig:filters}: B V G R I Z (SUBARU broad bands), NB816 IA427 IA464 IA505 IA574 IA709 IA827 NB711 IA484 IA527 IA624 IA679 IA738 IA767  (SUBARU intermediate and narrow bands), and F814W (HST). 
+We require all fluxes to have a signal-to-noise greater than 2. 
+For the validation/target set, we only take the five SDSS broad bands $ugriz$
+We require the $r$ and $i$ fluxes to have a signal-to-noise greater than 5.
+We apply extinction corrections to all fluxes, according to the $E(B-V)$ coefficients from Ref.~\citep{Schlegel:1998} and the conversion factors shown in Ref.~\citep{Andrews:2016}.
+The objects passing the criteria of both the training and target sets are put in the target set, which leaves us with a balanced 9,930 objects for training and 8,704 for validation.
 
 \begin{figure}
-\caption{GP applied to one galaxy, with predictions for DECALS}
+\centering\begin{tabular}{cc}
+\begin{minipage}{8cm}\includegraphics[width=8cm]{filters_training.pdf}\end{minipage}&
+\begin{minipage}{8cm}\includegraphics[width=8cm]{filters_target.pdf}\end{minipage}
+\end{tabular}
+\caption{Photometric filters used for the data demonstration.}
+\label{fig:filters}
 \end{figure}
 
 \begin{figure}
-\caption{Scatter plot of zmean vs zspec for CWW and GP}
+\centering
+\includegraphics[width=16cm]{training_vs_target.pdf}
+\caption{Distributions of the redshifts and $i$ band signal-to-noise ratios for the galaxies in the training and target sets considered here.}
+\label{fig:training_vs_target}
 \end{figure}
+
+The properties of the training and target data are drastically different.
+Not only the filter sets are different, as shown in \figref{fig:filters}, but the redshift distribution of the training data is deeper and more structured than the target.
+This is due to the cuts described above, as demonstrated in \figref{fig:training_vs_target} which also shows that the signal-to-noise in the $i$ band .
+The training set is significantly deeper and more diverse and heterogeneous than the target, due to the complicated cuts and selection effects on 21 deep bands compared to the noisier 5 SDSS bands.
+Yet, we should be able to use the deeper training data to construct a flexible model and infer photometric redshifts for the target.
+Note that we also make use of the SDSS bands in the training set for cross-validation and optimization purposes, as described below.
+
+We will run our new method and compare it to a standard template fitting approach.
+In both cases, we use the 8 classic SED templates from the CWW library \citep{Coleman:1980ej, Benitez:1998br}. 
+They are the central ingredient to standard template fitting, while in our method they form the mean function of the Gaussian Process. 
+We adopt the likelihood function of \equref{eq:likelihood} in both cases.
+
+We show the standard template fitting as a point of comparison roughly representative of this class of \photoz estimators.
+Our method is radically different in the number of templates, the greater flexibility priors/parameters, and the inclusion of theoretical errors associated with each template.
+We now discuss a few technical details relevant to our use of the standard template fitting.
+First, the likelihood function does not include theoretical uncertainties. 
+Second, we marginalize over $\ell$ with a flat prior, as commonly done with such \photoz methods to focus on color information.
+Third, for the 8 templates of the CWW library we use priors of the form $p(z,t_i)= p(z|t_i)p(t_i) = ({a_i}/{b_i} ) z \exp(-{z^2}/{2 b_i} ) $ for $i=1, \cdots, 8$. 
+The coefficients are calibrated on the training following \citep{Coleman:1980ej, Benitez:1998br}, and we find
+$\{a_i\} = \{ 0.23, 0.26, 0.32, 0.065, 0.016, 0.067, 0.021, 0.022 \}$ and $\{b_i\} = \{ 0.35, 0.36, 0.37, 0.51, 1.6, 0.38, 0.85, 1.3\}$, for the templates ordered from redder to bluer, \ie spiral and elliptical to irregular galaxies.
+
+We now describe more specific details of the novel method and how it is applied to the COSMOS/G10 data.
+In the SED model of \equref{eq:sedmodel}, we do not consider a linear mixture of templates, but a single best-fit template per training galaxy instead.
+It is obtained by performing standard template fitting and fixing $\alpha_k=0$ except for the best template found. 
+This speeds up the computation of the overall method, facilitates the interpretation of the results, and alleviates the need to specify priors for the $\alpha_k$ coefficients.
+
+For the redshift-type priors $p(z | t_i) \ p(t_i)$ we adopt a flat prior ($ p(t_i) = $constant) and a Gaussian prior around the spectroscopic redshift, $p(z | t_i) = \mathcal{N}(z-z_i; \sigma^2_z)$.
+The rationale is to only allow training galaxies to contribute to the redshift posterior distribution of target galaxies in a limited redshift range (\ie not all types can affect all redshifts).
+The (hyper)parameters of the method are: the parameters of the Gaussian Process (see \appref{sec:rbfgp}), the width of the luminosity and redshift prior $\sigma_\ell$ and $\sigma_z$,  and an extra fractional error which is added in quadrature to all flux errors to compensate for their underestimation if necessary.
+We set the later to $1\%$ for the SDSS bands, since those fluxes are known to be reliable at the $1\%$ level.
+
+We perform a rough grid search to find parameters that yield good results on the target.
+The metric we use is a "q-q" confidence interval: for each galaxy, we find the value of the redshift posterior distribution at the true redshift, and we then integrate the posterior distribution where it is lower than this value.
+The values of those integrals for a sample of objects should be uniformly distribution in $[0, 1]$, indicating that the confidence intervals arising from the redshift posterior are statistically correct. 
+We find that the following values give reasonably good results: 
+$\sigma_z = 0.5$, 
+$\sigma_\ell = 0.5$,
+$\alpha_C= 1.5e3$,
+$V_C= 0.1$,
+$\alpha_L: 1.0e2$,
+$V_L= 0.1$,
+$\{\mu_i\} = \{ 6500, 5002.26, 3732.22 \}$,
+$\{\sigma_i\} = \{ 20.0, 20.0, 20.0 \}$.
+We expect that the results presented below could be improved by performing a more detailed optimization of the parameters and the use of more complicated priors, for example in terms of redshift and luminosity.
+
+
+
+\begin{figure}
+\includegraphics[width=12cm]{traininggalaxy_fnulambda-3.pdf}
+\caption{SED model constructed for the training galaxy. We show the photometric fluxes for the filters used in the training (blue circles) and target (red squares) sets. The black line is the best-fit template from our SED library. The blue bands show the 1-sigma errors of space of SEDs constructed with our new technique. Note that this fit in SED space is only implicitly performed by our Gaussian Process -- we show it explicitly here for illustration purposes. The model is only existing in flux--redshift space, as in \figref{fig:traininggalaxy_fluxredshiftmodel}, and it is equivalent to constraining SEDs as we are showing here.}
+\label{fig:traininggalaxy_fnulambda}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=18cm, trim = 2cm 0cm 2cm 0cm, clip]{traininggalaxy_fluxredshiftmodel-3.pdf}
+\caption{flux--redshift model constructed for the training galaxy of  shown in \figref{fig:training_vs_target} obtained by applying our Gaussian Process to SUBARU bands (blue dots). The predictions for SDSS bands (red squares) are also shown. The error bars on the fluxes are very small.}
+\label{fig:traininggalaxy_fluxredshiftmodel}
+\end{figure} 
+
+\begin{figure}
+\includegraphics[width=16cm, trim = 0cm 0.6cm 0cm 0cm, clip]{data-pdfs-6.pdf}
+\includegraphics[width=16cm, trim = 0cm 0.6cm 0cm 0cm, clip]{data-pdfs-32.pdf}
+\caption{GP applied to one galaxy with SUBARU bands, with predictions for SDSS bands}
+\label{fig:datapdfs}
+\end{figure}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Results}
 
+We first sh
+\figref{fig:traininggalaxy_fnulambda}
 
+\figref{fig:traininggalaxy_fluxredshiftmodel}
 
+\figref{fig:datapdfs}
+\figref{fig:redshiftpdfs}
+
+\figref{fig:zmean_vs_zspec}
+\figref{fig:cipdfs}
+Outliers are probably due to very different templates or wrong fluxes.
+
+PDFs  look drastically different. Due to richness of template space, proper theoretical errors, and also more flexible model and priors.
+
+Significant difference:
+It was proposed to artificially inflate errors of standard template fitting to improve the quality of the confidence intervals.
+In our method, we optimize physically meaningful parameters to improve the confidence intervals.
+
+\begin{figure}
+\includegraphics[width=18cm]{redshiftpdfs.pdf}
+\caption{Posterior distributions on the redshifts of a few target galaxies, using standard template fitting and the new method.}
+\label{fig:redshiftpdfs}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=16cm, trim = 1.8cm 0cm 3.5cm 0cm, clip]{zmean_vs_zspec.pdf}
+\caption{Scatter plot of spectroscopic redshifts with the maximum a posterior photometric redshifts (MAP, peak of the posteriors distribution) derived with standard template fitting and the new method. The colors show the value of the posterior distribution evaluated at the spectroscopic redshift, normalized to 1.}
+\label{fig:zmean_vs_zspec}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=18cm]{cipdfs.pdf}
+\caption{Scatter plot of zmean vs zspec for CWW and GP}
+\label{fig:cipdfs}
+\end{figure}
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion}\label{sec:concl}
 
-Quasars
+Inaccurate photometric redshift estimation is the dominant source of statistical and systematic errors in modern photometric galaxy survey analyses.
+This is due to the inability of current \photoz algorithms to model the flux--redshift relation in a flexible, data-driven fashion (\eg via machine learning) and simultaneously exploit our knowledge of the underlying physics (as encoded in template fitting methods), \ie that physical flux--redshift relations correspond to SEDs being redshifted and projected into photometric band-passes. 
+Furthermore, machine learning methods must be trained of homogeneous, representative data set with the same band-passes, noise and redshift distributions as the target survey of interest, while SED models for template fitting are usually constructed from low-redshift data.
+Thus, standard methods cannot fully take advantage of the wealth of diverse, deep spectroscopic or many-band photometric surveys in existence.
 
-{Classification}
-Star-quasar and star-galaxy separation
+Smaller set of templates are good enough, mostly need continuum shape and lines
+Low dimensional space of templates exists. Could learn n templates are errors. But easier to do one template per galaxy.
 
-{Mapping to physical models}
-2D Gaussian process for full template model interpolation.
-Mapping onto SPS models.
+To resolve those issues, we presented a new method combining the advantages of machine learning and template fitting and capable of using heterogeneous training data.
+The training data can consist of a combination of spectroscopic and many-band photometric data, with arbitrary distributions of flux noise, galaxy types, and redshifts.
+Our method constructs an ensemble of flux-redshift tracks compatible with the noisy fluxes and spectroscopic redshifts of those training galaxies, with the tracks being constrained to correspond to SEDs  observed through photometric band-passes.
+Thus, it self-consistently accounts for heterogeneity of the noise or redshift distributions, and also missing bands, thanks to the modelling of photometric band-passes and latent SEDs. 
+It is made computationally efficient via a Gaussian process for fitting each training galaxy with an ensemble of flux--redshift models and performing a fast comparison with target galaxies. 
+This approach is similar to the K-correct model \citep{Blanton:2007}, but constructed from deep heterogeneous data, including model uncertainties, and does not require to explicitly construct the set of SEDs.
 
-Data augmentation for machine learning
+Our novel approach is the first capable of fully exploiting the setup in which ongoing galaxy surveys operate: the typical training data is highly heterogeneous and extracted from small regions of the survey where more photometric bands and spectroscopic redshifts available, often from external data. 
+Our method is agnostic to the uniformity of the training set.
+We demonstrated this features on the G10/COSMOS data by training on 10,000 galaxies with 21 deep photometric bands and inferring redshifts for 10,000 galaxies with only 5 noisier SDSS bands available. 
+The resulting redshift posterior distributions are statistically robust, as quantified by maximum a-posteriori values and confidence intervals. 
+In theory, this method should outperform both template fitting and machine learning methods since it has the advantages of both, while being more flexible and capable of exploiting more data. 
+However, our tests were on a relatively small data set with modest statistical power, and we haven't pushed the flexibility of the method, especially in terms of optimization of the hyperparameters.
+Next, we will perform more realistic tests on a state of the art data set such as the DES, including a detailed comparison to optimized template fitting and machine learning methods.
+
+A number of direct extensions of the method are possible, as discussed in \secref{sec:discussion}, and we intend to explore some of those in future work as well.
+In particular, one could adopt a more realistic latent SED model, for example including more complicated modelling of the continua and lines, possibly mapping onto physical parameters such as star formation histories.
+Finally, applying the methodology to quasars is straightforward, especially given the large amount of deep training data available, although other complications may arise, such as time variability and strong degeneracies in color-redshift space. 
+\todo{highlight applications better}
+\todo{get rest frame colors}
+Finally, the method presented here can be used for several purposes beyond \photoz estimation. 
+It can be seen as a fast way to fit the noisy flux measurements of an object with a latent SED model and predict fluxes in other band-passes.
+Thus, it could be used to predict missing bands, or to run cross-validation and quantify the self-consistency between the fluxes measured for an object with respect to an underlying SED model.
+Going even further, this could be used to learn filter responses (or correcting existing descriptions) by imposing that the fluxes of a set of galaxies must be self-consistent, for example.
+In addition, the set of flux--redshift tracks can be seen as a rich data-driven model of galaxy fluxes and redshifts. 
+By drawing objects from this model and adequate redshift, noise or magnitude distributions, one can create realistic galaxy fluxes, which in fact contain both statistical and systematic errors from real data.
+This could be used to populate galaxy mocks, which are currently not realistic enough to reproduce the population of galaxies observed in real data.
+Furthermore, one could use this model to perform data augmentation, for example to enrich the training sets used in standard machine learning methods; instead of resorting to significantly up-weighting under-represented (\eg high-redshift) objects, which is typically unstable, one could simply enrich the training set and adjust it to be representative of the target survey. 
+We intend to explore these diverse applications in future work.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\footnotesize{
-  \bibliographystyle{mn2e_eprint}
-\providecommand{\eprint}[1]{\href{http://arxiv.org/abs/#1}{arXiv:#1}}	
-  \bibliography{bib}
-}
-\normalsize
+\section{Acknowledgements}
 
+We thank Hiranya Peiris, Daniel Mortlock, Josh Speagle, Risa Wechsler, Michael Blanton, Alex I. Malz, Jeffrey Newman, Robert Lupton, Michael Strauss, and Peter Melchior for useful conversations.
 
+BL was supported by NASA through the Einstein Postdoctoral Fellowship (award number PF6-170154) and by the Simons Foundation (Junior Fellowship, award number 361058).
+\bl{Add Hogg's acknowledgements}
+
+The G10/COSMOS redshift catalogue, photometric catalogue and cutout tool uses data acquired as part of the Cosmic Evolution Survey (COSMOS) project and spectra from observations made with ESO Telescopes at the La Silla or Paranal Observatories under programme ID 175.A-0839. The G10 cutout tool is hosted and maintained by funding from the International Centre for Radio Astronomy Research (ICRAR) at the University of Western Australia. Full details of the data, observation and catalogues can be found in Davies et al. (2015) and Andrews et al. (2016), or on the G10/COSMOS website: \url{http://cutout.icrar.org/G10/dataRelease.php}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliography{bib}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Our GP implementation and SED prior}\label{sec:rbfgp}
 
-We model the relative energy density of luminosity of galaxies of type $t$ as a function of wavelength $\lambda$ as
-\equ{
-	R_\nu(\lambda) = C(\lambda) + \sum_{l} A(\lambda) \gaussian(\lambda, \lambda_l, \sigma_l)
-}
-where $C$ represent the continuum and $A$ the amplitude of Gaussian emission or absorption lines of fixed location and size $ \lambda_l, \sigma_l$ with $l = 1, \ldots, {\rm N}_{\rm lines}$. Both $C$ and $A$ are modeled as Gaussian Processes with factorized kernels
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Flux likelihood with model uncertainties and scaling parameters}\label{app:fluxlikelihood}
+
+Our flux model likelihood with the model predictions reads
 \eqn{
-	C(\lambda) \sim \GP\left(0, k_C(\lambda, \lambda')\right)\\
-	A(\lambda) \sim \GP\left(0, k_A(\lambda, \lambda')\right)
+	p\bigl(\hat{\mat{F}}| \mat{F}(z, t_i)\bigr) &=& \int \d\ell \ p\bigl(\hat{\mat{F}}| \mat{F}(z, t_i), \ell \bigr) \ p\bigl(\ell | \mat{F}(z, t_i)\bigr)\\
+	&=& \int \d\ell \ \mathcal{N}\left( \hat{\mat{F}} - \ell\  \mat{F}(z, t_i); \mat{\Sigma}_{\hat{\mat{F}}} + \ell^2 \mat{\Sigma_{{\mat{F}}}}(z)  \right) \  \mathcal{N}(\hat{\ell}; \sigma_\ell).
+}
+Notice that both the mean and the variance are scaled by the unknown parameter $\ell$, to be marginalized over. 
+Unfortunately, for this reason there is no analytical solution to this marginalization, unlike for the case where only the mean is scaled.
+However, we do iterative the standard approach yields satisfactory results.
+In particular, we solve and iterate over the following system of equations, with a starting value $\hat{\ell}^2_\mathrm{MAP}(z)  = 0$:
+\eqn{
+	\mat{\Sigma}(z)&=& \mat{\Sigma}_{\hat{\mat{F}}} \ +\  \hat{\ell}^2_\mathrm{MAP}(z) \mat{\Sigma_{{\mat{F}}}}(z) \\
+	F_\mathrm{oo}(z) &=& \hat{\mat{F}}^T \mat{\Sigma}(z)^{-1} \hat{\mat{F}} \ +\  \hat{\ell}^2 / \sigma_\ell^2 \\
+	F_\mathrm{tt}(z) &=& \mat{F}(z, t_i)^T \mat{\Sigma}(z)^{-1} \mat{F}(z, t_i) \ +\  1/\sigma_\ell^2\\
+	F_\mathrm{to}(z) &=&  \mat{F}(z, t_i) \mat{\Sigma}(z)^{-1} \hat{\mat{F}} \ +\ \hat{\ell}/\sigma_\ell^2 \\
+	\hat{\ell}_\mathrm{MAP}(z) &=& F_\mathrm{to}(z)/F_\mathrm{tt}(z) 	
+} 
+It typically converges after one iteration. 
+We numerically checked for a range of realistic values of the signal and noise that the approximate solution $\hat{\ell}_\mathrm{MAP}$ is very close to the true maximum a-posteriori estimate of $\ell_\mathrm{MAP}$ which would be obtained numerically. 
+We also find that the following Gaussian approximation formula is a satisfying approximation for the $\ell$ marginalization of interest,
+\eqn{
+	p\bigl(\hat{\mat{F}}| \mat{F}(z, t_i)\bigr) & \approx & \left( (2\pi)^B F_\mathrm{tt}(z)\ \sigma_\ell^2\ \det\mat{\Sigma}(z) \right)^{-\frac{1}{2}} \exp \left( -\frac{1}{2}F_\mathrm{oo}(z) + \frac{1}{2}\frac{F^2_\mathrm{to}(z)}{F_\mathrm{tt}(z)} \right)
+}
+with $B$ the number of bands, \ie the size of $\hat{\mat{F}}$.
+These approximations are typically very good (better than 1\%) is regimes where $\mat{\Sigma}_{\hat{\mat{F}}}$ dominate over $\mat{\Sigma_{{\mat{F}}}}(z)$. 
+For all purposes of this work since is sufficient. 
+The regimes where the model uncertainties dominate the data uncertainties will lead to less constrained flux predictions, which typically contribute less to \photoz estimates.
+This, the quality of the approximation for the $\ell$ marginalization have a negligible effect.  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Our Gaussian Process flux--redshift kernel}\label{sec:rbfgp}
+
+In this appendix we derive a specific model for our latent SED space and the resulting Gaussian Process kernel in flux space of \equref{eq:fluxgp}.
+We model the SED residuals of \equref{eq:sedmodel}
+\equ{
+	R_\nu(\lambda) = C(\lambda) + \sum_{l} A(\lambda) \mathcal{N}(\lambda, \lambda_l, \sigma_l),
+}
+where $C$ represent the continuum and $A$ the amplitude of Gaussian emission or absorption lines of fixed location and size $ \lambda_l, \sigma_l$ with $l = 1, \ldots, {\rm N}_{\rm lines}$. 
+Both $C$ and $A$ are modeled as zero-mean Gaussian Processes with factorized kernels
+\eqn{
+	C(\lambda) \sim \GP\left(0, k^C(\lambda, \lambda')\right)\\
+	A(\lambda) \sim \GP\left(0, k^A(\lambda, \lambda')\right)
 }
 If one further assumes that $C$ and $A$ are uncorrelated, then 
 \eqn{
-	R_\nu(\lambda) \sim \GP\left(0, K_R(\lambda, \lambda')\right)
+	R_\nu(\lambda) \sim \GP\left(0, k^R(\lambda, \lambda')\right)
 }
 with 
 \eqn{
-	k_R(\lambda, \lambda') = K_C(\lambda, \lambda') + k^A(\lambda, \lambda')\sum_{l} \gaussian(\lambda, \lambda_l, \sigma_l) \gaussian(\lambda', \lambda_l, \sigma_l)
+	k^R(\lambda, \lambda') = k^C(\lambda, \lambda') + k^A(\lambda, \lambda')\sum_{l} \mathcal{N}(\lambda-\lambda_l;\sigma_l) \ \mathcal{N}(\lambda'-\lambda_l; \sigma_l)
 	}
-assuming that the various lines $\gaussian(\lambda, \lambda_l, \sigma_l)$ don't overlap significantly so that cross terms can be neglected. All kernels are assumed to be a Gaussian, sometimes called Radial Basis Function (RBF) in the Gaussian Process litterature,
+assuming that the various lines $\mathcal{N}(\lambda, \lambda_l, \sigma_l)$ don't overlap significantly so that cross terms can be neglected. 
+Those assumptions could be relaxed but greatly simplify the calculations and have a small effect on the resulting fluxes in the case of broad photometric bands.
+
+We now consider the specific case of all kernels being Gaussian, sometimes called Radial Basis Function (RBF) in the Gaussian Process litterature,
 \eqn{
-	K_C(\lambda, \lambda') &=&  V_C\  \mathcal{N}\left(\lambda, \lambda', {\alpha}_C\right) \\
-	K_L(\lambda, \lambda') &=&  V_L\ \mathcal{N}\left(\lambda, \lambda', {\alpha}_L\right)
+	k^C(\lambda, \lambda') &=&  V_C\  \mathcal{N}\left(\lambda - \lambda'; {\alpha}_C\right) \\
+	k^L(\lambda, \lambda') &=&  V_L\ \mathcal{N}\left(\lambda - \lambda'; {\alpha}_L\right)
 }
 
 We approximate the rescaled filters $V_b(\lambda) = W_b(\lambda)/\lambda$ as a sum of Gaussian distributions,
 \eqn{
-	V_b(\lambda) = \sum_{i} a_{i}\mathcal{N}(\lambda,\mu_i,\sigma_i) \quad\quad  V_{b'}(\lambda) = \sum_{i'} a_{i'}\mathcal{N}(\lambda,\mu_{i'},\sigma_{i'})
+	V_b(\lambda) = \sum_{i} a_{i}\mathcal{N}(\lambda - \mu_i;\sigma_i) \quad\quad  V_{b'}(\lambda) = \sum_{i'} a_{i'}\mathcal{N}(\lambda - \mu_{i'}; \sigma_{i'})
 }
 We drop the secondary $b$ dependency below, but it should be understood that the $i$ and $j$ indices below depend on each band.
-The kernel for our flux-redshift Gaussian Process is
+The kernel for our flux--redshift Gaussian Process of \equref{eq:fluxgp} is
 \eqn{
-	k(b,b',z,z',\ell,\ell') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2 \frac{\ell \ell'}{C_bC_{b'}} \nonumber \\
-	  \times \ \sum_{i}\sum_{i'} a_{i} a_{i'} &&\hspace*{-5mm} \left( 2\pi\sigma_{i}\sigma_{i'} V_C\ K_C(z,z',b,b',i,i') + V_L \ \sum_{l}\sum_{l'} K_L(z,z',b,b',i,i',l,l')\right)
+	k^F(b,b',z,z',\ell,\ell') &=& \left( \frac{ (1+z)(1+z') }{4\pi D(z) D(z') g^\mathrm{AB}} \right)^2 \frac{\ell \ell'}{C_bC_{b'}} \nonumber \\
+	  \times \ \sum_{i}\sum_{i'} a_{i} a_{i'} &&\hspace*{-5mm} \left( 2\pi\sigma_{i}\sigma_{i'} V_C\ k^C(z,z',b,b',i,i') + V_L \ \sum_{l}\sum_{l'} k^L(z,z',b,b',i,i',l,l')\right)\label{eq:actualkernel}.
 }
-where the continuum kernel is
+The contribution from the continuum is
 \eqn{
-	K_C(z,z',b,b',i,i') = \frac{{\alpha}_C}{\sigma_{ii'}} \mathcal{N}\left( \mu_{i}(1+z'), \mu_{i'}(1+z), \sigma_{ii'}\right)
+	k^C(z,z',b,b',i,i') = \frac{{\alpha}_C}{\sigma_{ii'}} \mathcal{N}\left( \mu_{i}(1+z') - \mu_{i'}(1+z); \sigma_{ii'}\right)
 }	
 with
 \equ{
 	\sigma_{ii'}^2 \ =\ \sigma_{i}^2(1+z')^2 + \sigma_{i'}^2(1+z)^2 + {\alpha}_C^2(1+z)^2(1+z')^2
 }
-and the line kernel is
+and the contribution from lines kernel is
 \eqn{
-	K_L(z,z',b,b',i,i',l,l') \ = \  \mathcal{N}\left( \mu_{i}, \mu_{l}(1+z), \sigma_{i}\right) \ \mathcal{N}\left( \mu_{i'}, \mu_{l'}(1+z'), \sigma_{i}\right) \ \mathcal{N}\left( \mu_{l}, \mu_{l'}, {\alpha_L}\right)
+	k^L(z,z',b,b',i,i',l,l') \ = \  \mathcal{N}\left( \mu_{i} - \mu_{l}(1+z); \sigma_{i}\right) \ \mathcal{N}\left( \mu_{i'}-\mu_{l'}(1+z'); \sigma_{i}\right) \ \mathcal{N}\left( \mu_{l}-  \mu_{l'}; {\alpha_L}\right)
 }	
 
-Note that the kernel is non-stationary.
-
-Finally, for the type dependence of the mean function, we set $\alpha(t) = \alpha_0 \ t$. \todo{Explain rationale}.
-
-\todo{Describe hyperparameters}
-
-So our full vector of hyperparameters is $\bm{\alpha} = (\alpha_0, \alpha_t, V_L,  \alpha_L, V_C, \alpha_C)$
-
+So our kernel is described with parameters $(V_L,  \alpha_L, V_C, \alpha_C)$ controlling the variance and smoothness of the continuum and line residuals. Recall that the filters and the lines are described as Gaussian mixtures, assumed to be known (although they could be set as parameters and also inferred from the data).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{GP predictions}\label{sec:gppred}
 
-Start with assumptions, input data, output prediction on a grid, priors. Describe vectors one by one.
-Secondly, we use a multivariate Gaussian prior on the template coefficients, $p(\bm{\alpha}) = \mathcal{N}(\vec{b}, \mat{B})$. For the inputs and outputs variables, we use the same notation as Rasmusssen and Williams. For this purpose, we define the following vectors and matrices:
-\eqn{
-	\mat{X} &=&  \\
-	\mat{X^*} &=& \\
-	\vec{y} &=& \\
-	\vec{y}^* &=& \\
-	\mat{K} &=& \\ 
-	\mat{K}_y &=& \\
-	\mat{K}^* &=& \\
-	\mat{K}^{**} &=& \\
-	\bm{\beta}* &=& \\
-	\mat{H} &=& \\
-	\mat{R} &=& 
-}
+As detailed in the main text, we construct one Gaussian Process per training galaxy, and using noisy flux measurements and the spectroscopic redshift we make model predictions for other fluxes at different redshifts, via \equref{eq:multivariategaussianlike}. 
+To simplify the notation we drop the subscript $i$ from the main text; otherwise it should be added to all the variables below.
+Specifically, the training galaxy has (spectroscopic) redshift $z$ and noisy photometric fluxes $\hat{\mat{F}} = (\cdots, \hat{F}_{b_j}, \cdots)$ with $j=1, \dots, B$ with $B$ the number of observed bands and $b_j$ the labels of the bands. 
+The covariance of these measured fluxes is $\mat{\Sigma}_{\hat{\mat{F}}}$, and $\hat{\ell}$ is the estimated absolute luminosity (see main text for details).
 
-\eqn{
-	p( F_b(z, \ell) | z_i, \hat{\mat{F}}_i, \ell_i ) =  \mathcal{N}(\bar{F}_b(z), k(\vec{x}^*,\vec{x}^*)) \\ 
-	\bar{f} \ =\  k(\vec{x}^*,\vec{x})[k(\vec{x},\vec{x}) + \sigma I]^{-1} \vec{y} = \sum_i \alpha_i(y_i) k(x_i,\vec{x}^*)
-}
+We will predict noiseless fluxes for the same training galaxy at a different redshift $z^*$ and at absolute luminosity $\ell^*$. 
+We will use ${\mat{F}}^* = (\cdots, {F}^*_{b_k}, \cdots)$ with $k=1, \dots, B^*$ with $B^*$ the number of predicted bands. 
+One of the advantages of our approach is that it does not require the sets of bands $\{ b_j \}_{j=1, \dots, B}$ and $\{ b_k \}_{k=1, \dots, B^*}$ to match; we can make predictions for arbitrary bands using any set of measured bands as long as the filter responses are perfectly known. Note that this could be relaxed by inferring corrections to the filter responses directly from the data within our framework.
 
+We will follow the language of Gaussian Processes and use three input dimensions (luminosity $\ell$, band $b$, and redshift $z$) and one output dimension (photometric flux). Note that the second input dimension takes discrete values in the set of possible bands under consideration (the union of all possible bands for all training and target galaxies).
+
+Thus, the Gaussian Process is trained to fit the vector $\hat{\mat{F}}$ of size $B \times 1$ given the input matrix $\mat{X}$ of size $B \times 3$, with the $j$th row being the 3-element vector
+\eqn{
+	\mat{X}_j &=& (b_j,\ z,\ \hat{\ell}).
+}
+Similarly, we will make prediction for the vector ${\mat{F}}^*$ of size $B^*\times 1$ given the input matrix $\mat{X^*}$ of size $B^* \times 3$, with the $k$th row being the 3-element vector
+\eqn{
+	\mat{X}^*_k &=& (b_k^*, \ z^*, \ {\ell}^*) .
+}
+The prior on the noiseless model fluxes $\mat{F}$ (before observing the data $\hat{\mat{F}}$) reads
+\eqn{
+	p( \mat{F} | \mat{X} ) =  \mathcal{N}(\mu^F( \mat{X}) ; k^F(\mat{X},\mat{X})) 
+}
+and the posterior distribution on $\hat{\mat{F}}^*$ given measured $\hat{\mat{F}}$  is
+\eqn{
+	p( \hat{\mat{F}}^* | \mat{X}^*, \hat{\mat{F}}, \mat{X} ) =  \mathcal{N}({\mat{F}}^*; \mat{\Sigma}_{\mat{F}^*}) 
+}
+with mean and covariance
+\eqn{
+	\mat{F}^* &=& \mu^F(\mat{X}^*) \ + \ k^F(\mat{X}^*, \mat{X}) \ \bigl[ k^F(\mat{X},\mat{X})+ \mat{\Sigma}_{\hat{\mat{F}}} \bigr]^{-1} \bigl( \hat{\mat{F}} - \mu^F( \mat{X}) \bigr) \\
+	\mat{\Sigma_{{\mat{F}}}^*}&=&  k^F(\mat{X}^*, \mat{X}^*) \ -\ k^F(\mat{X}^*, \mat{X}) \ \bigl[k^F(\mat{X}, \mat{X}) + \mat{\Sigma}_{\hat{\mat{F}}} \bigr]^{-1} k^F(\mat{X}, \mat{X}^*).
+}
+In these equations, $\mu^F(\mat{X})$ and $\mu^F(\mat{X}^*)$ are $B \times 1$ and  $B^* \times 1$ vectors denoting the mean function of \equref{eq:gpmeanfct} evaluated at the inputs $\mat{X}$ and $\mat{X}^*$, respectively. 
+Similarly, $k^F(\mat{X}, \mat{X})$, $k^F(\mat{X}^*, \mat{X})$ and $k^F(\mat{X}^*, \mat{X}^*)$ denote the kernel of \equrefs{eq:gpgenkernel}{eq:actualkernel} evaluated at the inputs $\mat{X}$ and $\mat{X}^*$, and have size $B \times B$, $B^* \times B$, and $B^* \times B^*$, respectively.
+
+Reconnecting with the main text and \equref{eq:traintarpair}, $p\bigl( \mat{F}(z, t_i)| z_i, \hat{\mat{F}}_i\bigr)$  simply corresponds to $p( \hat{\mat{F}}^* | \mat{X}^*, \hat{\mat{F}}, \mat{X} )$, so that we can use $\mat{F}^*$ , $\mat{\Sigma_{{\mat{F}}}^*}$, $z^*$ and $\ell^*$ for the model predictions for the $i$th training galaxy in \equref{eq:multivariategaussianlike}.
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \end{document}
