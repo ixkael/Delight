@@ -76,7 +76,7 @@ For the second term, we will use a Gaussian Process,
 }
 which we will fit to the fluxes of the training galaxy $\{\hat{F}_b\}_i$ at its redshift $z_i$. Thus, $p\left( F_b(z,t_i) | z_i, \{\hat{F}_b\}_i\right)$ becomes a standard prediction for a Gaussian process with 2 input dimensions, redshift and photometric band (described by filter responses). 
 
-We want the mean function $\mu^F$ and the kernel $k^F$ to capture the expected correlations across redshift and bands resulting from the know setup and physics of the problem: the bands have known responses $\{ W_b(\lambda)\}$, and galaxy SEDs are redshifted according to \equref{fluxredshift}.  We model the latent, underlying SED of each training galaxy as a linear sum of templates $T^k_\nu(\lambda)$ (\eg taken from a standard template fitting method) and residuals that take the form of a  zero-mean Gaussian Process with kernel $k(\lambda, \lambda')$. Therefore, 
+We want the mean function $\mu^F$ and the kernel $k^F$ to capture the expected correlations across redshift and bands resulting from the known setup and physics of the problem: the bands have known responses $\{ W_b(\lambda)\}$, and galaxy SEDs are redshifted according to \equref{fluxredshift}.  We model the latent, underlying SED of each training galaxy as a linear sum of templates $T^k_\nu(\lambda)$ (\eg taken from a standard template fitting method) and residuals that take the form of a  zero-mean Gaussian Process with kernel $k(\lambda, \lambda')$. Therefore, 
 \eqn{
 	L_\nu(\lambda) = \underbrace{\sum_k \alpha_k T^k_\nu(\lambda)}_\mathrm{templates} + \underbrace{R_\nu(\lambda)}_\mathrm{residuals}  \sim \mathcal{GP}\Bigl(\sum_k \alpha_k T^k_\nu(\lambda), \ k(\lambda, \lambda')\Bigr)\nonumber
 	}
