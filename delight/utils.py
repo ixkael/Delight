@@ -76,9 +76,8 @@ def approx_flux_likelihood_multiobj(
         f_mod,  # no, nt, nf
         ell_hat,  # 1
         ell_var,  # 1
-        marginalizeEll=True,
-        normalized=True,
-        returnEllML=False):
+        returnChi2=False,
+        normalized=True):
 
     assert len(f_obs.shape) == 2
     assert len(f_obs_var.shape) == 2
@@ -94,16 +93,15 @@ def approx_flux_likelihood_multiobj(
     FOO = np.sum(f_obs_r**2 * invvar, axis=2)\
         + ell_hat**2 / ell_var  # no * nt
     sigma_det = np.prod(var, axis=2)
-    if returnEllML:
-        return FOT / FTT
     chi2 = FOO - FOT**2.0 / FTT  # no * nt
-    denom = 1
+    denom = np.sqrt(FTT)
     if normalized:
-        denom = denom * np.sqrt(sigma_det * (2*np.pi)**(nf+1) * ell_var)
-    if marginalizeEll:
-        denom = denom * np.sqrt(FTT / (2*np.pi))
+        denom *= np.sqrt(sigma_det * (2*np.pi)**nf * ell_var)
     like = np.exp(-0.5*chi2) / denom  # no * nt
-    return like
+    if returnChi2:
+        return chi2
+    else:
+        return like
 
 
 def dirichlet(alphas, rsize=1):
@@ -117,11 +115,12 @@ def approx_flux_likelihood(
         f_obs,  # nf
         f_obs_var,  # nf
         f_mod,  # nz, nt, nf
-        ell_hat,  # 1
-        ell_var,  # 1
+        ell_hat=1,  # 1 or nz, nt
+        ell_var=1e12,  # 1 or nz, nt
         f_mod_covar=None,  # nz, nt, nf (, nf)
         marginalizeEll=True,
         normalized=True,
+        returnChi2=False,
         returnEllML=False):
 
     assert len(f_obs.shape) == 1
@@ -129,37 +128,36 @@ def approx_flux_likelihood(
     assert len(f_mod.shape) == 3
     nz, nt, nf = f_mod.shape
     if f_mod_covar is not None:
-        assert len(f_mod_covar.shape) == 4 or len(f_mod_covar.shape) == 3
-    if f_mod_covar is not None and len(f_mod_covar.shape) == 4:
-        # TODO: implement this case
-        sigma = f_mod_covar + np.diag(f_obs_var)[None, None, :, :]
-        # nz, nt, nf, nf
-        sigma_det = np.linalg.det(sigma)
-        sigmainv_f_mod = np.linalg.solve(sigma, f_mod)
-        sigmainv_f_obs = np.linalg.solve(sigma, f_obs[:, None])[:, :, :, 0]
-        FOT = np.dot(sigmainv_f_mod, f_obs) + ell_hat / ell_var  # nz * nt
-        FTT = np.dot(sigmainv_f_mod, f_mod) + 1 / ell_var  # nz * nt
-        FOO = np.dot(sigmainv_f_obs, f_obs) + ell_hat**2 / ell_var  # nz * nt
+        assert len(f_mod_covar.shape) == 3
     if f_mod_covar is None or len(f_mod_covar.shape) == 3:
         f_obs_r = f_obs[None, None, :]
-        if f_mod_covar is not None:
-            var = f_obs_var[None, None, :] + f_mod_covar
-        else:
-            var = f_obs_var[None, None, :]
-        invvar = np.where(f_obs_r/var < 1e-6, 0.0, var**-1.0)  # nz * nt * nf
-        FOT = np.sum(f_mod * f_obs_r * invvar, axis=2)\
-            + ell_hat / ell_var  # nz * nt
-        FTT = np.sum(f_mod**2 * invvar, axis=2)\
-            + 1. / ell_var  # nz * nt
-        FOO = np.sum(f_obs_r**2 * invvar, axis=2)\
-            + ell_hat**2 / ell_var  # nz * nt
-        sigma_det = np.prod(var, axis=2)
+        ellML = 0
+        niter = 1 if f_mod_covar is None else 2
+        for i in range(niter):
+            if f_mod_covar is not None:
+                var = f_obs_var[None, None, :] + ellML**2 * f_mod_covar
+            else:
+                var = f_obs_var[None, None, :]
+            invvar = 1/var  # np.where(f_obs_r/var < 1e-6, 0.0, var**-1.0)  # nz * nt * nf
+            FOT = np.sum(f_mod * f_obs_r * invvar, axis=2)\
+                + ell_hat / ell_var  # nz * nt
+            FTT = np.sum(f_mod**2 * invvar, axis=2)\
+                + 1. / ell_var  # nz * nt
+            FOO = np.sum(f_obs_r**2 * invvar, axis=2)\
+                + ell_hat**2 / ell_var  # nz * nt
+            sigma_det = np.prod(var, axis=2)
+            ellbk = 1*ellML
+            ellML = (FOT / FTT)[:, :, None]
     if returnEllML:
-        return FOT / FTT
+        return ellML
     chi2 = FOO - FOT**2.0 / FTT  # nz * nt
+    if returnChi2:
+        return chi2
     denom = 1
     if normalized:
-        denom = denom * np.sqrt(sigma_det * (2*np.pi)**(nf+1) * ell_var)
+        denom = denom * np.sqrt(sigma_det * (2*np.pi)**nf)
+        if np.all(ell_var != 1e12):
+            denom = denom * np.sqrt(2*np.pi * ell_var)
     if marginalizeEll:
         denom = denom * np.sqrt(FTT / (2*np.pi))
     like = np.exp(-0.5*chi2) / denom  # nz * nt
@@ -174,12 +172,13 @@ def scalefree_flux_likelihood(f_obs, f_obs_var,
     FOT = np.sum(f_mod * f_obs * invvar, axis=2)  # nz * nt
     FTT = np.sum(f_mod**2 * invvar, axis=2)  # nz * nt
     FOO = np.dot(invvar, f_obs**2)  # nz * nt
+    ellML = FOT / FTT
     chi2 = FOO - FOT**2.0 / FTT  # nz * nt
     like = np.exp(-0.5*chi2) / np.sqrt(FTT)  # nz * nt
     if returnChi2:
-        return chi2 + FTT
+        return chi2 + FTT, ellML
     else:
-        return like
+        return like, ellML
 
 
 def CIlevel(redshiftGrid, PDF, fraction, numlevels=200):

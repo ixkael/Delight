@@ -60,20 +60,18 @@ localMetrics = np.zeros((numLines, numMetrics))
 loc = - 1
 trainingDataIter = getDataFromFile(params, firstLine, lastLine,
                                    prefix="target_", getXY=False)
-for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in trainingDataIter:
+for z, normedRefFlux, bands, fluxes, fluxesVar, bCV, fCV, fvCV in trainingDataIter:
     loc += 1
-    # like_grid = flux_likelihood(fluxes, fluxesVar, ell*f_mod[:, :, bands])
-    # like_grid = scalefree_flux_likelihood(
-    #    fluxes / ell, fluxesVar / ell**2,
-    #    f_mod[:, :, bands]
-    # )
-    like_grid = approx_flux_likelihood(
-        fluxes,
-        fluxesVar,
-        ell * f_mod[:, :, bands],
-        1,
-        params['ellFracStd']**2.
+    like_grid, _ = scalefree_flux_likelihood(
+        fluxes, fluxesVar,
+        f_mod[:, :, bands]
     )
+    ell_hat_z = normedRefFlux * 4 * np.pi\
+        * params['fluxLuminosityNorm'] \
+        * (DL(redshiftGrid)**2. * (1+redshiftGrid))[:, None]
+    #like_grid = approx_flux_likelihood(
+    #    fluxes, fluxesVar, f_mod[:, :, bands], marginalizeEll=True,
+    #    ell_hat=ell_hat_z, ell_var=(ell_hat_z*params['ellPriorSigma'])**2 )
     b_in = np.array([0.25, 0.11, 0.14, 0.2, 0.15, 0.063, 0.072, 0.03])[None, :]
     beta2 = np.array([0.18, 0.55, 0.62, 0.74, 0.66, 1.5, 0.58, 1.3])**2.0
     p_z = b_in * redshiftGrid[:, None] * np.exp(-0.5 * redshiftGrid[:, None]**2 / beta2[None, :]) / beta2[None, :]

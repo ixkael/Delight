@@ -3,6 +3,7 @@ import numpy as np
 from copy import copy
 import scipy.linalg
 from scipy.optimize import minimize
+from scipy.interpolate import interp1d
 
 from delight.utils import approx_DL, scalefree_flux_likelihood, symmetrize
 from delight.photoz_kernels import *
@@ -33,7 +34,7 @@ class PhotozGP:
             use_interpolators=use_interpolators)
         self.redshiftGridGP = redshiftGridGP
 
-    def setData(self, X, Y, Yvar):
+    def setData(self, X, Y, Yvar, bestType):
         """
         Set data content for the Gaussian process
         """
@@ -59,12 +60,27 @@ class PhotozGP:
                 mf = np.dot(hx.T, self.betas)[:, None]
         else:
             mf = 0
-        self.betas = np.zeros(self.mean_fct.nt)
-        self.D = self.Y - mf
         self.KXX = self.kernel.K(self.X)
-        self.logdet = np.log(scipy.linalg.det(self.KXX))
         self.A = self.KXX + np.diag(self.Yvar.flatten())
+        sign, self.logdet = np.linalg.slogdet(self.A)
+        self.logdet *= sign
         self.L = scipy.linalg.cholesky(self.A, lower=True)
+        hx = self.mean_fct.f(self.X).T
+        if False:
+            marglikes = np.zeros(self.mean_fct.nt)
+            for i in range(self.mean_fct.nt):
+                self.betas = np.zeros(self.mean_fct.nt)
+                self.betas[i] = 1.0
+                self.D = self.Y - np.dot(hx.T, self.betas)[:, None]
+                self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
+                marglikes[i] = 0.5 * np.sum(self.beta * self.D) +\
+                    0.5 * self.D.size * log_2_pi + 0.5 * self.logdet
+            i = np.argmin(marglikes)
+            print("marglikes", marglikes, "i=", i)
+        self.bestType = bestType
+        self.betas = np.zeros(self.mean_fct.nt)
+        self.betas[bestType] = 1.0
+        self.D = self.Y - np.dot(hx.T, self.betas)[:, None]
         self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
 
     def getCore(self):
@@ -86,6 +102,7 @@ class PhotozGP:
         """
         self.X = X
         self.betas = flatarray[0:nt]
+        self.bestType = int(np.argmax(self.betas))
         self.D = flatarray[nt+B*(B+1)//2:].reshape((-1, 1))
         self.L = np.zeros((B, B))
         self.L[np.tril_indices(B)] = flatarray[nt:nt+B*(B+1)//2]
@@ -98,42 +115,31 @@ class PhotozGP:
         return 0.5 * np.sum(self.beta * self.D) +\
             0.5 * self.logdet + 0.5 * self.D.size * log_2_pi
 
-    def predict(self, x_pred, b_in):
+    def predict(self, x_pred, diag=True):
         """
         Raw way to predict outputs with the GP
         """
         assert x_pred.shape[1] == 3
         KXXp = self.kernel.K(x_pred, self.X)
-        KXpXp = self.kernel.K(x_pred)
         v = scipy.linalg.cho_solve((self.L, True), KXXp.T)
+        if diag:
+            y_pred_cov = self.kernel.Kdiag(x_pred)
+            for i in range(x_pred.shape[0]):
+                y_pred_cov[i] -= KXXp[i, :].dot(v[:, i])
+        else:
+            KXpXp = self.kernel.K(x_pred)
+            v = scipy.linalg.cho_solve((self.L, True), KXXp.T)
+            y_pred_cov = KXpXp - KXXp.dot(v)
         if isinstance(self.mean_fct, Photoz_mean_function):
             mf = self.mean_fct.f(x_pred)
         elif isinstance(self.mean_fct, Photoz_linear_sed_basis):
-            hx = self.mean_fct.f(self.X).T
-            hx_pred = self.mean_fct.f(x_pred).T
-            if False:
-                mf = np.dot(hx_pred.T, self.betas)[:, None]
-            else:
-                R = hx_pred - np.dot(hx, v)
-                hkh = np.dot(hx, scipy.linalg.cho_solve((self.L, True), hx.T))
-                nt = self.mean_fct.nt
-                b = b_in[:, None]  # (np.arange(1, nt+1)/nt)[::-1, None]
-                bvar = (b/5.)**2
-                vh = np.dot(hx, self.beta) + b / bvar
-                hkherr = hkh + np.diag(1./bvar.flatten())
-                betabar, _, _, _ = np.linalg.lstsq(hkherr, vh)
-                self.betas = betabar.ravel()
-                bis = scipy.linalg.solve(hkherr, R)
-                mf = np.dot(R.T, betabar)
-                KXpXp += np.dot(R.T, bis)
-            #print("bprior", b.ravel())
-            #print("betabar", betabar.ravel())
-            #store: betabar
+            which = np.where(self.betas > 0)[0]
+            hx_pred = self.mean_fct.f(x_pred, which=which).T
+            mf = np.dot(hx_pred.T, self.betas)[:, None]
         else:
             mf = 0
         y_pred = np.dot(KXXp, self.beta) + mf
-        y_pred_fullcov = KXpXp - KXXp.dot(v)
-        return y_pred, y_pred_fullcov
+        return y_pred, y_pred_cov
 
     def predictAndInterpolate(self, redshiftGrid, ell=1.0, z=None):
         """
@@ -154,23 +160,16 @@ class PhotozGP:
         X_pred[:, 0] = yv.flatten()
         X_pred[:, 1] = xv.flatten()
         X_pred[:, 2] = ell
-        zZmax = self.X[0, 1] / redshiftGrid[-1]
-        alphas0 = np.array([0.11, 0.19, 0.2, 0.13, 0.14, 0.17, 0.047, 0.013])
-        alphas1 = np.array([0.24, 0.15, 0.16, 0.11, 0.086, 0.22, 0.022, 0.012])
-        b_in = zZmax * (alphas1 - alphas0) + alphas0  # no, nt
-        b_in = np.arange(1, 8+1)[::-1]
-        b_in = b_in / np.sum(b_in)
-        #print("b_in", b_in)
-        y_pred, y_pred_fullcov = self.predict(X_pred, b_in)
+        y_pred, y_pred_cov = self.predict(X_pred, diag=True)
         model_mean = np.zeros((redshiftGrid.size, numBands))
         model_var = np.zeros((redshiftGrid.size, numBands))
         for i in range(numBands):
             y_pred_bin = y_pred[i*numZGP:(i+1)*numZGP].ravel()
-            y_var_bin = np.diag(y_pred_fullcov)[i*numZGP:(i+1)*numZGP]
-            model_mean[:, i] = np.interp(redshiftGrid,
-                                         redshiftGridGP_loc, y_pred_bin)
-            model_var[:, i] = np.interp(redshiftGrid,
-                                        redshiftGridGP_loc, y_var_bin)
+            y_var_bin = y_pred_cov[i*numZGP:(i+1)*numZGP].ravel()
+            model_mean[:, i] = interp1d(redshiftGridGP_loc, y_pred_bin, assume_sorted=True, copy=False)(redshiftGrid) #np.interp(redshiftGrid, redshiftGridGP_loc, y_pred_bin)
+            if np.any(y_var_bin <= 0):
+                print("band", i, "y_pred_bin", y_pred_bin, "y_var_bin", y_var_bin)
+            model_var[:, i] = interp1d(redshiftGridGP_loc, y_var_bin, assume_sorted=True, copy=False)(redshiftGrid) # np.interp(redshiftGrid, redshiftGridGP_loc, y_var_bin)
         #model_covar = np.zeros((redshiftGrid.size, numBands, numBands))
         #for i in range(numBands):
         #    for j in range(numBands):
@@ -221,33 +220,6 @@ class PhotozGP:
         self.setData(self.X, self.Y, self.Yvar)  # Need to recompute core
 
         return self.mean_fct.alpha, self.X[0, 2]
-
-    def drawSED(self, z, ell, wavs):
-        """
-        Draw SED from GP model (prior only, no likelihood)
-        """
-        opz = 1 + z
-        meanfct = np.exp(self.mean_fct.alpha *
-                         (wavs/opz - self.mean_fct.lambdaRef))
-        dWav = wavs[:, None] - wavs[None, :]
-        cov_C = self.kernel.var_C *\
-            np.exp(-0.5*(dWav/opz/self.kernel.alpha_C)**2)
-        cov_L = 0*cov_C
-        for mu, sig in zip(self.kernel.lines_mu, self.kernel.lines_sig):
-            cov_L += self.kernel.var_L *\
-                np.exp(-0.5*(dWav/opz/self.kernel.alpha_L)**2) *\
-                np.exp(-0.5*((wavs[:, None]/opz-mu)/sig)**2) *\
-                np.exp(-0.5*((wavs[None, :]/opz-mu)/sig)**2)
-        fac = opz * ell / 4 / np.pi / self.kernel.DL_z(z)**2
-        sed = fac * np.random.multivariate_normal(meanfct, cov_C + cov_L)
-        numB = self.mean_fct.fcoefs_amp.shape[0]
-        filters = np.zeros((numB, wavs.size))
-        for i in range(numB):
-            for amp, mu, sig in zip(self.mean_fct.fcoefs_amp[i, :],
-                                    self.mean_fct.fcoefs_mu[i, :],
-                                    self.mean_fct.fcoefs_sig[i, :]):
-                filters[i, :] += amp * np.exp(-0.5*((wavs-mu)/sig)**2)
-        return sed, fac, cov_C + cov_L, filters
 
     def optimizeAlpha_GP(self):
         """

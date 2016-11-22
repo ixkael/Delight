@@ -80,6 +80,7 @@ for it, sed_name in enumerate(params['templates_names']):
         fullarr = np.concatenate(([f_mod[it, ib](redshiftGrid[2:-2])*fac[2:-2] for ib in bandIndices_TAR]))
         ylims = [0.25*np.min(fullarr), 2*np.max(fullarr)]
         for i, (ib, inm) in enumerate(zip(bandIndices_TRN, bandNames_TRN)):
+            axs[0, i].axvspan(z-0.5, z+0.5, color='gray', alpha=0.1)
             axs[0, i].axvline(z, ls='dashed', c='k')
             axs[0, i].fill_between(redshiftGrid,
                                    (model_mean[:, ib] - model_sig[:, ib])*fac,
@@ -94,6 +95,7 @@ for it, sed_name in enumerate(params['templates_names']):
             axs[0, i].set_xlim([redshiftGrid[0], redshiftGrid[-1]])
 
         for i, (ib, inm) in enumerate(zip(bandIndices_TAR, bandNames_TAR)):
+            axs[1, i].axvspan(z-0.5, z+0.5, color='gray', alpha=0.1)
             axs[1, i].axvline(z, ls='dashed', c='k')
             axs[1, i].fill_between(redshiftGrid,
                                    (model_mean[:, ib] - model_sig[:, ib])*fac,

@@ -7,7 +7,7 @@ import os
 from delight.io import *
 from delight.utils import *
 
-numCoefs = 20  # number of components for the fit
+numCoefs = 15  # number of components for the fit
 
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
@@ -16,9 +16,12 @@ bandNames = params['bandNames']
 fmt = '.res'
 max_redshift = params['redshiftMax']  # for plotting purposes
 root = params['bands_directory']
-make_plots = False
+make_plots = True
 if make_plots:
     import matplotlib.pyplot as plt
+    cm = plt.get_cmap('brg')
+    num = len(bandNames)
+    cols = [cm(i/num) for i in range(num)]
 
 
 # Function we will optimize
@@ -29,9 +32,11 @@ def dfunc(p, x, yd):
         y += np.abs(p[i]) * np.exp(-0.5*((mus[i]-x)/np.abs(p[n+i]))**2.0)
     return yd - y
 
+if make_plots:
+    fig0, ax0 = plt.subplots(1, 1, figsize=(8.2, 4))
 
 # Loop over bands
-for band in bandNames:
+for iband, band in enumerate(bandNames):
 
     fname_in = root + '/' + band + fmt
     data = np.genfromtxt(fname_in)
@@ -47,6 +52,7 @@ for band in bandNames:
     mus = np.linspace(lambdaMin+sig0[0], lambdaMax-sig0[-1], num=numCoefs)
     amp0 = interp1d(x, y)(mus)
     p0 = np.concatenate((amp0, sig0))
+    print(band)
     popt, pcov = leastsq(dfunc, p0, args=(x, y))
     coefs[:, 0] = np.abs(popt[0:numCoefs])  # amplitudes
     coefs[:, 1] = mus  # positions
@@ -64,6 +70,8 @@ for band in bandNames:
         fig, ax = plt.subplots(figsize=(8, 4))
         ax.plot(x[ind], y[ind], lw=3, label='True filter', c='k')
         ax.plot(xf, yy, lw=2, c='r', label='Gaussian fit')
+        #ax0.plot(x[ind], y[ind], lw=3, label=band, color=cols[iband])
+        ax0.plot(xf, yy, lw=3, label=band, color=cols[iband])
 
     coefs_redshifted = 1*coefs
     coefs_redshifted[:, 1] /= (1. + max_redshift)
@@ -90,3 +98,13 @@ for band in bandNames:
         fig.tight_layout()
         fname_fig = root + '/' + band + '_gaussian_approximation.png'
         fig.savefig(fname_fig)
+
+if make_plots:
+    ax0.legend(loc='upper center', frameon=False, ncol=4)
+    ylims = ax0.get_ylim()
+    ax0.set_ylim([0, 1.4*ylims[1]])
+    ax0.set_yticks([])
+    ax0.set_xlabel(r'$\lambda$')
+    fig0.tight_layout()
+    fname_fig = root + '/allbands.pdf'
+    fig0.savefig(fname_fig)

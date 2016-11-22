@@ -1,6 +1,11 @@
 
 from delight.utils import *
 from astropy.cosmology import FlatLambdaCDM
+from delight.utils import approx_flux_likelihood
+from delight.utils_cy import approx_flux_likelihood_cy
+from time import time
+
+relative_accuracy = 0.05
 
 
 def test_approx_DL():
@@ -18,6 +23,34 @@ def test_random_X():
     assert X.shape == (size, 3)
 
 
+def test_full_fluxlikelihood():
+
+    nz, nt, nf = 100, 100, 5
+
+    for i in range(3):
+        f_obs = np.random.uniform(low=1, high=2, size=nf)
+        f_obs_var = np.random.uniform(low=.1, high=.2, size=nf)
+        f_mod = np.random.uniform(low=1, high=2, size=nz*nt*nf)\
+            .reshape((nz, nt, nf))
+        f_mod_covar = np.random.uniform(low=.1, high=.2, size=nz*nt*nf)\
+            .reshape((nz, nt, nf))
+        ell_hat, ell_var = 1, 0.01
+
+        t1 = time()
+        res1 = approx_flux_likelihood(
+            f_obs, f_obs_var, f_mod, f_mod_covar=f_mod_covar,
+            ell_hat=ell_hat, ell_var=ell_var)
+        t2 = time()
+        res2 = np.zeros_like(res1)
+        approx_flux_likelihood_cy(
+            res2, nz, nt, nf,
+            f_obs, f_obs_var, f_mod, f_mod_covar,
+            ell_hat, ell_var)
+        t3 = time()
+        print(t2-t1, t3-t2)
+        assert np.allclose(res1, res2, rtol=relative_accuracy)
+
+
 def test_flux_likelihood_approxscalemarg():
 
     nz, nt, nf = 3, 2, 5
@@ -33,12 +66,12 @@ def test_flux_likelihood_approxscalemarg():
             model_covar[i, j, :, :] = np.diag(model_var[i, j, :])
 
     ell, ell_var = 1, 1e6
-    like_grid1 = flux_likelihood_approxscalemarg(
+    like_grid1 = approx_flux_likelihood(
         fluxes, fluxesVar,
         model_mean,
-        0*model_var,
-        ell,
-        ell_var,
+        f_mod_covar=0*model_var,
+        ell_hat=ell,
+        ell_var=ell_var,
         normalized=False
     )
     like_grid2 = scalefree_flux_likelihood(

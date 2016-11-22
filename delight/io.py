@@ -38,6 +38,14 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     params['templates_directory'] = config.get('Templates', 'directory')
     params['lambdaRef'] = config.getfloat('Templates', 'lambdaRef')
     params['templates_names'] = config.get('Templates', 'names').split(' ')
+    params['p_t']\
+        = np.array([float(x) for x in
+                    config.get('Templates', 'p_t').split(' ')])
+    params['p_z_t']\
+        = np.array([float(x) for x in
+                    config.get('Templates', 'p_z_t').split(' ')])
+    assert params['p_z_t'].size == params['p_z_t'].size and\
+        params['p_z_t'].size == len(params['templates_names'])
 
     # Parsing Training
     params['training_numChunks'] = config.getint('Training', 'numChunks')
@@ -111,7 +119,8 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     params['metricsFileTemp'] = config.get('Target', 'metricsFileTemp')
 
     # Parsing other parameters
-    params['ellFracStd'] = config.getfloat('Other', 'ellFracStd')
+    params['zPriorSigma'] = config.getfloat('Other', 'zPriorSigma')
+    params['ellPriorSigma'] = config.getfloat('Other', 'ellPriorSigma')
     params['fluxLuminosityNorm']\
         = config.getfloat('Other', 'fluxLuminosityNorm')
     params['alpha_C'] = config.getfloat('Other', 'alpha_C')
@@ -253,13 +262,13 @@ def getDataFromFile(params, firstLine, lastLine,
 
     if ftype == "catalog":
 
+        DL = approx_DL()
         bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,\
             refBandColumn = readColumnPositions(params, prefix=prefix)
         bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
             = readBandCoefficients(params)
         refBandNorm = norms[params['bandNames']
                             .index(params[prefix+'referenceBand'])]
-        DL = approx_DL()
 
         if CV:
             bandIndicesCV, bandNamesCV, bandColumnsCV,\
@@ -271,6 +280,7 @@ def getDataFromFile(params, firstLine, lastLine,
 
                 data = np.array(line.split(' '), dtype=float)
                 refFlux = data[refBandColumn]
+                normedRefFlux = refFlux * refBandNorm
                 if redshiftColumn >= 0:
                     z = data[redshiftColumn]
                 else:
@@ -284,10 +294,9 @@ def getDataFromFile(params, firstLine, lastLine,
                 bandsUsed = np.where(mask)[0]
                 numBandsUsed = mask.sum()
 
-                ell = refFlux / refBandNorm
-                # ell = np.mean(data[bandColumns[mask]] /
-                #              norms[bandColumns[mask]])
-                ell *= DL(z)**2. * params['fluxLuminosityNorm']
+                if z > -1:
+                    ell = normedRefFlux * 4 * np.pi \
+                        * params['fluxLuminosityNorm'] * DL(z)**2 * (1+z)
 
                 if (refFlux <= 0) or (not np.isfinite(refFlux))\
                         or (z < 0) or (numBandsUsed <= 1):
@@ -313,11 +322,11 @@ def getDataFromFile(params, firstLine, lastLine,
                 if not getXY:
 
                     if CV:
-                        yield z, ell,\
+                        yield z, normedRefFlux,\
                             bandIndices[mask], fluxes, fluxesVar,\
                             bandIndicesCV[maskCV], fluxesCV, fluxesCVVar
                     else:
-                        yield z, ell,\
+                        yield z, normedRefFlux,\
                             bandIndices[mask], fluxes, fluxesVar,\
                             None, None, None
 
@@ -334,12 +343,12 @@ def getDataFromFile(params, firstLine, lastLine,
                         Yvar[off, 0] = fluxesVar[off]
 
                     if CV:
-                        yield z, ell,\
+                        yield z, normedRefFlux,\
                             bandIndices[mask], fluxes, fluxesVar,\
                             bandIndicesCV[maskCV], fluxesCV, fluxesCVVar,\
                             X, Y, Yvar
                     else:
-                        yield z, ell,\
+                        yield z, normedRefFlux,\
                             bandIndices[mask], fluxes, fluxesVar,\
                             None, None, None,\
                             X, Y, Yvar

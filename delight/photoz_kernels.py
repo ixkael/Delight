@@ -24,7 +24,7 @@ class Photoz_linear_sed_basis():
         self.alpha = 0
         self.nt, self.nb = f_mod_interp.shape
 
-    def f(self, X):
+    def f(self, X, which=None):
         """
         Compute mean function.
         """
@@ -33,10 +33,13 @@ class Photoz_linear_sed_basis():
         l = X[:, 2]
         opz = 1. + z
 
+        if which is None:
+            which = range(self.nt)
         hx = np.zeros((X.shape[0], self.nt))
-        for k in range(X.shape[0]):
-            for it in range(self.nt):
-                hx[k, it] = self.f_mod_interp[it, b[k]](z[k])
+        for it in which:
+            for k in range(self.nb):
+                sel = b == k
+                hx[sel, it] = self.f_mod_interp[it, k](z[sel])
         return l[:, None] * hx
 
 
@@ -152,6 +155,12 @@ class Photoz_kernel:
         b[b >= self.numBands] = self.numBands - 1
         return b
 
+    def Kdiag(self, X):
+            l1 = X[:, 2]
+            self.update_kernelparts_diag(X)
+            return self.KTd * self.Zprefacd**2 * l1**2 *\
+                (self.var_C * self.KCd + self.var_L * self.KLd)
+
     def K(self, X, X2=None):
         """
         Compute kernel.
@@ -163,6 +172,45 @@ class Photoz_kernel:
         self.update_kernelparts(X, X2)
         return self.Zprefac**2 * l1[:, None] * l2[None, :] *\
             (self.var_C * self.KC + self.var_L * self.KL)
+
+    def update_kernelparts_diag(self, X):
+            NO1 = X.shape[0]
+            b1 = self.roundband(X[:, 0])
+            fz1 = 1 + X[:, 1]
+            self.KLd, self.KCd = np.zeros((NO1,)), np.zeros((NO1,))
+            self.D_alpha_Cd, self.D_alpha_Ld =\
+                np.zeros((NO1,)), np.zeros((NO1,))
+            self.KTd = np.ones((X.shape[0],))
+            self.Zprefacd = (1.+X[:, 1])**2 /\
+                (self.fourpi * self.g_AB * self.DL_z(X[:, 1])**2)
+
+            if self.use_interpolators:
+
+                for i1 in range(self.numBands):
+                    ind1 = np.where(b1 == i1)[0]
+                    fz1 = 1 + X[ind1, 1]
+                    is1 = np.argsort(fz1)
+                    if ind1.size > 0:
+                        self.KLd[ind1[is1]] =\
+                            self.KL_diag_interp[i1](fz1[is1])
+                        self.KCd[ind1[is1]] =\
+                            self.KC_diag_interp[i1](fz1[is1])
+                        self.D_alpha_Cd[ind1[is1]] =\
+                            self.D_alpha_C_diag_interp[i1](fz1[is1])
+                        self.D_alpha_Ld[ind1[is1]] =\
+                            self.D_alpha_L_diag_interp[i1](fz1[is1])
+
+            else:  # not use interpolators
+                fz1 = 1 + X[:, 1]
+                kernelparts_diag(self.nz, self.numCoefs, self.numLines,
+                                 self.alpha_C, self.alpha_L,
+                                 self.fcoefs_amp, self.fcoefs_mu,
+                                 self.fcoefs_sig,
+                                 self.lines_mu[:self.numLines],
+                                 self.lines_sig[:self.numLines],
+                                 self.norms, b1, fz1,
+                                 True, self.KLd, self.KCd,
+                                 self.D_alpha_Cd, self.D_alpha_Ld)
 
     def update_kernelparts(self, X, X2=None):
         """
@@ -282,13 +330,21 @@ class Photoz_kernel:
                              D_alpha_L_grid)
             self.KL_diag_interp[b1] = interp1d(fzgrid, KL_grid,
                                                kind=kind,
-                                               assume_sorted=True)
+                                               assume_sorted=True,
+                                               bounds_error=False,
+                                               fill_value="extrapolate")
             self.KC_diag_interp[b1] = interp1d(fzgrid, KC_grid,
                                                kind=kind,
-                                               assume_sorted=True)
+                                               assume_sorted=True,
+                                               bounds_error=False,
+                                               fill_value="extrapolate")
             self.D_alpha_C_diag_interp[b1] = interp1d(fzgrid, D_alpha_C_grid,
                                                       kind=kind,
-                                                      assume_sorted=True)
+                                                      assume_sorted=True,
+                                                      bounds_error=False,
+                                                      fill_value="extrapolate")
             self.D_alpha_L_diag_interp[b1] = interp1d(fzgrid, D_alpha_L_grid,
                                                       kind=kind,
-                                                      assume_sorted=True)
+                                                      assume_sorted=True,
+                                                      bounds_error=False,
+                                                      fill_value="extrapolate")

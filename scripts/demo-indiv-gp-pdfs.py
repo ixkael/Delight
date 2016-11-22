@@ -33,11 +33,11 @@ gp = PhotozGP(f_mod, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
 
 numZ = redshiftGrid.size
 all_z = np.zeros((numObjectsTraining, ))
-all_alphaell = np.zeros((numObjectsTraining, 2))
 all_fluxes = np.zeros((numObjectsTraining, numBands))
 all_fluxes_var = np.zeros((numObjectsTraining, numBands))
+bestTypes = np.zeros((numObjectsTraining, ), dtype=int)
 model_mean = np.zeros((numZ, numObjectsTraining, numBands))
-model_var = np.zeros((numZ, numObjectsTraining, numBands))
+model_covar = np.zeros((numZ, numObjectsTraining, numBands))
 bandIndices_TRN, bandNames_TRN, bandColumns_TRN,\
     bandVarColumns_TRN, redshiftColumn_TRN,\
     refBandColumn_TRN = readColumnPositions(params, prefix='training_')
@@ -64,16 +64,29 @@ trainingDataIter = getDataFromFile(params, 0, numObjectsTraining,
                                    prefix="training_", getXY=True)
 targetDataIter = getDataFromFile(params, 0, numObjectsTraining,
                                  prefix="target_", getXY=False)
-for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV, X, Y, Yvar\
+for z, normedRefFlux, bands, fluxes, fluxesVar, bCV, fCV, fvCV, X, Y, Yvar\
         in trainingDataIter:
     loc += 1
 
+    themod = np.zeros((1, f_mod.shape[1], bands.size))
+    for it in range(f_mod.shape[1]):
+        for ib, band in enumerate(bands):
+            themod[0, it, ib] = np.interp(z, redshiftGrid, f_mod[:, it, band])
+    chi2_grid = scalefree_flux_likelihood(
+        fluxes,
+        fluxesVar,
+        themod,
+        returnChi2=True
+    )
+    bestTypes[loc] = np.argmin(chi2_grid)
+    gp.setData(X, Y, Yvar, bestTypes[loc])
+
+    ell = gp.X[0, 2]
+    model_mean[:, loc, :], model_covar[:, loc, :]\
+        = gp.predictAndInterpolate(redshiftGrid, ell=ell, z=z)
     all_z[loc] = z
-    all_fluxes[loc, bands] = fluxes / ell
-    all_fluxes_var[loc, bands] = fluxesVar / ell**2
-    gp.setData(X, Y, Yvar)
-    #alpha, ell = gp.estimateAlphaEll()
-    #all_alphaell[loc, :] = alpha, ell
+    all_fluxes[loc, bands] = fluxes
+    all_fluxes_var[loc, bands] = fluxesVar
 
     if False:
         wavs = np.linspace(bandCoefPositions.min(),
@@ -135,27 +148,34 @@ for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV, X, Y, Yvar\
         fig.tight_layout()
         fig.savefig('data/data-sed-'+str(loc)+'.png')
 
-    model_mean[:, loc, :], model_var[:, loc, :]\
-        = gp.predictAndInterpolate(redshiftGrid, ell=ell, z=z)
+p_t = params['p_t'][bestTypes][None, :]
+p_z_t = params['p_z_t'][bestTypes][None, :]
 
+prior = np.exp(-0.5*((redshiftGrid[:, None]-all_z[None, :])/params['zPriorSigma'])**2)
+#prior[prior < 1e-6] = 0
+#prior *= p_t * redshiftGrid[:, None] * np.exp(-0.5 * redshiftGrid[:, None]**2 / p_z_t) / p_z_t
 
 loc = -1
-for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in targetDataIter:
+for z, normedRefFlux, bands, fluxes, fluxesVar, bCV, fCV, fvCV in targetDataIter:
     loc += 1
-    fluxes /= ell
-    fluxesVar /= ell**2
-    fulllike_grid = scalefree_flux_likelihood(
-        fluxes, fluxesVar,
-        model_mean[:, :, bands],  # model mean
-        f_mod_var=model_var[:, :, bands]  # model var
+    fulllike_grid = approx_flux_likelihood(
+        fluxes,
+        fluxesVar,
+        model_mean[:, :, bands],
+        f_mod_covar=model_covar[:, :, bands],
+        marginalizeEll=True,
+        ell_hat=1, ell_var=params['ellPriorSigma']**2
     )
+    fulllike_grid *= prior
     evidences = np.trapz(fulllike_grid, x=redshiftGrid, axis=0)
     sortind = np.argsort(evidences)[::-1][0:Ncompress]
     like_grid = fulllike_grid.sum(axis=1)
     like_grid_comp = fulllike_grid[:, sortind].sum(axis=1)
-    alllike_grid_cww = scalefree_flux_likelihood(
-        fluxes, fluxesVar,
-        f_mod[:, :, bands]
+    alllike_grid_cww = approx_flux_likelihood(
+        fluxes,
+        fluxesVar,
+        f_mod[:, :, bands],
+        marginalizeEll=True
     )
     besttype = np.argmax(alllike_grid_cww.sum(axis=0))
     like_grid_cww = alllike_grid_cww.sum(axis=1)  # [:, besttype]
@@ -167,8 +187,8 @@ for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in targetDataIter:
             for ii in sortind:
                 ax.plot(redshiftGrid, fulllike_grid[:, ii], c='gray', alpha=0.6)
             ax.plot(redshiftGrid, like_grid, c='k', lw=2, label='GP')
+            like_grid_cww = like_grid_cww * np.max(like_grid) / np.max(like_grid_cww)
             ax.plot(redshiftGrid, like_grid_cww, c='blue', lw=2, label='CWW')
-            #ax.plot(redshiftGrid, like_grid_cww / np.max(like_grid_cww) * np.max(like_grid), c='orange')
             ax.plot(redshiftGrid, like_grid_comp, c='r', ls='dashed', label='Compressed GP')
             ax.axvline(z, c='orange', lw=2, ls='dashed', label='True redshift')
 
@@ -183,55 +203,55 @@ for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in targetDataIter:
                 ax.scatter(all_z[ii], ylimax*0.99, c='gray', marker='x', s=10)
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.2e'))
             ax.legend(loc='upper right', frameon=False, ncol=2)
+            #ax.set_yscale('log')
             fig.tight_layout()
             fig.savefig('data/data-pdfs-'+str(loc)+'.pdf')
 
-            usedBands = list(np.unique(np.concatenate((
-                bandIndices_TRN, bandIndices))))
+            if False:
+                usedBands = list(np.unique(np.concatenate((
+                    bandIndices_TRN, bandIndices))))
 
-            fig, axs = plt.subplots(3, len(usedBands)//2, figsize=(10, 5),
-                                    sharex=True, sharey=True)
-            axs = axs.ravel()
-            fac = redshiftGrid**2
-            ylims = [0.25*np.min(model_mean[2:-2, :, :]*fac[2:-2, None, None]),
-                2*np.max(model_mean[2:-2, :, :]*fac[2:-2, None, None])]
-            for i, ib in enumerate(bands):
-                pos = usedBands.index(ib)
-                axs[pos].axvline(zphotmean, c='r', lw=2)
-                axs[pos].axvline(z, c='k', lw=2)
-                axs[pos].axhspan(fluxes[i] - np.sqrt(fluxesVar[i]),
-                                 fluxes[i] + np.sqrt(fluxesVar[i]),
-                                 color='k', alpha=0.4)
-            for i, ib in enumerate(usedBands):
-                for t, sed_name in enumerate(sed_names):
-                    if t == besttype:
-                        pos = list(bands).index(ib)
-                        fac = fluxes[pos] / np.interp(z, redshiftGrid, f_mod[:, t, ib])
-                        axs[i].plot(redshiftGrid, f_mod[:, t, ib]*fac, c='k')
-            for ii in sortind:
-                for i, ib in enumerate(bandIndices_TRN):
-                    if False and all_fluxes[ii, ib] > 0:
-                        pos = usedBands.index(ib)
-                        axs[pos].errorbar(all_z[ii], all_fluxes[ii, ib],
-                                          np.sqrt(all_fluxes_var[ii, ib]),
-                                          fmt='-o', markersize=5, alpha=0.1)
+                fig, axs = plt.subplots(3, len(usedBands)//3 + 1, figsize=(10, 5),
+                                        sharex=True, sharey=True)
+                axs = axs.ravel()
+                fac = redshiftGrid**2
+                ylims = [0.25*np.min(model_mean[2:-2, :, :]*fac[2:-2, None, None]),
+                    2*np.max(model_mean[2:-2, :, :]*fac[2:-2, None, None])]
+                for i, ib in enumerate(bands):
+                    pos = usedBands.index(ib)
+                    axs[pos].axvline(zphotmean, c='r', lw=2)
+                    axs[pos].axvline(z, c='k', lw=2)
+                    axs[pos].axhspan(fluxes[i] - np.sqrt(fluxesVar[i]),
+                                     fluxes[i] + np.sqrt(fluxesVar[i]),
+                                     color='k', alpha=0.4)
                 for i, ib in enumerate(usedBands):
-                    axs[i].set_title(bandNames[ib])
-                    axs[i].axvline(all_z[ii], c='gray', alpha=0.3)
-                    pos = list(bands).index(ib)
-                    fac = fluxes[pos] / np.interp(z, redshiftGrid, model_mean[:, ii, ib])
-                    axs[i].fill_between(
-                        redshiftGrid,
-                        (model_mean[:, ii, ib] - np.sqrt(model_var[:, ii, ib]))*fac,
-                        (model_mean[:, ii, ib] + np.sqrt(model_var[:, ii, ib]))*fac,
-                        color='b', alpha=0.1)
-                    #axs[i].plot(redshiftGrid, model_mean[:, ii, ib], c='b', alpha=0.1)
-                    axs[i].set_yscale('log')
-                    axs[i].set_ylim(ylims)
-                    axs[i].set_xlim([redshiftGrid[0], redshiftGrid[-1]])
+                    for t, sed_name in enumerate(sed_names):
+                        if t == besttype:
+                            fac = ell / np.interp(z, redshiftGrid, f_mod[:, t, ib])
+                            axs[i].plot(redshiftGrid, f_mod[:, t, ib]*fac, c='k')
+                for ii in sortind:
+                    for i, ib in enumerate(bandIndices_TRN):
+                        if False and all_fluxes[ii, ib] > 0:
+                            pos = usedBands.index(ib)
+                            axs[pos].errorbar(all_z[ii], all_fluxes[ii, ib],
+                                              np.sqrt(all_fluxes_var[ii, ib]),
+                                              fmt='-o', markersize=5, alpha=0.1)
+                    for i, ib in enumerate(usedBands):
+                        axs[i].set_title(bandNames[ib])
+                        axs[i].axvline(all_z[ii], c='gray', alpha=0.3)
+                        fac = ell / np.interp(z, redshiftGrid, model_mean[:, ii, ib])
+                        axs[i].fill_between(
+                            redshiftGrid,
+                            (model_mean[:, ii, ib] - np.sqrt(model_covar[:, ii, ib]))*fac,
+                            (model_mean[:, ii, ib] + np.sqrt(model_covar[:, ii, ib]))*fac,
+                            color='b', alpha=0.1)
+                        #axs[i].plot(redshiftGrid, model_mean[:, ii, ib], c='b', alpha=0.1)
+                        axs[i].set_yscale('log')
+                        #axs[i].set_ylim(ylims)
+                        axs[i].set_xlim([redshiftGrid[0], redshiftGrid[-1]])
 
-            fig.tight_layout()
-            fig.savefig('data/data-fluxes-'+str(loc)+'.pdf')
+                fig.tight_layout()
+                fig.savefig('data/data-fluxes-'+str(loc)+'.pdf')
 
     if loc > 2050:
         exit(1)

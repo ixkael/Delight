@@ -30,7 +30,7 @@ def test_kernel():
                            alpha_C, alpha_L, alpha_T,
                            use_interpolators=True)
 
-
+test_kernel()
 def test_meanfunction():
     """
     Other tests of the mean function
@@ -90,6 +90,10 @@ def test_interpolation():
             assert X.shape[0] == kern.nz
             assert X.shape[1] == 4
 
+            Kfull = kern.K(X)
+            Kdiag = kern.Kdiag(X)
+            assert np.allclose(np.diag(Kfull), Kdiag, rtol=relative_accuracy)
+
             b1 = kern.roundband(X[:, 0])
             fz1 = (1. + X[:, 1])
 
@@ -108,10 +112,10 @@ def test_interpolation():
                         True, KL, KC,
                         D_alpha_C, D_alpha_L, D_alpha_z)
 
-            np.allclose(KL, kern.KL, rtol=relative_accuracy)
-            np.allclose(KC, kern.KC, rtol=relative_accuracy)
-            np.allclose(D_alpha_C, kern.D_alpha_C, rtol=relative_accuracy)
-            np.allclose(D_alpha_L, kern.D_alpha_L, rtol=relative_accuracy)
+            assert np.allclose(KL, kern.KL, rtol=relative_accuracy)
+            assert np.allclose(KC, kern.KC, rtol=relative_accuracy)
+            assert np.allclose(D_alpha_C, kern.D_alpha_C, rtol=relative_accuracy)
+            assert np.allclose(D_alpha_L, kern.D_alpha_L, rtol=relative_accuracy)
 
 
 test_kernel()

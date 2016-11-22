@@ -121,7 +121,7 @@ sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                 threads=4,
                                 args=[nt, allFluxes, allFluxesVar, fmod_atZ,
                                       pmin, pmax])
-pos, prob, state = sampler.run_mcmc(p0, 100)
+pos, prob, state = sampler.run_mcmc(p0, 200)
 sampler.reset()
 sampler.run_mcmc(pos, 1000)
 print("Mean acceptance fraction: {0:.3f}"
@@ -152,10 +152,10 @@ alphas = params_mean[0:nt]
 betas = params_mean[nt:2*nt]
 
 alpha0 = np.sum(alphas)
-print("p_t:", ', '.join(['%.2g' % x for x in alphas / alpha0]))
-print("p_t err:", ', '.join(['%.2g' % x
+print("p_t:", ' '.join(['%.2g' % x for x in alphas / alpha0]))
+print("p_t err:", ' '.join(['%.2g' % x
       for x in np.sqrt(alphas*(alpha0-alphas)/alpha0**2/(alpha0+1))]))
-print("p_z_t:", ', '.join(['%.2g' % x for x in betas]))
+print("p_z_t:", ' '.join(['%.2g' % x for x in betas]))
 
 fig = corner.corner(samples)
 fig.savefig("triangle.pdf")

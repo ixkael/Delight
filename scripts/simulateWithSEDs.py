@@ -28,10 +28,11 @@ redshifts = np.random.uniform(low=redshiftGrid[0],
                               size=numObjects)
 types = np.random.randint(0, high=numT, size=numObjects)
 
+ell = 1e6
 fluxes, fluxesVar = np.zeros((numObjects, numB)), np.zeros((numObjects, numB))
 for k in range(numObjects):
     for i in range(numB):
-        trueFlux = f_mod[types[k], i](redshifts[k])
+        trueFlux = ell * f_mod[types[k], i](redshifts[k])
         noise = trueFlux * noiseLevel
         fluxes[k, i] = trueFlux + noise * np.random.randn()
         fluxesVar[k, i] = noise**2.

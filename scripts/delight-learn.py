@@ -35,6 +35,7 @@ numLines = lastLine - firstLine
 comm.Barrier()
 print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
 
+DL = approx_DL()
 gp = PhotozGP(f_mod, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
               params['lines_pos'], params['lines_width'],
               params['V_C'], params['V_L'],
@@ -44,7 +45,7 @@ gp = PhotozGP(f_mod, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
 B = numBands
 numCol = 3 + B + B*(B+1)//2 + B + f_mod.shape[0]
 localData = np.zeros((numLines, numCol))
-fmt = '%i ' + '%.6e ' * (localData.shape[1] - 1)
+fmt = '%i ' + '%.12e ' * (localData.shape[1] - 1)
 
 loc = - 1
 crossValidate = params['training_crossValidate']
@@ -57,31 +58,44 @@ if crossValidate:
         bandVarColumnsCV, redshiftColumnCV =\
         readColumnPositions(params, prefix="training_CV_", refFlux=False)
 
-for z, ell,\
+for z, normedRefFlux,\
     bands, fluxes, fluxesVar,\
     bandsCV, fluxesCV, fluxesVarCV,\
         X, Y, Yvar in trainingDataIter1:
     loc += 1
-    gp.setData(X, Y, Yvar)
+
+    themod = np.zeros((1, f_mod.shape[0], bands.size))
+    for it in range(f_mod.shape[0]):
+        for ib, band in enumerate(bands):
+            themod[0, it, ib] = f_mod[it, band](z)
+    chi2_grid, ellMLs = scalefree_flux_likelihood(
+        fluxes,
+        fluxesVar,
+        themod,
+        returnChi2=True
+    )
+    bestType = np.argmin(chi2_grid)
+    ell = ellMLs[0, bestType]
+    X[:, 2] = ell
+
+    gp.setData(X, Y, Yvar, bestType)
     lB = bands.size
-    alpha_hat, ell_hat = 0, ell # gp.estimateAlphaEll()
     localData[loc, 0] = lB
     localData[loc, 1] = z
-    localData[loc, 2] = ell_hat
-    localData[loc, 3:3+bands.size] = bands
+    localData[loc, 2] = ell
+    localData[loc, 3:3+lB] = bands
     localData[loc, 3+lB:3+f_mod.shape[0]+lB+lB*(lB+1)//2+lB] = gp.getCore()
 
     if crossValidate:
         model_mean, model_covar\
-            = gp.predictAndInterpolate(np.array([z]), ell=ell_hat)
-        model_mean /= ell_hat
-        model_covar /= ell_hat**2
+            = gp.predictAndInterpolate(np.array([z]), ell=ell)
         if chi2sLocal is None:
             chi2sLocal = np.zeros((numObjectsTraining, bandIndicesCV.size))
         ind = np.array([list(bandIndicesCV).index(b) for b in bandsCV])
         chi2sLocal[firstLine + loc, ind] =\
-            - 0.5 * (model_mean[0, bandsCV] - fluxesCV / ell_hat)**2 /\
-            (model_var[0, bandsCV] + fluxesVarCV / ell_hat**2)
+            - 0.5 * (model_mean[0, bandsCV] - fluxesCV)**2 /\
+            (model_covar[0, bandsCV] + fluxesVarCV)
+
 
 # use MPI to get the totals
 comm.Barrier()

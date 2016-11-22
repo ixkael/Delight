@@ -6,7 +6,8 @@ from delight.io import *
 from delight.utils import *
 from delight.photoz_gp import PhotozGP
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
-
+from delight.utils_cy import approx_flux_likelihood_cy
+from time import time
 comm = MPI.COMM_WORLD
 threadNum = comm.Get_rank()
 numThreads = comm.Get_size()
@@ -24,7 +25,20 @@ bandCoefAmplitudes, bandCoefPositions, bandCoefWidths, norms\
 numBands = bandCoefAmplitudes.shape[0]
 
 redshiftDistGrid, redshiftGrid, redshiftGridGP = createGrids(params)
-f_mod = readSEDs(params)
+f_mod_interp = readSEDs(params)
+nt = f_mod_interp.shape[0]
+nz = redshiftGrid.size
+
+dir_seds = params['templates_directory']
+dir_filters = params['bands_directory']
+lambdaRef = params['lambdaRef']
+sed_names = params['templates_names']
+f_mod_grid = np.zeros((redshiftGrid.size, len(sed_names),
+                  len(params['bandNames'])))
+for t, sed_name in enumerate(sed_names):
+    f_mod_grid[:, t, :] = np.loadtxt(dir_seds + '/' + sed_name +
+                                '_fluxredshiftmod.txt')
+
 numZbins = redshiftDistGrid.size - 1
 numZ = redshiftGrid.size
 
@@ -43,7 +57,8 @@ if threadNum == 0:
 comm.Barrier()
 print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
 
-gp = PhotozGP(f_mod, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+DL = approx_DL()
+gp = PhotozGP(f_mod_interp, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
               params['lines_pos'], params['lines_width'],
               params['V_C'], params['V_L'],
               params['alpha_C'], params['alpha_L'],
@@ -67,72 +82,73 @@ for chunk in range(numChunks):
     redshifts = np.zeros((numTObjCk, ))
     model_mean = np.zeros((numZ, numTObjCk, numBands))
     model_covar = np.zeros((numZ, numTObjCk, numBands))
+    bestTypes = np.zeros((numTObjCk, ), dtype=int)
+    ells = np.zeros((numTObjCk, ), dtype=int)
     loc = TR_firstLine - 1
     trainingDataIter = getDataFromFile(params, TR_firstLine, TR_lastLine,
                                        prefix="training_", ftype="gpparams")
     for loc, (z, ell, bands, X, B, flatarray) in enumerate(trainingDataIter):
+        t1 = time()
         redshifts[loc] = z
-        gp.setCore(X, B, f_mod.shape[0],
-                   flatarray[0:f_mod.shape[0]+B+B*(B+1)//2])
+        gp.setCore(X, B, nt,
+                   flatarray[0:nt+B+B*(B+1)//2])
+        bestTypes[loc] = gp.bestType
+        ells[loc] = ell
         model_mean[:, loc, :], model_covar[:, loc, :] =\
             gp.predictAndInterpolate(redshiftGrid, ell=ell)
-        model_mean[:, loc, :] /= ell
-        model_covar[:, loc, :] /= ell**2
+        t2 = time()
+        #print(loc, t2-t1)
 
-    if params['compressionFilesFound']:
+    p_t = params['p_t'][bestTypes][None, :]
+    p_z_t = params['p_z_t'][bestTypes][None, :]
+    prior = np.exp(-0.5*((redshiftGrid[:, None]-redshifts[None, :])/params['zPriorSigma'])**2)
+    #prior[prior < 1e-6] = 0
+    #prior *= p_t * redshiftGrid[:, None] * np.exp(-0.5 * redshiftGrid[:, None]**2 / p_z_t) / p_z_t
+
+    if params['useCompression'] and params['compressionFilesFound']:
         fC = open(params['compressMargLikFile'])
         fCI = open(params['compressIndicesFile'])
         itCompM = itertools.islice(fC, firstLine, lastLine)
         iterCompI = itertools.islice(fCI, firstLine, lastLine)
     targetDataIter = getDataFromFile(params, firstLine, lastLine,
                                      prefix="target_", getXY=False, CV=False)
-    for loc, (z, ell, bands, fluxes, fluxesVar, bCV, dCV, dVCV)\
+    for loc, (z, normedRefFlux, bands, fluxes, fluxesVar, bCV, dCV, dVCV)\
             in enumerate(targetDataIter):
-
-        if params['compressionFilesFound']:
+        t1 = time()
+        if params['useCompression'] and params['compressionFilesFound']:
             indices = np.array(next(iterCompI).split(' '), dtype=int)
             sel = np.in1d(targetIndices, indices, assume_unique=True)
-            # like_grid = scalefree_flux_likelihood(
-            #    fluxes / ell, fluxesVar / ell**2,
-            #    model_mean[:, :, bands][:, sel, :],
-            #    f_mod_var=model_var[:, :, bands][:, sel, :]
-            # )
-            # like_grid = flux_likelihood(
-            #    fluxes, fluxesVar,
-            #    ell * model_mean[:, :, bands][:, sel, :],
-            #    ell**2 * model_covar[:, :, bands][:, sel, :]
-            # )
-            like_grid = approx_flux_likelihood(
+            like_grid2 = approx_flux_likelihood(
                 fluxes,
                 fluxesVar,
-                ell * model_mean[:, :, bands][:, sel, :],
-                1,
-                params['ellFracStd']**2.,
-                f_mod_covar = ell**2 * model_covar[:, :, bands][:, sel, :]
+                model_mean[:, sel, :][:, :, bands],
+                f_mod_covar=model_covar[:, sel, :][:, :, bands],
+                marginalizeEll=True, normalized=True,
+                ell_hat=1, ell_var=params['ellPriorSigma']**2
             )
+            like_grid *= prior[:, sel]
         else:
-            # like_grid = scalefree_flux_likelihood(
-            #    fluxes / ell, fluxesVar / ell**2,
-            #    model_mean[:, :, bands],  # model mean
-            #    f_mod_var=model_var[:, :, bands]  # model var
-            # )
-            # like_grid = flux_likelihood(
-            #    fluxes, fluxesVar,
-            #    ell * model_mean[:, :, bands],
-            #    ell**2 * model_covar[:, :, bands]
-            # )
-            like_grid = approx_flux_likelihood(
-                fluxes,
-                fluxesVar,
-                ell * model_mean[:, :, bands],
-                1,
-                params['ellFracStd']**2.,
-                f_mod_covar = ell**2 * model_covar[:, :, bands]
-            )
+            #like_grid2 = approx_flux_likelihood(
+            #    fluxes,
+            #    fluxesVar,
+            #    model_mean[:, :, bands],
+            #    f_mod_covar=model_covar[:, :, bands],
+            #    marginalizeEll=True, normalized=True,
+            #    ell_hat=1, ell_var=params['ellPriorSigma']**2
+            #)
+            like_grid = np.zeros((nz, model_mean.shape[1]))
+            approx_flux_likelihood_cy(
+                like_grid, nz, model_mean.shape[1], bands.size,
+                fluxes, fluxesVar,
+                model_mean[:, :, bands],
+                model_covar[:, :, bands],
+                1, params['ellPriorSigma']**2)
+            like_grid *= prior[:, :]
+        t2 = time()
         localPDFs[loc, :] += like_grid.sum(axis=1)
         evidences = np.trapz(like_grid, x=redshiftGrid, axis=0)
-
-        if not params['compressionFilesFound']:
+        t3 = time()
+        if params['useCompression'] and not params['compressionFilesFound']:
             if localCompressIndices[loc, :].sum() == 0:
                 sortind = np.argsort(evidences)[::-1][0:Ncompress]
                 localCompressIndices[loc, :] = targetIndices[sortind]
@@ -153,10 +169,11 @@ for chunk in range(numChunks):
                                     z, redshiftGrid,
                                     localPDFs[loc, :],
                                     params['confidenceLevels'])
+        t4 = time()
+        if loc % 100 == 0:
+            print(loc, t2-t1, t3-t2, t4-t3)
 
-
-
-    if params['compressionFilesFound']:
+    if params['useCompression'] and params['compressionFilesFound']:
         fC.close()
         fCI.close()
 
@@ -205,7 +222,7 @@ if threadNum == 0:
     np.savetxt(fname, globalPDFs, fmt=fmt)
     if redshiftsInTarget:
         np.savetxt(params['metricsFile'], globalMetrics, fmt=fmt)
-    if not params['compressionFilesFound']:
+    if params['useCompression'] and not params['compressionFilesFound']:
         np.savetxt(params['compressMargLikFile'],
                    globalCompEvidences, fmt=fmt)
         np.savetxt(params['compressIndicesFile'],
