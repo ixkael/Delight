@@ -1,9 +1,9 @@
 # Project specific
-*ipynb
 *pdf
 data/*.png
 data/*.pdf
-notebooks
+notebooks/oldstuff/
+notebooks/movies/
 *gpCV.txt
 *fits
 *fluxredshiftmod.txt
@@ -264,4 +264,3 @@ TSWLatexianTemp*
 # KBibTeX
 *~[0-9]*
 
-*.ipynb
