@@ -23,7 +23,12 @@ class PhotozGP:
 
         DL = approx_DL()
         self.bands = np.arange(bandCoefAmplitudes.shape[0])
-        self.mean_fct = Photoz_linear_sed_basis(f_mod_interp)
+        if isinstance(f_mod_interp, int):
+            self.mean_fct = None
+            self.nt = f_mod_interp
+        else:
+            self.mean_fct = Photoz_linear_sed_basis(f_mod_interp)
+            self.nt = f_mod_interp.shape[0]
         #self.mean_fct = Photoz_mean_function(
         #    alpha, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
         #    g_AB=g_AB, lambdaRef=lambdaRef, DL_z=DL)
@@ -44,7 +49,7 @@ class PhotozGP:
         if isinstance(self.mean_fct, Photoz_mean_function):
             mf = self.mean_fct.f(X)
         elif isinstance(self.mean_fct, Photoz_linear_sed_basis):
-            mf = 0
+            mf = None
             if False:
                 hx = self.mean_fct.f(self.X).T
                 def fun(betas):
@@ -59,28 +64,31 @@ class PhotozGP:
                 self.betas = res.x
                 mf = np.dot(hx.T, self.betas)[:, None]
         else:
-            mf = 0
+            mf = None
         self.KXX = self.kernel.K(self.X)
         self.A = self.KXX + np.diag(self.Yvar.flatten())
         sign, self.logdet = np.linalg.slogdet(self.A)
         self.logdet *= sign
         self.L = scipy.linalg.cholesky(self.A, lower=True)
-        hx = self.mean_fct.f(self.X).T
         if False:
             marglikes = np.zeros(self.mean_fct.nt)
             for i in range(self.mean_fct.nt):
                 self.betas = np.zeros(self.mean_fct.nt)
                 self.betas[i] = 1.0
-                self.D = self.Y - np.dot(hx.T, self.betas)[:, None]
+                self.D = self.Y - np.dot(mf.T, self.betas)[:, None]
                 self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
                 marglikes[i] = 0.5 * np.sum(self.beta * self.D) +\
                     0.5 * self.D.size * log_2_pi + 0.5 * self.logdet
             i = np.argmin(marglikes)
             print("marglikes", marglikes, "i=", i)
         self.bestType = bestType
-        self.betas = np.zeros(self.mean_fct.nt)
-        self.betas[bestType] = 1.0
-        self.D = self.Y - np.dot(hx.T, self.betas)[:, None]
+        self.D = 1*self.Y
+        self.betas = np.zeros(self.nt)
+        if self.mean_fct is not None:
+            self.betas[bestType] = 1.0
+            which = np.where(self.betas > 0)[0]
+            hx = self.mean_fct.f(self.X, which=which).T
+            self.D -= np.dot(hx.T, self.betas)[:, None]
         self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
 
     def getCore(self):
@@ -168,7 +176,7 @@ class PhotozGP:
             y_var_bin = y_pred_cov[i*numZGP:(i+1)*numZGP].ravel()
             model_mean[:, i] = interp1d(redshiftGridGP_loc, y_pred_bin, assume_sorted=True, copy=False)(redshiftGrid) #np.interp(redshiftGrid, redshiftGridGP_loc, y_pred_bin)
             if np.any(y_var_bin <= 0):
-                print("band", i, "y_pred_bin", y_pred_bin, "y_var_bin", y_var_bin)
+                print(z, "band", i, "y_pred_bin", y_pred_bin, "y_var_bin", y_var_bin)
             model_var[:, i] = interp1d(redshiftGridGP_loc, y_var_bin, assume_sorted=True, copy=False)(redshiftGrid) # np.interp(redshiftGrid, redshiftGridGP_loc, y_var_bin)
         #model_covar = np.zeros((redshiftGrid.size, numBands, numBands))
         #for i in range(numBands):

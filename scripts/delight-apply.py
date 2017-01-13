@@ -99,8 +99,8 @@ for chunk in range(numChunks):
         t2 = time()
         #print(loc, t2-t1)
 
-    p_t = params['p_t'][bestTypes][None, :]
-    p_z_t = params['p_z_t'][bestTypes][None, :]
+    #p_t = params['p_t'][bestTypes][None, :]
+    #p_z_t = params['p_z_t'][bestTypes][None, :]
     prior = np.exp(-0.5*((redshiftGrid[:, None]-redshifts[None, :])/params['zPriorSigma'])**2)
     #prior[prior < 1e-6] = 0
     #prior *= p_t * redshiftGrid[:, None] * np.exp(-0.5 * redshiftGrid[:, None]**2 / p_z_t) / p_z_t
@@ -115,6 +115,10 @@ for chunk in range(numChunks):
     for loc, (z, normedRefFlux, bands, fluxes, fluxesVar, bCV, dCV, dVCV)\
             in enumerate(targetDataIter):
         t1 = time()
+        ell_hat_z = normedRefFlux * 4 * np.pi\
+            * params['fluxLuminosityNorm'] \
+            * (DL(redshiftGrid)**2. * (1+redshiftGrid))
+        ell_hat_z[:] = 1
         if params['useCompression'] and params['compressionFilesFound']:
             indices = np.array(next(iterCompI).split(' '), dtype=int)
             sel = np.in1d(targetIndices, indices, assume_unique=True)
@@ -124,25 +128,17 @@ for chunk in range(numChunks):
                 model_mean[:, sel, :][:, :, bands],
                 f_mod_covar=model_covar[:, sel, :][:, :, bands],
                 marginalizeEll=True, normalized=True,
-                ell_hat=1, ell_var=params['ellPriorSigma']**2
+                ell_hat=ell_hat_z, ell_var=(ell_hat_z*params['ellPriorSigma'])**2
             )
             like_grid *= prior[:, sel]
         else:
-            #like_grid2 = approx_flux_likelihood(
-            #    fluxes,
-            #    fluxesVar,
-            #    model_mean[:, :, bands],
-            #    f_mod_covar=model_covar[:, :, bands],
-            #    marginalizeEll=True, normalized=True,
-            #    ell_hat=1, ell_var=params['ellPriorSigma']**2
-            #)
             like_grid = np.zeros((nz, model_mean.shape[1]))
             approx_flux_likelihood_cy(
                 like_grid, nz, model_mean.shape[1], bands.size,
                 fluxes, fluxesVar,
                 model_mean[:, :, bands],
                 model_covar[:, :, bands],
-                1, params['ellPriorSigma']**2)
+                ell_hat=ell_hat_z, ell_var=(ell_hat_z*params['ellPriorSigma'])**2)
             like_grid *= prior[:, :]
         t2 = time()
         localPDFs[loc, :] += like_grid.sum(axis=1)

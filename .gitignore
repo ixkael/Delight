@@ -1,5 +1,4 @@
 # Project specific
-*pdf
 data/*.png
 data/*.pdf
 notebooks/oldstuff/
@@ -263,4 +262,3 @@ TSWLatexianTemp*
 
 # KBibTeX
 *~[0-9]*
-

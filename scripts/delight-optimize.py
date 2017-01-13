@@ -20,6 +20,7 @@ numBands = bandCoefAmplitudes.shape[0]
 
 redshiftDistGrid, redshiftGrid, redshiftGridGP = createGrids(params)
 f_mod = readSEDs(params)
+DL = approx_DL()
 
 dir_seds = params['templates_directory']
 dir_filters = params['bands_directory']
@@ -39,7 +40,7 @@ numObjectsTarget = np.sum(1 for line in open(params['target_catFile']))
 print('Number of Training Objects', numObjectsTraining)
 print('Number of Target Objects', numObjectsTarget)
 
-for ellPriorSigma in [0.1, 1.0]:
+for ellPriorSigma in [1.0, 10.0]:
     alpha_C = 1e3
     alpha_L = 1e2
     V_C, V_L = 1.0, 1.0
@@ -59,7 +60,7 @@ for ellPriorSigma in [0.1, 1.0]:
         #params['training_extraFracFluxError'] = extraFracFluxError
         params['target_extraFracFluxError'] = extraFracFluxError
 
-        for V_C in [1e-2, 0.1, 1.0]:
+        for V_C in [0.1, 1.0]:
 
             gp.var_C = V_C
             gp.var_L = V_L
@@ -106,13 +107,17 @@ for ellPriorSigma in [0.1, 1.0]:
                         in targetDataIter:
                     loc += 1
                     like_grid = np.zeros((model_mean.shape[0], model_mean.shape[1]))
+                    ell_hat_z = normedRefFlux * 4 * np.pi\
+                        * params['fluxLuminosityNorm'] \
+                        * (DL(redshiftGrid)**2. * (1+redshiftGrid))
+                    ell_hat_z[:] = 1
                     approx_flux_likelihood_cy(
                         like_grid,
                         model_mean.shape[0], model_mean.shape[1], bands.size,
                         fluxes, fluxesVar,
                         model_mean[:, :, bands],
                         V_C*model_covar[:, :, bands],
-                        1, ellPriorSigma**2)
+                        ell_hat_z, (ell_hat_z*ellPriorSigma)**2)
                     like_grid *= np.exp(-0.5*((redshiftGrid[:, None]-redshifts[None, :])/redshiftSigma)**2)
                     pdf = like_grid.sum(axis=1)
                     if pdf.sum() == 0:
@@ -137,10 +142,9 @@ for ellPriorSigma in [0.1, 1.0]:
                         for i in range(numConfLevels):
                             if pdfAtZ >= confidencelevels[i]:
                                 confFractions[i, zmeanBinLoc] += 1
-                        # pdf /= np.trapz(pdf, x=redshiftGrid)
                         stackedPdfs[:, zmeanBinLoc]\
                             += pdf / numObjectsTraining
-                        ind = pdf <= pdfAtZ
+                        ind = pdf >= pdfAtZ
                         pdf /= np.trapz(pdf, x=redshiftGrid)
                         cis[loc] = np.trapz(pdf[ind], x=redshiftGrid[ind])
 
@@ -155,23 +159,23 @@ for ellPriorSigma in [0.1, 1.0]:
                 print("")
                 print(' =======================================')
                 print("  ellSTD", ellPriorSigma, "fluxError", extraFracFluxError, "V_C", V_C, "zSTD", redshiftSigma)
-                cis_pdf, e = np.histogram(cis, 50)
+                cis_pdf, e = np.histogram(cis, 50, range=[0, 1])
                 cis_pdfcum = np.cumsum(cis_pdf) / np.sum(cis_pdf)
-                print("-------------------------------->>  %.3g" % (np.max(np.abs(e[1:] - cis_pdfcum))))
+                print("-------------------------------->>  %.3g" % (np.max(np.abs(np.abs(e[1:] - cis_pdfcum)))))
                 print(">>", end = "")
                 for i in range(numZbins):
                     ind2 = zmeanBinLocs == i
                     if ind2.sum() > 2:
-                        cis_pdf, e = np.histogram(cis[ind2], 50)
+                        cis_pdf, e = np.histogram(cis[ind2], 50, range=[0, 1])
                         cis_pdfcum = np.cumsum(cis_pdf) / np.sum(cis_pdf)
                         print("  %.3g" % (np.max(np.abs(e[1:] - cis_pdfcum))), end = " ")
-                print("")
-                print(' >>>> mean z bias %.3g' % np.abs(bias_zmean[ind]).mean(), 'mean N(z) bias %.3g' % np.abs(bias_nz[ind]).mean(), ' <<<<')
+                #print("")
+                #print(' >>>> mean z bias %.3g' % np.abs(bias_zmean[ind]).mean(), 'mean N(z) bias %.3g' % np.abs(bias_nz[ind]).mean(), ' <<<<')
                 #print(' >>>> max z bias %.3g' % np.abs(bias_zmean[ind]).max(), 'max N(z) bias %.3g' % np.abs(bias_nz[ind]).max(), ' <<<<')
                 #print(' > bias_zmap : ', '  '.join(['%.3g' % x for x in bias_zmap]))
                 #print(' > z bias : ', '  '.join([('%.3g' % x) if np.isfinite(x) else '.' for x in bias_zmean]))
                 #print(' > nzbias : ', '  '.join([('%.3g' % x) if np.isfinite(x) else '.' for x in bias_nz]))
                 #print(' --------------------------------')
-                for i in range(numConfLevels):
-                    print(' >', params['confidenceLevels'][i], ' :: ', '  '.join([('%.3g' % x) if np.isfinite(x) else '.' for x in confFractions[i, :]]))
-                print(' =======================================')
+                #for i in range(numConfLevels):
+                #    print(' >', params['confidenceLevels'][i], ' :: ', '  '.join([('%.3g' % x) if np.isfinite(x) else '.' for x in confFractions[i, :]]))
+                #print(' =======================================')

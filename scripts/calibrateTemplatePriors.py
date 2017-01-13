@@ -63,13 +63,12 @@ for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in trainingDataIter:
             fmod_atZ[loc, t, ib] = ell * np.interp(z, redshiftGrid,
                                                    f_mod[:, t, b])
 
-
 def lnprob(params, nt, allFluxes, allFluxesVar, fmod_atZ, pmin, pmax):
     if np.any(params > pmax) or np.any(params < pmin):
             return - np.inf
     alphas = params[0:nt]
     betas = params[nt:2*nt][None, :]
-    sigma_ell = 1e3
+    sigma_ell = 1e16
     like_grid = approx_flux_likelihood_multiobj(
         allFluxes, allFluxesVar, fmod_atZ, 1, sigma_ell**2.)  # no, nt
     p_t = dirichlet(alphas)
