@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
 import os
 import collections
@@ -9,8 +11,8 @@ from scipy.interpolate import interp1d
 
 def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
     """
-    Parser for cfg inputtype parameter files,
-    see examples for details.
+    Parser for configuration inputtype parameter files,
+    see examples for details. A bunch of them ar parsed.
     """
     config = configparser.ConfigParser()
     if not os.path.isfile(fileName):
@@ -159,7 +161,8 @@ def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
 
 def readColumnPositions(params, prefix="training_", refFlux=True):
     """
-    Read column/band information needed for parsing catalog file.
+    Read column/band information needed for parsing catalog file,
+        in particular the column positions.
     """
     bandIndices = np.array([ib for ib, b in enumerate(params['bandNames'])
                             if b in params[prefix+'bandOrder']])
@@ -184,7 +187,7 @@ def readColumnPositions(params, prefix="training_", refFlux=True):
 
 def readBandCoefficients(params):
     """
-    Read band/filter information.
+    Read band/filter information, in particular the Gaussian Mixture coefs.
     """
     bandCoefAmplitudes = []
     bandCoefPositions = []
@@ -206,7 +209,7 @@ def readBandCoefficients(params):
 
 def createGrids(params):
     """
-    Create redshift grids.
+    Create redshift grids from parameters in file.
     """
     redshiftDistGrid = np.arange(0, params['redshiftMax'],
                                  params['redshiftDisBinSize'])
@@ -220,6 +223,9 @@ def createGrids(params):
 
 
 def readSEDs(params):
+    """
+    Read SED parameters.
+    """
     redshiftGrid = np.arange(params['redshiftMin'],
                              params['redshiftMax'],
                              params['redshiftBinSize'])

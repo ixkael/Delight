@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import numpy as np
 from copy import copy
@@ -15,7 +16,11 @@ kind = "linear"
 
 class Photoz_linear_sed_basis():
     """
-    Mean function of photoz GP
+    Mean function of photoz GP, based on a library of templates.
+
+    Args:
+        f_mod_interp: grid of interpolators of size (num templates, num bands)
+            called as ``f_mod_interp[it, ib](z)``
     """
     def __init__(self, f_mod_interp):
         """ Constructor."""
@@ -27,6 +32,12 @@ class Photoz_linear_sed_basis():
     def f(self, X, which=None):
         """
         Compute mean function.
+
+        Args:
+            X: array of size (nobj, 3) containing the GP inputs.
+                The column order is band, redshift, and luminosity.
+            which (Optional): array of indices on which to compute the mean
+                function. (default: all types in the SED basis).
         """
         b = X[:, 0].astype(int)
         z = X[:, 1]
@@ -40,14 +51,18 @@ class Photoz_linear_sed_basis():
             for k in range(self.nb):
                 sel = b == k
                 hx[sel, it] = self.f_mod_interp[it, k](z[sel])
+
         return l[:, None] * hx
 
 
 class Photoz_mean_function():
     """
-    Mean function of photoz GP
+    (Deprecated)
+    Mean function of photoz GP, based on a power law model.
     """
-    def __init__(self, alpha, fcoefs_amp, fcoefs_mu, fcoefs_sig,
+    def __init__(self,
+                 alpha,
+                 fcoefs_amp, fcoefs_mu, fcoefs_sig,
                  g_AB=1.0, lambdaRef=4.5e3, DL_z=None, name='photoz_mf'):
         """ Constructor."""
         # If luminosity_distance function not provided, use approximation
@@ -104,12 +119,50 @@ class Photoz_mean_function():
 
 class Photoz_kernel:
     """
-    Photoz kernel based on RBF kernel
+    Photoz kernel based on RBF kernel in SED space.
+
+    Args:
+        fcoefs_amp: ``numpy.array`` of size (numBands, numCoefs)
+            describint the amplitudes of the Gaussians approximating the
+            photometric filters.
+        fcoefs_mu: ``numpy.array`` of size (numBands, numCoefs)
+            describint the positions of the Gaussians approximating the
+            photometric filters.
+        fcoefs_sig: ``numpy.array`` of size (numBands, numCoefs)
+            describint the widths of the Gaussians approximating the
+            photometric filters.
+        lines_mu: ``numpy.array`` of SED line positions
+        lines_sig: ``numpy.array`` of SED line widths
+        var_C: GP variance for SED continuum correlations.
+            Should be a ``float`, preferably between 1e-3 and 1e2.
+        var_L: GP variance for SED line correlations.
+            Should be a ``float`, preferably between 1e-3 and 1e2.
+        alpha_C: GP lengthscale for smoothness of SED continuum correlations.
+            Should be a ``float`, preferably between 1e1 and 1e4.
+        alpha_L: GP lengthscale for smoothness of SED line correlations.
+            Should be a ``float`, preferably between 1e1 and 1e4.
+        lambdaRef (Optional): Pivot space for the SEDs
+            (``float``, default: ``4.5e3``)
+        g_AB (Optional): AB photometric normalization constant
+            (``float``, default: ``1.0``)
+        DL_z (Optional): function for computing the luminosity distance
+            as a fct of redshift. Default: an analytic approximation.
+        redshiftGrid (Optional): redshift grid (array) for computing the GP.
+            (default: some fine grid.)
+        use_interpolators (Optional): ``boolean`` indicating if the GP
+            should be used for all predictions,
+            or if an interpolation scheme should be used (default: ``True``)
     """
-    def __init__(self, fcoefs_amp, fcoefs_mu, fcoefs_sig,
+    def __init__(self,
+                 fcoefs_amp, fcoefs_mu, fcoefs_sig,
                  lines_mu, lines_sig,
-                 var_C, var_L, alpha_C, alpha_L,
-                 g_AB=1.0, DL_z=None, redshiftGrid=None,
+                 var_C,
+                 var_L,
+                 alpha_C,
+                 alpha_L,
+                 g_AB=1.0,
+                 DL_z=None,
+                 redshiftGrid=None,
                  use_interpolators=True):
         """ Constructor."""
         self.use_interpolators = use_interpolators
@@ -145,7 +198,7 @@ class Photoz_kernel:
 
     def roundband(self, bfloat):
         """
-        Cast the last dimension (band index) as integer
+        Convenient fct to cast the last dimension (band index) as integer.
         """
         # In GPy, numpy arrays are type ObsAr, so the values must be extracted.
         b = bfloat.astype(int)
@@ -156,14 +209,17 @@ class Photoz_kernel:
         return b
 
     def Kdiag(self, X):
-            l1 = X[:, 2]
-            self.update_kernelparts_diag(X)
-            return self.KTd * self.Zprefacd**2 * l1**2 *\
-                (self.var_C * self.KCd + self.var_L * self.KLd)
+        """
+        Compute GP kernel on the diagonal only.
+        """
+        l1 = X[:, 2]
+        self.update_kernelparts_diag(X)
+        return self.KTd * self.Zprefacd**2 * l1**2 *\
+            (self.var_C * self.KCd + self.var_L * self.KLd)
 
     def K(self, X, X2=None):
         """
-        Compute kernel.
+        Compute GP kernel, auto or cross depending on whether X2 is set.
         """
         if X2 is None:
             X2 = X
@@ -174,47 +230,54 @@ class Photoz_kernel:
             (self.var_C * self.KC + self.var_L * self.KL)
 
     def update_kernelparts_diag(self, X):
-            NO1 = X.shape[0]
-            b1 = self.roundband(X[:, 0])
+        """
+        Update the precomputed parts of the kernel, on the diagonal only.
+        X is an array of size (nobj, 3) containing the GP inputs.
+        The column order is band, redshift, and luminosity.
+        """
+        NO1 = X.shape[0]
+        b1 = self.roundband(X[:, 0])
+        fz1 = 1 + X[:, 1]
+        self.KLd, self.KCd = np.zeros((NO1,)), np.zeros((NO1,))
+        self.D_alpha_Cd, self.D_alpha_Ld =\
+            np.zeros((NO1,)), np.zeros((NO1,))
+        self.KTd = np.ones((X.shape[0],))
+        self.Zprefacd = (1.+X[:, 1])**2 /\
+            (self.fourpi * self.g_AB * self.DL_z(X[:, 1])**2)
+
+        if self.use_interpolators:
+
+            for i1 in range(self.numBands):
+                ind1 = np.where(b1 == i1)[0]
+                fz1 = 1 + X[ind1, 1]
+                is1 = np.argsort(fz1)
+                if ind1.size > 0:
+                    self.KLd[ind1[is1]] =\
+                        self.KL_diag_interp[i1](fz1[is1])
+                    self.KCd[ind1[is1]] =\
+                        self.KC_diag_interp[i1](fz1[is1])
+                    self.D_alpha_Cd[ind1[is1]] =\
+                        self.D_alpha_C_diag_interp[i1](fz1[is1])
+                    self.D_alpha_Ld[ind1[is1]] =\
+                        self.D_alpha_L_diag_interp[i1](fz1[is1])
+
+        else:  # not use interpolators
             fz1 = 1 + X[:, 1]
-            self.KLd, self.KCd = np.zeros((NO1,)), np.zeros((NO1,))
-            self.D_alpha_Cd, self.D_alpha_Ld =\
-                np.zeros((NO1,)), np.zeros((NO1,))
-            self.KTd = np.ones((X.shape[0],))
-            self.Zprefacd = (1.+X[:, 1])**2 /\
-                (self.fourpi * self.g_AB * self.DL_z(X[:, 1])**2)
-
-            if self.use_interpolators:
-
-                for i1 in range(self.numBands):
-                    ind1 = np.where(b1 == i1)[0]
-                    fz1 = 1 + X[ind1, 1]
-                    is1 = np.argsort(fz1)
-                    if ind1.size > 0:
-                        self.KLd[ind1[is1]] =\
-                            self.KL_diag_interp[i1](fz1[is1])
-                        self.KCd[ind1[is1]] =\
-                            self.KC_diag_interp[i1](fz1[is1])
-                        self.D_alpha_Cd[ind1[is1]] =\
-                            self.D_alpha_C_diag_interp[i1](fz1[is1])
-                        self.D_alpha_Ld[ind1[is1]] =\
-                            self.D_alpha_L_diag_interp[i1](fz1[is1])
-
-            else:  # not use interpolators
-                fz1 = 1 + X[:, 1]
-                kernelparts_diag(self.nz, self.numCoefs, self.numLines,
-                                 self.alpha_C, self.alpha_L,
-                                 self.fcoefs_amp, self.fcoefs_mu,
-                                 self.fcoefs_sig,
-                                 self.lines_mu[:self.numLines],
-                                 self.lines_sig[:self.numLines],
-                                 self.norms, b1, fz1,
-                                 True, self.KLd, self.KCd,
-                                 self.D_alpha_Cd, self.D_alpha_Ld)
+            kernelparts_diag(self.nz, self.numCoefs, self.numLines,
+                             self.alpha_C, self.alpha_L,
+                             self.fcoefs_amp, self.fcoefs_mu,
+                             self.fcoefs_sig,
+                             self.lines_mu[:self.numLines],
+                             self.lines_sig[:self.numLines],
+                             self.norms, b1, fz1,
+                             True, self.KLd, self.KCd,
+                             self.D_alpha_Cd, self.D_alpha_Ld)
 
     def update_kernelparts(self, X, X2=None):
         """
-        Update kernel components if inputs have changed.
+        Update the precomputed parts of the kernel.
+        X is an array of size (nobj, 3) containing the GP inputs.
+        The column order is band, redshift, and luminosity.
         """
         if X2 is None:
             X2 = X
@@ -278,6 +341,8 @@ class Photoz_kernel:
     def construct_interpolators(self):
         """
         Construct interpolation scheme for the kernel.
+        This significantly speeds up calculations by computing and storing
+        the kernel evaluated on a grid, for later interpolation.
         """
         bands = np.arange(self.numBands).astype(int)
         fzgrid = 1 + self.redshiftGrid

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 from delight.utils import *
 from astropy.cosmology import FlatLambdaCDM

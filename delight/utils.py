@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import numpy as np
 
@@ -18,6 +19,9 @@ class approx_DL():
 
 
 def symmetrize(a):
+    """
+    Symmmetrize matrix
+    """
     return a + a.T - np.diag(a.diagonal())
 
 
@@ -105,7 +109,10 @@ def approx_flux_likelihood_multiobj(
 
 
 def dirichlet(alphas, rsize=1):
-    gammabs = np.array([np.random.gamma(alpha+1, size=rsize)
+    """
+    Draw samples from a Dirichlet distribution.
+    """
+    gammabs = np.array([np.random.gamma(alpha, size=rsize)
                         for alpha in alphas])
     fbs = gammabs / gammabs.sum(axis=0)
     return fbs.T
@@ -122,6 +129,10 @@ def approx_flux_likelihood(
         normalized=True,
         returnChi2=False,
         returnEllML=False):
+    """
+    Approximate flux likelihood, with scaling of both the mean and variance.
+    This approximates the true likelihood with an iterative scheme.
+    """
 
     assert len(f_obs.shape) == 1
     assert len(f_obs_var.shape) == 1
@@ -182,6 +193,9 @@ def scalefree_flux_likelihood(f_obs, f_obs_var,
 
 
 def CIlevel(redshiftGrid, PDF, fraction, numlevels=200):
+    """
+    Computes confidence interval from PDF.
+    """
     evidence = np.trapz(PDF, redshiftGrid)
     for level in np.linspace(0, PDF.max(), num=numlevels):
         ind = np.where(PDF <= level)
@@ -196,6 +210,9 @@ def kldiv(p, q):
 
 
 def computeMetrics(ztrue, redshiftGrid, PDF, confIntervals):
+    """
+    Compute various metrics on the PDF
+    """
     zmean = np.average(redshiftGrid, weights=PDF)
     zmap = redshiftGrid[np.argmax(PDF)]
     zstdzmean = np.sqrt(np.average((redshiftGrid-zmean)**2, weights=PDF))

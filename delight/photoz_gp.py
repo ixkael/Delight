@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import numpy as np
 from copy import copy
@@ -10,16 +11,53 @@ from delight.photoz_kernels import *
 
 log_2_pi = np.log(2*np.pi)
 
+__all__ = ["PhotozGP"]
+
 
 class PhotozGP:
     """
     Photo-z Gaussian process, with physical kernel and mean function.
+
+    Args:
+        f_mod_interp: grid of interpolators of size (num templates, num bands)
+            called as ``f_mod_interp[it, ib](z)``
+        bandCoefAmplitudes: ``numpy.array`` of size (numBands, numCoefs)
+            describint the amplitudes of the Gaussians approximating the
+            photometric filters.
+        bandCoefPositions: ``numpy.array`` of size (numBands, numCoefs)
+            describint the positions of the Gaussians approximating the
+            photometric filters.
+        bandCoefWidths: ``numpy.array`` of size (numBands, numCoefs)
+            describint the widths of the Gaussians approximating the
+            photometric filters.
+        lines_pos: ``numpy.array`` of SED line positions
+        lines_width: ``numpy.array`` of SED line widths
+        var_C: GP variance for SED continuum correlations.
+            Should be a ``float`, preferably between 1e-3 and 1e2.
+        var_L: GP variance for SED line correlations.
+            Should be a ``float`, preferably between 1e-3 and 1e2.
+        alpha_C: GP lengthscale for smoothness of SED continuum correlations.
+            Should be a ``float`, preferably between 1e1 and 1e4.
+        alpha_L: GP lengthscale for smoothness of SED line correlations.
+            Should be a ``float`, preferably between 1e1 and 1e4.
+        redshiftGridGP: redshift grid (array) for computing the GP.
+        use_interpolators (Optional): ``boolean`` indicating if the GP
+            should be used for all predictions,
+            or if an interpolation scheme should be used (default: ``True``)
+        lambdaRef (Optional): Pivot space for the SEDs
+            (``float``, default: ``4.5e3``)
+        g_AB (Optional): AB photometric normalization constant
+            (``float``, default: ``1.0``)
     """
-    def __init__(self, f_mod_interp,
+    def __init__(self,
+                 f_mod_interp,
                  bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
-                 lines_pos, lines_width, var_C, var_L, alpha_C, alpha_L,
-                 redshiftGridGP, use_interpolators=True,
-                 lambdaRef=4.5e3, g_AB=1.0):
+                 lines_pos, lines_width,
+                 var_C, var_L, alpha_C, alpha_L,
+                 redshiftGridGP,
+                 use_interpolators=True,
+                 lambdaRef=4.5e3,
+                 g_AB=1.0):
 
         DL = approx_DL()
         self.bands = np.arange(bandCoefAmplitudes.shape[0])
@@ -29,7 +67,7 @@ class PhotozGP:
         else:
             self.mean_fct = Photoz_linear_sed_basis(f_mod_interp)
             self.nt = f_mod_interp.shape[0]
-        #self.mean_fct = Photoz_mean_function(
+        # self.mean_fct = Photoz_mean_function(
         #    alpha, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
         #    g_AB=g_AB, lambdaRef=lambdaRef, DL_z=DL)
         self.kernel = Photoz_kernel(
@@ -41,7 +79,15 @@ class PhotozGP:
 
     def setData(self, X, Y, Yvar, bestType):
         """
-        Set data content for the Gaussian process
+        Set data content for the Gaussian process.
+
+        Args:
+            X: array of size (nobj, 3) containing the GP inputs.
+                The column order is band, redshift, and luminosity.
+            Y: array of size (nobj, 1) containing the GP outputs.
+                Contains the photometric fluxes corresponding to the inputs.
+            Yvar: array of size (nobj, 1) containing the GP outputs.
+                Contains the flux variances corresponding to the inputs.
         """
         self.X = X
         self.Y = Y.reshape((-1, 1))
@@ -50,10 +96,12 @@ class PhotozGP:
             mf = self.mean_fct.f(X)
         elif isinstance(self.mean_fct, Photoz_linear_sed_basis):
             mf = None
-            if False:
+            if False:  # old stuff, that might be useful one day.
                 hx = self.mean_fct.f(self.X).T
+
                 def fun(betas):
-                    chi2 = (np.dot(hx.T, betas) - self.Y[:, 0])**2 / self.Yvar[:, 0]
+                    chi2 = (np.dot(hx.T, betas) -
+                            self.Y[:, 0])**2 / self.Yvar[:, 0]
                     return chi2.sum()
                 ell = self.X[:, 2].mean()
                 x0 = np.repeat(ell / self.mean_fct.nt, self.mean_fct.nt)
@@ -70,7 +118,7 @@ class PhotozGP:
         sign, self.logdet = np.linalg.slogdet(self.A)
         self.logdet *= sign
         self.L = scipy.linalg.cholesky(self.A, lower=True)
-        if False:
+        if False:  # old stuff, that might be useful one day.
             marglikes = np.zeros(self.mean_fct.nt)
             for i in range(self.mean_fct.nt):
                 self.betas = np.zeros(self.mean_fct.nt)
@@ -84,7 +132,7 @@ class PhotozGP:
         self.bestType = bestType
         self.D = 1*self.Y
         self.betas = np.zeros(self.nt)
-        if self.mean_fct is not None:
+        if self.mean_fct is not None:  # set mean fct to best fit template
             self.betas[bestType] = 1.0
             which = np.where(self.betas > 0)[0]
             hx = self.mean_fct.f(self.X, which=which).T
@@ -94,6 +142,8 @@ class PhotozGP:
     def getCore(self):
         """
         Returns core matrices, useful to re-use the GP elsewhere.
+        The core matrices contain stuff that doesn't need to be recomputed.
+        Returns array of size numTemplates+numBands+numBands*(numBands+1)//2.
         """
         B = self.D.size
         nt = self.betas.size
@@ -106,7 +156,15 @@ class PhotozGP:
 
     def setCore(self, X, B, nt, flatarray):
         """
-        Set core matrices
+        Set the GP core matrices.
+        The core matrices contain stuff that doesn't need to be recomputed.
+
+        Args:
+            flatarray: size numTemplates+numBands+numBands*(numBands+1)//2.
+            X: the GP inputs, of size (nobj, 3).
+            B: ``float`` the number of bands.
+            nt: ``float`` the number of templates.
+
         """
         self.X = X
         self.betas = flatarray[0:nt]
@@ -118,14 +176,18 @@ class PhotozGP:
 
     def margLike(self):
         """
-        Returns marginalized likelihood of GP
+        Returns marginalized likelihood of GP.
         """
         return 0.5 * np.sum(self.beta * self.D) +\
             0.5 * self.logdet + 0.5 * self.D.size * log_2_pi
 
     def predict(self, x_pred, diag=True):
         """
-        Raw way to predict outputs with the GP
+        Raw way to predict outputs with the GP.
+        Args:
+            x_pred: input array of size (nobj, 3).
+                The column order is band, redshift, and luminosity.
+            diag (Optional): return the predicted variance on the diagonal only
         """
         assert x_pred.shape[1] == 3
         KXXp = self.kernel.K(x_pred, self.X)
@@ -155,6 +217,12 @@ class PhotozGP:
         First compute on the coarce GP grid and then interpolate on finer grid.
         ell should be set to reference luminosity used in the GP.
         z is an additional redshift to compute predictions at.
+
+        Args:
+            redshiftGrid: array to get predictions for.
+                The bands are automatically set.
+            ell (Optional): to change the luminosity scaling if necessary.
+            z (Optional): add an additional point to the redshift Grid.
         """
         numBands = self.bands.size
         numZGP = self.redshiftGridGP.size
@@ -174,20 +242,34 @@ class PhotozGP:
         for i in range(numBands):
             y_pred_bin = y_pred[i*numZGP:(i+1)*numZGP].ravel()
             y_var_bin = y_pred_cov[i*numZGP:(i+1)*numZGP].ravel()
-            model_mean[:, i] = interp1d(redshiftGridGP_loc, y_pred_bin, assume_sorted=True, copy=False)(redshiftGrid) #np.interp(redshiftGrid, redshiftGridGP_loc, y_pred_bin)
+            model_mean[:, i] = interp1d(redshiftGridGP_loc,
+                                        y_pred_bin,
+                                        assume_sorted=True,
+                                        copy=False)(redshiftGrid)
+            # np.interp(redshiftGrid, redshiftGridGP_loc, y_pred_bin)
             if np.any(y_var_bin <= 0):
-                print(z, "band", i, "y_pred_bin", y_pred_bin, "y_var_bin", y_var_bin)
-            model_var[:, i] = interp1d(redshiftGridGP_loc, y_var_bin, assume_sorted=True, copy=False)(redshiftGrid) # np.interp(redshiftGrid, redshiftGridGP_loc, y_var_bin)
-        #model_covar = np.zeros((redshiftGrid.size, numBands, numBands))
-        #for i in range(numBands):
+                print(z, "band", i, "y_pred_bin",
+                      y_pred_bin, "y_var_bin", y_var_bin)
+            model_var[:, i] = interp1d(redshiftGridGP_loc,
+                                       y_var_bin,
+                                       assume_sorted=True,
+                                       copy=False)(redshiftGrid)
+            #  np.interp(redshiftGrid, redshiftGridGP_loc, y_var_bin)
+        # model_covar = np.zeros((redshiftGrid.size, numBands, numBands))
+        # for i in range(numBands):
         #    for j in range(numBands):
-        #        y_covar_bin = y_pred_fullcov[i*numZGP:(i+1)*numZGP, :][:, j*numZGP:(j+1)*numZGP]
-        #        interp_spline = RectBivariateSpline(redshiftGridGP_loc, redshiftGridGP_loc, y_covar_bin)
-        #        model_covar[:, i, j] = interp_spline(redshiftGrid, redshiftGrid, grid=False)
+        #        y_covar_bin =
+        # y_pred_fullcov[i*numZGP:(i+1)*numZGP, :][:, j*numZGP:(j+1)*numZGP]
+        #        interp_spline =
+        # RectBivariateSpline(redshiftGridGP_loc,
+        # redshiftGridGP_loc, y_covar_bin)
+        #        model_covar[:, i, j] =
+        # interp_spline(redshiftGrid, redshiftGrid, grid=False)
         return model_mean, model_var
 
     def estimateAlphaEll(self):
         """
+        (Deprecated)
         Estimate alpha by fitting colours with power law
         then estimate ell by fixing alpha by fitting fluxes with power law.
         """
@@ -197,8 +279,10 @@ class PhotozGP:
             self.mean_fct.alpha = alpha[0]
             y_pred = self.mean_fct.f(X_pred).ravel()
             y_pred *= np.mean(self.Y) / y_pred.mean()
-            chi2 = scalefree_flux_likelihood(self.Y.ravel(), self.Yvar.ravel(),
-                                                y_pred[None, None, :], returnChi2=True)
+            chi2 = scalefree_flux_likelihood(self.Y.ravel(),
+                                             self.Yvar.ravel(),
+                                             y_pred[None, None, :],
+                                             returnChi2=True)
             return chi2
 
         x0 = [0.0]
@@ -231,6 +315,7 @@ class PhotozGP:
 
     def optimizeAlpha_GP(self):
         """
+        (Deprecated)
         Optimize alpha with marglike as objective.
         """
         x0 = 0.0  # [0.0, self.X[0, 2]]
@@ -243,6 +328,7 @@ class PhotozGP:
 
     def updateAlphaAndReturnMarglike(self, alpha):
         """
+        (Deprecated)
         For optimizing alpha with the marglike as objective using scipy.
         """
         self.mean_fct.alpha = alpha[0]
