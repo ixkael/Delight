@@ -19,6 +19,6 @@ ext_modules = [
     ]
 
 setup(
-  name="delight_cy",
+  name="delight",
   cmdclass={"build_ext": build_ext},
   ext_modules=ext_modules)

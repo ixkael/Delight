@@ -22,7 +22,8 @@ install:
 before_script:
   - pwd
   - ls delight
-  - python -c "import delight"
+  - python -c "from delight.io import *"
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)
   - python scripts/processFilters.py tests/parametersTest.cfg
 script:
   - coverage run --source delight -m py.test
