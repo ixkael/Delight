@@ -19,11 +19,12 @@ install:
   - sudo apt-get update
   - python setup.py build_ext --inplace
   - python setup.py install
-script:
+before_script:
   - pwd
   - ls delight
   - python -c "import delight"
   - python scripts/processFilters.py tests/parametersTest.cfg
+script:
   - coverage run --source delight -m py.test
   - pep8 delight/*py
   - pep8 tests/*py
