@@ -17,7 +17,6 @@ old_2D_stuff
 paper/PhotoZviaGP_paper.pdf
 data/FILTERS/*png
 data/FILTERS/*txt
-delight/*.pyx
 delight/*.c
 
 # Byte-compiled / optimized / DLL files
