@@ -70,7 +70,7 @@ for iband, band in enumerate(bandNames):
         fig, ax = plt.subplots(figsize=(8, 4))
         ax.plot(x[ind], y[ind], lw=3, label='True filter', c='k')
         ax.plot(xf, yy, lw=2, c='r', label='Gaussian fit')
-        #ax0.plot(x[ind], y[ind], lw=3, label=band, color=cols[iband])
+        # ax0.plot(x[ind], y[ind], lw=3, label=band, color=cols[iband])
         ax0.plot(xf, yy, lw=3, label=band, color=cols[iband])
 
     coefs_redshifted = 1*coefs

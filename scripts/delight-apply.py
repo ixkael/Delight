@@ -34,10 +34,10 @@ dir_filters = params['bands_directory']
 lambdaRef = params['lambdaRef']
 sed_names = params['templates_names']
 f_mod_grid = np.zeros((redshiftGrid.size, len(sed_names),
-                  len(params['bandNames'])))
+                       len(params['bandNames'])))
 for t, sed_name in enumerate(sed_names):
     f_mod_grid[:, t, :] = np.loadtxt(dir_seds + '/' + sed_name +
-                                '_fluxredshiftmod.txt')
+                                     '_fluxredshiftmod.txt')
 
 numZbins = redshiftDistGrid.size - 1
 numZ = redshiftGrid.size
@@ -58,7 +58,8 @@ comm.Barrier()
 print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
 
 DL = approx_DL()
-gp = PhotozGP(f_mod_interp, bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+gp = PhotozGP(f_mod_interp,
+              bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
               params['lines_pos'], params['lines_width'],
               params['V_C'], params['V_L'],
               params['alpha_C'], params['alpha_L'],
@@ -97,13 +98,15 @@ for chunk in range(numChunks):
         model_mean[:, loc, :], model_covar[:, loc, :] =\
             gp.predictAndInterpolate(redshiftGrid, ell=ell)
         t2 = time()
-        #print(loc, t2-t1)
+        # print(loc, t2-t1)
 
-    #p_t = params['p_t'][bestTypes][None, :]
-    #p_z_t = params['p_z_t'][bestTypes][None, :]
-    prior = np.exp(-0.5*((redshiftGrid[:, None]-redshifts[None, :])/params['zPriorSigma'])**2)
-    #prior[prior < 1e-6] = 0
-    #prior *= p_t * redshiftGrid[:, None] * np.exp(-0.5 * redshiftGrid[:, None]**2 / p_z_t) / p_z_t
+    # p_t = params['p_t'][bestTypes][None, :]
+    # p_z_t = params['p_z_t'][bestTypes][None, :]
+    prior = np.exp(-0.5*((redshiftGrid[:, None]-redshifts[None, :]) /
+                         params['zPriorSigma'])**2)
+    # prior[prior < 1e-6] = 0
+    # prior *= p_t * redshiftGrid[:, None] *
+    # np.exp(-0.5 * redshiftGrid[:, None]**2 / p_z_t) / p_z_t
 
     if params['useCompression'] and params['compressionFilesFound']:
         fC = open(params['compressMargLikFile'])
@@ -128,7 +131,8 @@ for chunk in range(numChunks):
                 model_mean[:, sel, :][:, :, bands],
                 f_mod_covar=model_covar[:, sel, :][:, :, bands],
                 marginalizeEll=True, normalized=True,
-                ell_hat=ell_hat_z, ell_var=(ell_hat_z*params['ellPriorSigma'])**2
+                ell_hat=ell_hat_z,
+                ell_var=(ell_hat_z*params['ellPriorSigma'])**2
             )
             like_grid *= prior[:, sel]
         else:
@@ -138,7 +142,8 @@ for chunk in range(numChunks):
                 fluxes, fluxesVar,
                 model_mean[:, :, bands],
                 model_covar[:, :, bands],
-                ell_hat=ell_hat_z, ell_var=(ell_hat_z*params['ellPriorSigma'])**2)
+                ell_hat=ell_hat_z,
+                ell_var=(ell_hat_z*params['ellPriorSigma'])**2)
             like_grid *= prior[:, :]
         t2 = time()
         localPDFs[loc, :] += like_grid.sum(axis=1)

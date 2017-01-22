@@ -35,7 +35,7 @@ def test_full_fluxlikelihood():
             .reshape((nz, nt, nf))
         f_mod_covar = np.random.uniform(low=.1, high=.2, size=nz*nt*nf)\
             .reshape((nz, nt, nf))
-        ell_hat, ell_var = 1, 0.01
+        ell_hat, ell_var = np.ones((nz, )), 0.01*np.ones((nz, ))
 
         t1 = time()
         res1 = approx_flux_likelihood(

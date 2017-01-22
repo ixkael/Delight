@@ -56,7 +56,6 @@ for it, sed_name in enumerate(params['templates_names']):
 
         gp.setData(X, Y, Yvar)
 
-        #alpha, ell = gp.estimateAlphaEll()
         ell = 1.0
         gp.X[:, 2] = 1.0
         gp.setData(gp.X, gp.Y, gp.Yvar)
@@ -72,12 +71,14 @@ for it, sed_name in enumerate(params['templates_names']):
                                 sharex=False, sharey=True)
         for i, inm in enumerate(bandNames_TRN):
             axs[0, i].errorbar(z, Y[i, 0] * z**2,
-                               np.sqrt(Yvar[i, 0]) * z**2, fmt='-o', markersize=5)
+                               np.sqrt(Yvar[i, 0]) * z**2,
+                               fmt='-o', markersize=5)
 
         fac = ell * redshiftGrid**2
         ylims = [0.25*np.min(model_mean[2:-2, :]*fac[2:-2, None]),
                  2*np.max(model_mean[2:-2, :]*fac[2:-2, None])]
-        fullarr = np.concatenate(([f_mod[it, ib](redshiftGrid[2:-2])*fac[2:-2] for ib in bandIndices_TAR]))
+        fullarr = np.concatenate(([f_mod[it, ib](redshiftGrid[2:-2])*fac[2:-2]
+                                   for ib in bandIndices_TAR]))
         ylims = [0.25*np.min(fullarr), 2*np.max(fullarr)]
         for i, (ib, inm) in enumerate(zip(bandIndices_TRN, bandNames_TRN)):
             axs[0, i].axvspan(z-0.5, z+0.5, color='gray', alpha=0.1)
@@ -87,7 +88,8 @@ for it, sed_name in enumerate(params['templates_names']):
                                    (model_mean[:, ib] + model_sig[:, ib])*fac,
                                    color='b', alpha=0.2)
             axs[0, i].plot(redshiftGrid, model_mean[:, ib]*fac, c='b')
-            axs[0, i].plot(redshiftGrid, f_mod[it, ib](redshiftGrid)*fac, c='k')
+            axs[0, i].plot(redshiftGrid, f_mod[it, ib](redshiftGrid)*fac,
+                           c='k')
             axs[0, i].set_title(inm)
             axs[0, i].set_yscale('log')
             axs[0, i].set_ylim(ylims)
@@ -102,7 +104,8 @@ for it, sed_name in enumerate(params['templates_names']):
                                    (model_mean[:, ib] + model_sig[:, ib])*fac,
                                    color='b', alpha=0.2)
             axs[1, i].plot(redshiftGrid, model_mean[:, ib]*fac, c='b')
-            axs[1, i].plot(redshiftGrid, f_mod[it, ib](redshiftGrid)*fac, c='k')
+            axs[1, i].plot(redshiftGrid, f_mod[it, ib](redshiftGrid)*fac,
+                           c='k')
             axs[1, i].set_title(inm)
             axs[1, i].set_yscale('log')
             axs[1, i].set_ylim(ylims)

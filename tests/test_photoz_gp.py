@@ -2,6 +2,7 @@
 
 import pytest
 import numpy as np
+from scipy.interpolate import interp1d
 
 from delight.photoz_gp import PhotozGP
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
@@ -14,6 +15,8 @@ nObjUnfixed = 4
 numBands = 2
 numLines = 3
 numCoefs = 8
+numTemplates = 4
+numZ = 10
 relative_accuracy = 0.50
 size = numBands * nObj
 bandsUsed = range(numBands)
@@ -37,25 +40,22 @@ def use_interpolators(request):
 def create_gp(use_interpolators):
     """Create valid GP with reasonable parameters, kernel, mean fct"""
 
-    redshiftGrid = np.logspace(-2, np.log10(4), num=60)
+    redshiftGrid = np.logspace(-2, np.log10(4), num=numZ)
+    f_mod_interp = np.zeros((numTemplates, numBands), dtype=object)
+    for it in range(numTemplates):
+        for jf in range(numBands):
+            data = np.random.randn(numZ)
+            f_mod_interp[it, jf] = interp1d(redshiftGrid, data,
+                                            kind='linear', bounds_error=False,
+                                            fill_value='extrapolate')
     gp = PhotozGP(
-        0.0,
+        f_mod_interp,
         fcoefs_amp, fcoefs_mu, fcoefs_sig,
         lines_mu, lines_sig,
         var_C, var_L, alpha_C, alpha_L,
         redshiftGrid,
         use_interpolators=use_interpolators
         )
-    gp.setData(X, Y, Yvar)
+    gp.setData(X, Y, Yvar, np.random.randint(numTemplates))
 
     return gp
-
-
-def test_alpha(create_gp):
-    gp = create_gp
-    gp.optimizeAlpha_GP()
-
-
-def test_alpha_ell(create_gp):
-    gp = create_gp
-    gp.estimateAlphaEll()

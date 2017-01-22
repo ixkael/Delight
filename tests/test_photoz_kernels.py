@@ -30,7 +30,7 @@ def test_kernel():
                            alpha_C, alpha_L, alpha_T,
                            use_interpolators=True)
 
-test_kernel()
+
 def test_meanfunction():
     """
     Other tests of the mean function
@@ -114,8 +114,7 @@ def test_interpolation():
 
             assert np.allclose(KL, kern.KL, rtol=relative_accuracy)
             assert np.allclose(KC, kern.KC, rtol=relative_accuracy)
-            assert np.allclose(D_alpha_C, kern.D_alpha_C, rtol=relative_accuracy)
-            assert np.allclose(D_alpha_L, kern.D_alpha_L, rtol=relative_accuracy)
-
-
-test_kernel()
+            assert np.allclose(D_alpha_C, kern.D_alpha_C,
+                               rtol=relative_accuracy)
+            assert np.allclose(D_alpha_L, kern.D_alpha_L,
+                               rtol=relative_accuracy)

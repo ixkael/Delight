@@ -151,12 +151,15 @@ for z, normedRefFlux, bands, fluxes, fluxesVar, bCV, fCV, fvCV, X, Y, Yvar\
 p_t = params['p_t'][bestTypes][None, :]
 p_z_t = params['p_z_t'][bestTypes][None, :]
 
-prior = np.exp(-0.5*((redshiftGrid[:, None]-all_z[None, :])/params['zPriorSigma'])**2)
-#prior[prior < 1e-6] = 0
-#prior *= p_t * redshiftGrid[:, None] * np.exp(-0.5 * redshiftGrid[:, None]**2 / p_z_t) / p_z_t
+prior = np.exp(-0.5*((redshiftGrid[:, None]-all_z[None, :]) /
+                     params['zPriorSigma'])**2)
+# prior[prior < 1e-6] = 0
+# prior *= p_t * redshiftGrid[:, None] *
+# np.exp(-0.5 * redshiftGrid[:, None]**2 / p_z_t) / p_z_t
 
 loc = -1
-for z, normedRefFlux, bands, fluxes, fluxesVar, bCV, fCV, fvCV in targetDataIter:
+for z, normedRefFlux, bands, fluxes, fluxesVar,\
+        bCV, fCV, fvCV in targetDataIter:
     loc += 1
     fulllike_grid = approx_flux_likelihood(
         fluxes,
@@ -185,25 +188,27 @@ for z, normedRefFlux, bands, fluxes, fluxesVar, bCV, fCV, fvCV in targetDataIter
 
             fig, ax = plt.subplots(1, 1, figsize=(7, 4))
             for ii in sortind:
-                ax.plot(redshiftGrid, fulllike_grid[:, ii], c='gray', alpha=0.6)
+                ax.plot(redshiftGrid, fulllike_grid[:, ii], c='gray', alpha=.6)
             ax.plot(redshiftGrid, like_grid, c='k', lw=2, label='GP')
-            like_grid_cww = like_grid_cww * np.max(like_grid) / np.max(like_grid_cww)
-            ax.plot(redshiftGrid, like_grid_cww, c='blue', lw=2, label='CWW')
-            ax.plot(redshiftGrid, like_grid_comp, c='r', ls='dashed', label='Compressed GP')
+            like_grid_cww = like_grid_cww * np.max(like_grid) /\
+                np.max(like_grid_cww)
+            ax.plot(redshiftGrid, like_grid_cww,
+                    c='blue', lw=2, label='CWW')
+            ax.plot(redshiftGrid, like_grid_comp,
+                    c='r', ls='dashed', label='Compressed GP')
             ax.axvline(z, c='orange', lw=2, ls='dashed', label='True redshift')
 
-            #ax.axvline(zphotmean, c='r', lw=2)
-            #ax.axvline(np.average(redshiftGrid, weights=like_grid_comp), c='r', ls='dashed', lw=2)
+            # ax.axvline(zphotmean, c='r', lw=2)
             ax.set_ylabel('Likelihood')
             ax.set_xlabel('Redshift')
-            ax.set_xlim([0, 2.])#redshiftGrid[-1]])
+            ax.set_xlim([0, 2.])  # redshiftGrid[-1]])
             ylimax = 1.3*np.max(np.concatenate((like_grid, like_grid_cww)))
             ax.set_ylim([0, ylimax])
             for ii in sortind:
                 ax.scatter(all_z[ii], ylimax*0.99, c='gray', marker='x', s=10)
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.2e'))
             ax.legend(loc='upper right', frameon=False, ncol=2)
-            #ax.set_yscale('log')
+            # ax.set_yscale('log')
             fig.tight_layout()
             fig.savefig('data/data-pdfs-'+str(loc)+'.pdf')
 
@@ -211,12 +216,15 @@ for z, normedRefFlux, bands, fluxes, fluxesVar, bCV, fCV, fvCV in targetDataIter
                 usedBands = list(np.unique(np.concatenate((
                     bandIndices_TRN, bandIndices))))
 
-                fig, axs = plt.subplots(3, len(usedBands)//3 + 1, figsize=(10, 5),
+                fig, axs = plt.subplots(3, len(usedBands)//3 + 1,
+                                        figsize=(10, 5),
                                         sharex=True, sharey=True)
                 axs = axs.ravel()
                 fac = redshiftGrid**2
-                ylims = [0.25*np.min(model_mean[2:-2, :, :]*fac[2:-2, None, None]),
-                    2*np.max(model_mean[2:-2, :, :]*fac[2:-2, None, None])]
+                ylims = [0.25*np.min(model_mean[2:-2, :, :] *
+                                     fac[2:-2, None, None]),
+                         2*np.max(model_mean[2:-2, :, :] *
+                                  fac[2:-2, None, None])]
                 for i, ib in enumerate(bands):
                     pos = usedBands.index(ib)
                     axs[pos].axvline(zphotmean, c='r', lw=2)
@@ -227,27 +235,32 @@ for z, normedRefFlux, bands, fluxes, fluxesVar, bCV, fCV, fvCV in targetDataIter
                 for i, ib in enumerate(usedBands):
                     for t, sed_name in enumerate(sed_names):
                         if t == besttype:
-                            fac = ell / np.interp(z, redshiftGrid, f_mod[:, t, ib])
-                            axs[i].plot(redshiftGrid, f_mod[:, t, ib]*fac, c='k')
+                            fac = ell
+                            fac /= np.interp(z, redshiftGrid, f_mod[:, t, ib])
+                            axs[i].plot(redshiftGrid, f_mod[:, t, ib]*fac, 'k')
                 for ii in sortind:
                     for i, ib in enumerate(bandIndices_TRN):
                         if False and all_fluxes[ii, ib] > 0:
                             pos = usedBands.index(ib)
                             axs[pos].errorbar(all_z[ii], all_fluxes[ii, ib],
                                               np.sqrt(all_fluxes_var[ii, ib]),
-                                              fmt='-o', markersize=5, alpha=0.1)
+                                              fmt='-o', markersize=5, alpha=.1)
                     for i, ib in enumerate(usedBands):
                         axs[i].set_title(bandNames[ib])
                         axs[i].axvline(all_z[ii], c='gray', alpha=0.3)
-                        fac = ell / np.interp(z, redshiftGrid, model_mean[:, ii, ib])
+                        fac = ell /\
+                            np.interp(z, redshiftGrid, model_mean[:, ii, ib])
                         axs[i].fill_between(
                             redshiftGrid,
-                            (model_mean[:, ii, ib] - np.sqrt(model_covar[:, ii, ib]))*fac,
-                            (model_mean[:, ii, ib] + np.sqrt(model_covar[:, ii, ib]))*fac,
+                            (model_mean[:, ii, ib] -
+                             np.sqrt(model_covar[:, ii, ib]))*fac,
+                            (model_mean[:, ii, ib] +
+                             np.sqrt(model_covar[:, ii, ib]))*fac,
                             color='b', alpha=0.1)
-                        #axs[i].plot(redshiftGrid, model_mean[:, ii, ib], c='b', alpha=0.1)
+                        # axs[i].plot(redshiftGrid, model_mean[:, ii, ib],
+                        # c='b', alpha=0.1)
                         axs[i].set_yscale('log')
-                        #axs[i].set_ylim(ylims)
+                        # axs[i].set_ylim(ylims)
                         axs[i].set_xlim([redshiftGrid[0], redshiftGrid[-1]])
 
                 fig.tight_layout()

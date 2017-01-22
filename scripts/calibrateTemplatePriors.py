@@ -63,6 +63,7 @@ for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in trainingDataIter:
             fmod_atZ[loc, t, ib] = ell * np.interp(z, redshiftGrid,
                                                    f_mod[:, t, b])
 
+
 def lnprob(params, nt, allFluxes, allFluxesVar, fmod_atZ, pmin, pmax):
     if np.any(params > pmax) or np.any(params < pmin):
             return - np.inf

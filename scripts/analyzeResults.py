@@ -65,7 +65,7 @@ for iax, extra in enumerate(['', 'Temp']):
             = metrics[0:7]
         confidencelevels = metrics[7:]
         zmeanBinLoc = -1
-        if True:#np.abs(zmean - zmap) < 2.5:
+        if True:  # np.abs(zmean - zmap) < 2.5:
             for i in range(numZbins):
                 if zmap >= redshiftDistGrid[i]\
                         and zmap < redshiftDistGrid[i+1]:
@@ -92,12 +92,15 @@ for iax, extra in enumerate(['', 'Temp']):
     bias_zmap /= binnobj
     bias_zmean /= binnobj
 
-    print(' >> bias_zmap %.3g' % np.abs(bias_zmap[ind]).mean(), 'bias_zmean %.3g' % np.abs(bias_zmean[ind]).mean(), 'N(z) bias %.3g' % np.abs(bias_nz[ind]).mean(), ' <<')
+    print(' >> bias_zmap %.3g' % np.abs(bias_zmap[ind]).mean(),
+          'bias_zmean %.3g' % np.abs(bias_zmean[ind]).mean(),
+          'N(z) bias %.3g' % np.abs(bias_nz[ind]).mean(), ' <<')
     print(' > bias_zmap : ', ' '.join(['%.3g' % x for x in bias_zmap]))
     print(' > bias_zmean : ', ' '.join(['%.3g' % x for x in bias_zmean]))
     print(' > nzbias : ', ' '.join(['%.3g' % x for x in bias_nz]))
     for i in range(numConfLevels):
-        print(' >', params['confidenceLevels'][i], ' :: ', ' '.join(['%.3g' % x for x in confFractions[i, :]]))
+        print(' >', params['confidenceLevels'][i], ' :: ',
+              ' '.join(['%.3g' % x for x in confFractions[i, :]]))
 
     for i in range(numZbins):
         print("> N(z) bin", i, "zlo", redshiftDistGrid[i], "zhi",
@@ -110,14 +113,14 @@ for iax, extra in enumerate(['', 'Temp']):
             if pdf.sum() > 0:
                 pdf /= np.trapz(pdf, x=redshiftGrid)
             axs[i, iax].plot(redshiftGrid, pdf,
-                        label='Inferred', color='b')
+                             label='Inferred', color='b')
             if ind.sum() > 1:
                 density = stats.kde.gaussian_kde(binlocsz[ind, 1])
                 axs[i, iax].plot(redshiftGrid, density(redshiftGrid),
-                            label='Data KDE '+extra, c='k')
+                                 label='Data KDE '+extra, c='k')
                 axs[i, iax].hist(binlocsz[ind, 1], 50, normed=True,
-                            range=[0, redshiftGrid[-1]], histtype='step',
-                            label='Data hist '+extra, color='gray')
+                                 range=[0, redshiftGrid[-1]], histtype='step',
+                                 label='Data hist '+extra, color='gray')
             axs[i, iax].axvline(redshiftDistGrid[i], ls='dashed', color='k')
             axs[i, iax].axvline(redshiftDistGrid[i+1], ls='dashed', color='k')
 

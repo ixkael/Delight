@@ -60,12 +60,12 @@ localMetrics = np.zeros((numLines, numMetrics))
 loc = - 1
 trainingDataIter = getDataFromFile(params, firstLine, lastLine,
                                    prefix="target_", getXY=False)
-for z, normedRefFlux, bands, fluxes, fluxesVar, bCV, fCV, fvCV in trainingDataIter:
+for z, normedRefFlux, bands, fluxes, fluxesVar,\
+        bCV, fCV, fvCV in trainingDataIter:
     loc += 1
-    #like_grid, _ = scalefree_flux_likelihood(
+    # like_grid, _ = scalefree_flux_likelihood(
     #    fluxes, fluxesVar,
-    #    f_mod[:, :, bands]
-    #)
+    #    f_mod[:, :, bands])
     ell_hat_z = normedRefFlux * 4 * np.pi\
         * params['fluxLuminosityNorm'] \
         * (DL(redshiftGrid)**2. * (1+redshiftGrid))[:, None]
@@ -73,10 +73,11 @@ for z, normedRefFlux, bands, fluxes, fluxesVar, bCV, fCV, fvCV in trainingDataIt
     params['ellPriorSigma'] = 1e12
     like_grid = approx_flux_likelihood(
         fluxes, fluxesVar, f_mod[:, :, bands], marginalizeEll=True,
-        ell_hat=ell_hat_z, ell_var=(ell_hat_z*params['ellPriorSigma'])**2 )
+        ell_hat=ell_hat_z, ell_var=(ell_hat_z*params['ellPriorSigma'])**2)
     b_in = np.array(params['p_t'])[None, :]
     beta2 = np.array(params['p_z_t'])**2.0
-    p_z = b_in * redshiftGrid[:, None] * np.exp(-0.5 * redshiftGrid[:, None]**2 / beta2[None, :]) / beta2[None, :]
+    p_z = b_in * redshiftGrid[:, None] / beta2[None, :] *\
+        np.exp(-0.5 * redshiftGrid[:, None]**2 / beta2[None, :])
     like_grid *= p_z
     localPDFs[loc, :] += like_grid.sum(axis=1)
     if localPDFs[loc, :].sum() > 0:

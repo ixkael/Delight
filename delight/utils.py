@@ -149,7 +149,8 @@ def approx_flux_likelihood(
                 var = f_obs_var[None, None, :] + ellML**2 * f_mod_covar
             else:
                 var = f_obs_var[None, None, :]
-            invvar = 1/var  # np.where(f_obs_r/var < 1e-6, 0.0, var**-1.0)  # nz * nt * nf
+            invvar = 1/var  # nz * nt * nf
+            # np.where(f_obs_r/var < 1e-6, 0.0, var**-1.0)  # nz * nt * nf
             FOT = np.sum(f_mod * f_obs_r * invvar, axis=2)\
                 + ell_hat / ell_var  # nz * nt
             FTT = np.sum(f_mod**2 * invvar, axis=2)\

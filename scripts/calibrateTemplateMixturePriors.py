@@ -64,6 +64,7 @@ for z, ell, bands, fluxes, fluxesVar, bCV, fCV, fvCV in trainingDataIter:
                                                    f_mod[:, t, b])
 zZmax = redshifts[:, 0] / redshiftGrid[-1]
 
+
 def lnprob(params, nt, allFluxes, allFluxesVar, zZmax, fmod_atZ, pmin, pmax):
     if np.any(params > pmax) or np.any(params < pmin):
             return - np.inf
@@ -71,7 +72,8 @@ def lnprob(params, nt, allFluxes, allFluxesVar, zZmax, fmod_atZ, pmin, pmax):
     alphas1 = dirichlet(params[nt:2*nt], rsize=1).ravel()[None, :]  # 1, nt
     alphas_atZ = zZmax[:, None] * (alphas1 - alphas0) + alphas0  # no, nt
     # fmod_atZ: no, nt, nf
-    fmod_atZ_t = (fmod_atZ * alphas_atZ[:, :, None]).sum(axis=1)[:, None, :]  # no, 1, nf
+    fmod_atZ_t = (fmod_atZ * alphas_atZ[:, :, None]).sum(axis=1)[:, None, :]
+    # no, 1, nf
     sigma_ell = 1e3
     like_grid = approx_flux_likelihood_multiobj(
         allFluxes, allFluxesVar, fmod_atZ_t, 1, sigma_ell**2.).ravel()  # no,
@@ -120,7 +122,8 @@ p0 = [pmin + (pmax-pmin)*np.random.uniform(0, 1, size=ndim)
       for i in range(nwalkers)]
 
 for i in range(10):
-    print(lnprob(p0[i], nt, allFluxes, allFluxesVar, zZmax, fmod_atZ, pmin, pmax))
+    print(lnprob(p0[i], nt, allFluxes,
+                 allFluxesVar, zZmax, fmod_atZ, pmin, pmax))
 
 sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                 threads=4,
