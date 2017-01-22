@@ -3,35 +3,26 @@ notifications:
     on_failure: always
     on_success: change
 language: python
+cache:
+ directories:
+  - $HOME/miniconda
+  - $HOME/virtualenv
+env:
+  global:
+  - CACHE_DIR="$HOME/virtualenv"
+  - MINICONDA_DIR="$HOME/miniconda"
 python:
   - "3.5"
 before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b
-  - export PATH=/home/travis/miniconda2/bin:$PATH
-  - conda update --yes conda
+  - install_conda_pip.sh
 install:
   - sudo apt-get update
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
-    else
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    fi
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - hash -r
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda info -a
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib cython pytest pylint pep8 mpi4py astropy
-  - source activate test-environment
-  - pip install -r requirements.txt
   - python setup.py build_ext --inplace
   - python setup.py install
 script:
   - pwd
   - ls delight
+  - python -c "import delight"
   - python scripts/processFilters.py tests/parametersTest.cfg
   - coverage run --source delight -m py.test
   - pep8 delight/*py
