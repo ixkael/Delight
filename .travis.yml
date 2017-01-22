@@ -14,7 +14,7 @@ env:
 python:
   - "3.5"
 before_install:
-  - install_conda_pip.sh
+  - . install_conda_pip.sh
 install:
   - sudo apt-get update
   - python setup.py build_ext --inplace
