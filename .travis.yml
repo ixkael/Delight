@@ -30,6 +30,8 @@ install:
   - python setup.py build_ext --inplace
   - python setup.py install
 script:
+  - pwd
+  - ls delight
   - python scripts/processFilters.py tests/parametersTest.cfg
   - coverage run --source delight -m py.test
   - pep8 delight/*py
