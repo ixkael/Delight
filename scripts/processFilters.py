@@ -4,8 +4,9 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import leastsq
 import os
-from delight.io import *
+
 from delight.utils import *
+from delight.io import *
 
 numCoefs = 15  # number of components for the fit
 
