@@ -3,9 +3,6 @@ import sys
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import leastsq
-import os
-print("abspath", os.path.dirname(os.path.abspath(__file__)))
-print("cwd", os.getcwd())
 
 from delight.utils import *
 from delight.io import *
@@ -19,7 +16,7 @@ bandNames = params['bandNames']
 fmt = '.res'
 max_redshift = params['redshiftMax']  # for plotting purposes
 root = params['bands_directory']
-make_plots = True
+make_plots = False
 if make_plots:
     import matplotlib.pyplot as plt
     cm = plt.get_cmap('brg')
