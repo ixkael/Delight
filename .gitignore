@@ -14,7 +14,6 @@ notebooks/movies/
 *redshiftmetrics*
 
 old_2D_stuff
-paper/PhotoZviaGP_paper.pdf
 data/FILTERS/*png
 data/FILTERS/*txt
 delight/*.c
