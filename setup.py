@@ -8,14 +8,16 @@ args = {
     "include_dirs": [numpy.get_include()],
     "extra_link_args": ['-fopenmp'],
     "extra_compile_args": ["-ffast-math", "-fopenmp",
-                          "-Wno-uninitialized",
-                          "-Wno-maybe-uninitialized",
-                          "-Wno-unused-function"]  # -march=native
+                           "-Wno-uninitialized",
+                           "-Wno-maybe-uninitialized",
+                           "-Wno-unused-function"]  # -march=native
     }
 
 ext_modules = [
-    Extension("delight.photoz_kernels_cy",  ["delight/photoz_kernels_cy.pyx"], **args),
-    Extension("delight.utils_cy",  ["delight/utils_cy.pyx"], **args)
+    Extension("delight.photoz_kernels_cy",
+              ["delight/photoz_kernels_cy.pyx"], **args),
+    Extension("delight.utils_cy",
+              ["delight/utils_cy.pyx"], **args)
     ]
 
 setup(
