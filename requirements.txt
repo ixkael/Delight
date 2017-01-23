@@ -8,3 +8,4 @@ matplotlib
 coveralls
 mpi4py
 astropy
+sphinx
