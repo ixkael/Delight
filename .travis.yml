@@ -25,6 +25,8 @@ before_script:
   - python -c "from delight.io import *"
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
   - python scripts/processFilters.py tests/parametersTest.cfg
+  - python scripts/processSEDs.py tests/parametersTest.cfg
+  - python scripts/simulateWithSEDs.py tests/parametersTest.cfg
 script:
   - coverage run --source delight -m py.test
   - pep8 delight/*py

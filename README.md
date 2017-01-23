@@ -26,8 +26,8 @@ Python 3.5, cython, numpy, scipy, pytest, pylint, coveralls, matplotlib, astropy
 ## Authors
 
 Boris Leistedt (NYU) </br>
-David W. Hogg (NYU) (MPIA) (Flatiron)
+David W. Hogg (NYU) (Flatiron)
 
 ## License
 
-Copyright 2016 the authors. The code in this repository is released under the open-source MIT License. See the file LICENSE for more details.
+Copyright 2016-2017 the authors. The code in this repository is released under the open-source MIT License. See the file LICENSE for more details.
