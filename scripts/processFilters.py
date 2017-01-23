@@ -11,7 +11,7 @@ numCoefs = 15  # number of components for the fit
 
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
-params = parseParamFile(sys.argv[1], verbose=False)
+params = parseParamFile(sys.argv[1], verbose=False, catFilesNeeded=False)
 bandNames = params['bandNames']
 fmt = '.res'
 max_redshift = params['redshiftMax']  # for plotting purposes
