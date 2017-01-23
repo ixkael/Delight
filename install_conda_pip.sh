@@ -20,8 +20,8 @@ else # if it does not exist, we need to install miniconda
     conda update -q conda
     conda info -a # for debugging
     conda install numpy scipy matplotlib cython pytest pylint pep8 mpi4py astropy
+    conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
 fi
 
-conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
 source activate test-environment
 pip install -r requirements.txt
