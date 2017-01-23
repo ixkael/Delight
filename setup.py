@@ -2,6 +2,9 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import numpy
+from sphinx.setup_command import BuildDoc
+
+version = '1.0.0'
 
 args = {
     "libraries": ["m"],
@@ -22,5 +25,14 @@ ext_modules = [
 
 setup(
   name="delight",
-  cmdclass={"build_ext": build_ext},
+  version=version,
+  cmdclass={"build_ext": build_ext,
+            'build_sphinx': BuildDoc},
+  command_options={
+        'build_sphinx': {
+            'project': (None, "delight"),
+            'version': ('setup.py', version),
+            'build_dir': (None, 'docs/_build'),
+            'config_dir': (None, 'docs'),
+            }},
   ext_modules=ext_modules)
