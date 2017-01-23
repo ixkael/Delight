@@ -1,0 +1,393 @@
+G10CosmosRedshifts
+G10CosmosCat
+v04
+2016-04-22
+Luke Davies <luke.j.davies@uwa.edu.au>
+
+Catalogue containing redshift and photometric data for all sources in
+the COSMOS region based on the 2006 catalogue described in Capak et
+al. (2007), and including the analysis described in Davies et al.
+(2014). The catalogue covers the ~2 deg^2 COSMOS region centred at
+R.A.=150.1191, DEC=2.205749. Source photometry comes from various
+photometric campaigns in the COSMOS region. The deep broadband
+observations are described in Capak et al. (2007), which include the
+HST observations first detailed in Leauthaund et al. (2007). We also
+include photometry from the updated 2008 COSMOS broad- and
+intermediate-band catalogue, which contains intermediate band Subaru
+photometry taken from Taniguchi et al. (‎2007).
+
+In addition to the photometric observations we also include the
+30-band photometric redshifts obtained by Ilbert et al. (2009) and those 
+from the COSMOS2015 catalogue of Laigle et al (20016) both using
+the Le Phare photometric redshift fitting code. These use both the
+broad- and intermediate-band data.
+       
+We match the photometric catalogues to a number of spectroscopic
+campaigns in the COSMOS region by taking the nearest (on the sky)
+spectroscopic match to a photometric object out to a maximum radius of
+2 arcsec. Spectroscopic samples used are:
+
+i)   zCOSMOS-bright (Lilly et al. 2009) DR3 January 2016 release 
+ii)  PRIMUS (Cool et al. 2013)
+iii) VVDS (Le Ferve et al. 2013)
+iv)  SDSS (Anh et al. 2014).      
+
+Lastly, we include the parameters from the analysis outlined in Davies
+et al. (2014). This work re-reduces all of the archival zCOSMOS-bright
+data and automatically assigns redshifts using the code AUTOZ (Baldry
+et al. 2014). All sources are then visually inspected to confirm the
+automatic redshifts. Final best-fit redshifts are given by the column
+Z_BEST.
+
+Recomeneded selection for spectroscopic samples is:
+
+Z_BEST>0.0001 & Z_USE<3 & STAR_GALAXY_CLASS==0
+
+
+################## PHOTOMETRIC CATALOGUES ##################
+
+Details of the 2006 COSMOS catalogue can be found here:
+http://irsa.ipac.caltech.edu/data/COSMOS/gator_docs/cosmos_photom_colDescriptions.html
+
+Briefly, this is the I-band selected broad-band photometry catalogue
+for the full 2 deg^2 COSMOS region. All photometry is measured in AB
+magnitudes in a 3 arcsec aperture on PSF-matched images unless
+otherwise noted. Parameters taken from the 2006 catalogue are suffixed
+with *_06.
+
+Total i-band magnitudes (I_MAG_AUTO_06) are calculated from either the
+Subaru i+ or CFHT i* image. AUTO_FLAG_06 defines which image is used:
+
+Flag  | image
+-----------------
+1     | Subaru i+
+2     | CFHT i*
+0     |	None
+
+The catalogue contains data in the following bands, with 1 sigma errors:
+- Subaru u*, Bj, Vj, g+, r+, i+, z+, NB816
+- CTIO/KPNO Ks 
+- CFHT i*
+- SDSS u, g, r, i,z
+- HST F814
+
+Also provided are mask values for the source aperture in their Subaru
+Bj, Vj, i+, z+ images. In the bad pixel masks, 0 = good, a number >0
+indicates the area of the photometry aperture, in arcsec^2, which is
+in a masked region. A flag of 1 has 14 percent of the aperture masked.
+
+This catalogue also contains a stellar mass taken from Mobasher et
+al. (2007).  These are derived using the V-band magnitude (M_v) and
+average rest-frame B-V colour of the galaxy's spectral type - defined
+from their photometric redshift fitting and assuming Salpeter IMF,
+using:
+
+log(M/M_sun) = -0.628 + 1.305*(B-V) - 0.4*(M_v - 4.82) 
+
+This value is given by parameter LOGMASS_06 in units of Log10(M_sun).
+
+We also give a star/galaxy flag taken from the colour and morphology
+measurements of Capak et al. (2006): STAR_06 => 0=Non-Star, 1=Star
+
+
+Details of the 2008 COSMOS catalogue can be found here:
+http://irsa.ipac.caltech.edu/data/COSMOS/gator_docs/cosmos_ib_colDescriptions.html
+This catalogue contains updated broad-band photometry from the same
+observations detailed in the 2006 catalogue, and also the deep
+intermediate- and narrow-band Subaru observations detailed in
+Taniguchi et al. (‎2007). All photometry is measured in AB magnitudes
+in a 3 arcsec aperture on PSF-matched images, except SDSS which are
+measured from the original image. Parameters taken from the 2008
+catalogue are suffixed with *_08.
+
+Total i-band magnitudes (I_MAG_AUTO_08) are calculated from either the
+Subaru i+ or CFHT i* image with the same flags at in the 2006
+catalogue.
+
+The catalogue contains data in the following bands, with 1 sigma
+errors:
+
+Broadband.....
+- CFHT u*
+- Subaru Bj, Vj, g+, r+, i+, z+
+- CTIO/KPNO Ks 
+- CFHT i*, Ks
+- SDSS u, g, r, i,z
+- HST F814
+- UKIRT J
+- GALEX FUV, NUV
+
+Intermediate and narrowband.....
+- Subaru NB816, IA427, IA464, IA505, IA574, IA709,IA827, NB711, IA484, IA527, 
+IA624, IA679, IA738, IA767
+
+This catalogue includes galactic extinction E(B-V) values measured
+from the Schlegel et al. dust maps (EV_V_08).
+
+Bad pixel map flags are also included for the GALEX UV data:
+0 = good, 1=bad
+
+
+################## PHOT0METRIC REDSHIFTS ##################
+
+Photometric redshifts from Ilbert et al. (2008) are matched to the
+photometric data using the COSMOS ID value. Included are the best fit
+photometric redshift from the Ilbert analysis, ZP_ILBERT:
+
+Value       	     	  |     Meaning
+------------------------------------------------------------------------
+0 < ZP_ILBERT < 9.99	  |     best-fit redshift using a galaxy template
+ZP_ILBERT == 0		  |	star
+ZP_ILBERT == 9.99	  |	Xray source
+ZP_ILBERT == 99.0	  |	I_MAG_08 > 25.5
+ZP_ILBERT == -99.0	  |	in masked area
+
+Associated products from the Ilbert et al. analysis are as follows:
+ZL68_ILBERT -> lower limit, 68% confidence level for ZP_ILBERT redshift
+ZU68_ILBERT -> upper limit, 68% confidence level for ZP_ILBERT redshift
+ZL99_ILBERT -> lower limit, 99% confidence level for ZP_ILBERT redshift
+ZU99_ILBERT -> upper limit, 99% confidence level for ZP_ILBERT redshift
+
+CHI2_ILBERT -> chi^2 value for the best fit galaxy template used in the
+ photometric redshift fitting (-99 if less than 3 filters).
+
+The Ilbert et al. analysis also provides a stellar flag,
+STAR_GALAXY_CLASS:
+
+value  |  meaning
+-----------------------------
+0      |  galaxy
+1      |  star
+2      |  Xray source
+3      |  I_MAG_08 > 25.5
+4      |  in masked area
+
+Photometric redshifts from Laigle et al. (2016) are also matched via the 
+COSMOS ID value. Included are the best fit
+photometric redshift from the Laigle analysis, ZP_COSMOS2015, with:
+
+ZL68_COSMOS2015 -> lower limit, 68% confidence level for ZP_COSMOS2015 redshift
+ZU68_COSMOS2015 -> upper limit, 68% confidence level for ZP_COSMOS2015  redshift
+CHI2_COSMOS2015 -> chi^2 value for the best fit galaxy template used in the
+ZP_COSMOS2015 photometric redshift fitting.
+
+################## PREVIOUS SPECTROSCOPIC REDSHIFTS ##################
+
+Photometric sources are matched to spectroscopic samples by taking the
+nearest (on sky) spectroscopic match to a photometric object out to a
+maximum radius of 2 arcsec.
+
+We match to:
+
+i) zCOSMOS-bright DR3 release (Lilly et al. 2009)
+
+The public release of 20k redshift in the COSMOS region selected to i
+< 22.5. Spectra were obtained using the VIMOS spectrograph on the
+VLT. Included are the RA and DEC position of the zCOSMOS source, as
+well the zCOSMOS redshift and quality flag:
+
+Flag | Meaning
+---------------------
+0    | No redshift measurement attempted
+1    | An insecure redshift
+2    | A likely redshift about which there is some doubt
+3    | A very secure redshift
+4    | A very secure redshift with an exhibition-quality spectrum
+9    | A securely detected line which is believed to be either [Oii] 3727
+     | or Ha 6563
+
+- 10.0 is added to the flag if the source is a QSO
+- 20.0 is added to the flag if the source is a secondary target
+
+Decimal places are added to denote the relation of the spectroscopic
+redshift to the photometric redshift of Mobasher et al (2007):
+
+Decimal | reason
+-------------------------------------------------------------------------------
+0.5     | Spectroscopic and photometric redshifts are consistent to within
+        | 0.08(1+z)
+0.4     | No photometric redshift is available
+0.3     | For Class 9 and 18, the spectroscopic redshift is consistent
+        | with photometric redshifts | only after the spectroscopic redshift
+        | is changed to the alternate redshift (still matched to single line)
+0.1     | The spectroscopic and photometric redshifts differ by more than
+        | 0.08(1+z)
+
+We also include the filename of the 1D zCOSMOS spectrum in the
+parameter 'filename_zCOS'.
+
+
+ii) PRIMUS (Cool et al. 2013)
+
+The public release of the PRIsum MUlti-object Sky Survey data,
+undertaken using IMACS instrument on the 6.5m Magellan/Baade
+telescope. The survey covers multiple fields including a ~1.2 deg^2
+region of COSMOS. Included are the RA and DEC position of the PRIMUS
+source, as well the PRIMUS redshift and quality flag:
+
+Flag | Meaning
+---------------------
+0    | No redshift measurement attempted
+1    | An insecure redshift
+2    | A likely redshift about which there is some doubt
+3    | A very secure redshift
+4    | A very secure redshift with an exhibition-quality spectrum
+9    | A securely detected line which is believed to be either [Oii] 3727
+     | or Ha 6563
+
+
+
+iii) VVDS (Le Ferve et al. 2013)
+
+The public release of the VIMOS Very Deep Survey. A deep spectroscopic
+survey using the VIMOS instrument on the VLT, which covers the COSMOS
+field. Included are the RA and DEC position of the VVDS source, as
+well the VVDS redshift and quality flag, defined in the following
+manner:
+
+The sum of the CHI^2 of the first and second best redshift fits is
+given by,
+
+delt_CHI^2 = CHI^2_2nd + CHI^2_best
+
+Then,
+
+SIGMA = 1000*(simga_z/(1 + z_best))/(delt_CHI^2)^0.5
+
+Quality flags are assigned as:
+
+SIGMA                    | Quality
+---------------------------------------
+log[SIGMA] > 0.3         | 2
+-0.3 < log[SIGMA] < 0.3  | 3
+log[SIGMA] < -0.3        | 4
+
+
+
+iv) SDSS (Anh et al. 2014)
+
+The public release of Sloan Digital Sky Survey (SDSS). Included are
+the RA and DEC position of the SDSS source, as well the SDSS redshift,
+and SDSS star/galaxy class and the error on the SDSS redshift.
+
+################# ANALYSIS FROM DAVIES ET AL. (2014) ##################
+
+Finally, we also include all values derived from the analysis detailed
+in Davies et al. (2014). In this work, all zCOSMOS-bright VIMOS data
+are re-reduced, matched to the photometric sources and automatically
+assigned redshifts using the redshift fitting code AUTOZ. All source
+were also visually inspected to confirm AUTOZ redshifts.
+
+First, we include the VIMOS slit mask RA and Dec position taken from
+the raw zCOSMOS-bright data -> SLIT_RA_14, SLIT_DEC_14.
+
+In order to match the spectra to the photometric catalogue, we search
+for the closest matched I_MAG_AUTO_06 < 22.5, photometric source up to
+a maximum offset of 10 arcsec from the slit position (the slit
+length). If no I_MAG_AUTO_06 < 22.5 match is found, we extend our
+search to fainter magnitudes in 0.5 mag steps until a match is
+found. We give the offset between the slit position and matched
+photometric source in arcsec, SLIT_OFF.
+
+We also provide the four best-fit AUTOZ redshifts, with confidences
+and the spectral template used in the best-fit redshifts. Templates
+are:
+
+Template number    | Source
+------------------------------------------
+02–10              | B to K stars 
+11–14, 17, 19, 22  | late-type stars 
+16, 18, 20, 21     | other stars 
+23–27              | galaxies 
+28                 | luminous red galaxy 
+40–47              | galaxies 
+
+
+Redshifts assigned in the visual classifications using the 1D and 2D
+spectra are given 'Z_EYE', and visual classifications as:
+
+ZQUALITY_EYE                | Meaning
+----------------------------------------------------------------------- 
+  ZQUALITY_EYE==3-4         | Good redshift
+  ZQUALITY_EYE==2           | Good redshift but potential mismatch 
+                            | to photometric source
+  ZQUALITY_EYE==10          | QSO
+-999.99 < ZQUALITY_EYE <= 0 | no clear redshift
+  ZQUALITY_EYE==-999.99     | not visually classified
+
+These visual redshifts and classifications supersede all other
+classifications.
+
+We include the filename of the reduced 1D spectrum from the Davies et
+al.  analysis in the parameter SPEC_FILENAME, and the BEST_R_MAG value
+as either r_08, where available, or r_06.
+   
+*** The final results of the Davies et al. analysis is summarised in
+the four key values given below:
+
+i)  Z_BEST = value obtained as the current best redshift for all
+    sources. Using the Davies et al. analysis and all other redshifts
+    know for the source
+
+ii) Z_GEN = Numerical code quantifying coincident redshifts from
+    different surveys in automatic redshift fitting of Davies et al:
+
+Z_GEN |  Meaning
+------------------------------------------------------------------------------
+1     |  AUTOZ and zCOSMOS redshifts agree at a delta_z<0.1*z level (<10%
+      |  error). AUTOZ redshift used.
+      |
+2     |  AUTOZ and PRIMUS redshifts agree at a delta_z<0.1*z level (<10%
+      |  error). AUTOZ redshift used.
+      |
+3     |  zCOSMOS and PRIMUS redshifts agree at a delta_z<0.1*z level (<10%
+      |  error). zCOSMOS redshift used.
+      |
+4     |  zCOSMOS secure redshift
+      |
+5     |  Best-fit AUTOZ is consistent with the photometric redshift of
+      |  Laigale et al. (2015)
+6     |  PRIMUS quality 3 or 4 spectra (secure redshift)
+      |
+7     |  Just best-fit AUTOZ redshift - redshift has been eyeballed and there
+      |  is no clear redshift
+      |
+8     |  zCOSMOS unsecured redshift
+      |
+9     |  PRIMUS but not quality 3 or 4
+      |  
+10    |  Only zPhoto available
+      |
+11    |  VVDS spectrum used
+      |
+12    |  SDSS spectrum used
+
+A lower value for Z_GEN supersedes a higher value at
+Z_GEN=1-10, if multiple classes apply. Z_GEN=11 & 12 are assigned 
+in addition to the Z_GEN classifications. 
+
+iii) Z_USE = Numerical code indicating circumstances where redshift
+   should be used:
+
+Z_USE |  Meaning
+-----------------------------------------------------------------------
+1     |  Reliable high resolution spectroscopic redshift - spectrum has
+      |  been visually inspected and redshift is good.
+      |  
+2     |  Reliable spectroscopic redshift with PRIMUS low resolution
+      |  
+3     |  Spectroscopic observation obtained, but no reliable redshift
+      |  
+4     |  Only photometric redshift available
+      |  
+5     |  Visually inspected as a star/standard star spectrum
+
+
+
+iv) QUALITY_FLAG = spectral quality flag, defined by the signal to
+noise in the three strongest spectral features in the continuum
+subtracted 1D spectrum ranging from 0-1.
+
+All missing values in this table are marked by -999.99 or -999.99, as
+appropriate.
+

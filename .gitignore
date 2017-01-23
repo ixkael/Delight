@@ -1,6 +1,8 @@
 # Project specific
 data/*.png
 data/*.pdf
+data/FILTERS/*pdf
+*.csv
 notebooks/oldstuff/
 notebooks/movies/
 *gpCV.txt
@@ -12,6 +14,7 @@ notebooks/movies/
 *redshiftpdfs*
 *fluxredshifts*
 *redshiftmetrics*
+basp*
 
 old_2D_stuff
 data/FILTERS/*png

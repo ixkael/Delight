@@ -1,0 +1,194 @@
+# G10CosmosRedshifts
+# G10CosmosCat
+# v03
+# 2016-04-22
+# Luke Davies <luke.j.davies@uwa.edu.au>
+#
+# This table provides photometry, spectroscopic and photometric
+# redshifts for all sources in the Capak et al. (2007) COSMOS
+# catalogue. Redshifts are both crossmatched from various
+# spectroscopic surveys and derived from the analysis in Davies et
+# al. (2014). Columns with the suffix _06 are 2006 COSMOS catalogue
+# parameters and while those with suffix _08 refer to the 2008 COSMOS
+# catalogue.
+#
+CATAID               1  -         meta.id                       G10 unique catalogue 6000000+  
+ID_06                2  -         meta.id.cross                 COSMOS survey unique 2006 ID 	
+RA_06                3  deg       pos.eq.ra                     Right Ascension (J2000.0) 		
+DEC_06               4  deg       pos.eq.ra                     Declination (J2000.0) 
+I_FWHM_06            5  pixel     phys.angSize;em.opt.I         FWHM in pixels i-band image in AUTO_FLAG_06  
+I_STAR_06            6  -         src.class.starGalaxy          I-band Sextractor stellarity parameter  
+I_MAG_AUTO_06        7  mag       phot.mag.I;em.opt.I           Total i-band magnitude 
+AUTO_FLAG_06         8  -         meta.code                     Flag for i-band image used 	
+U_06                 9  mag       phot.mag.U;em.opt.U           CFHT u* AB magnitude 	
+U_06_ERR            10  mag       stat.error;phot.mag;em.opt.U  1 Sigma error on CFHT u* AB magnitude  
+B_06                11  mag       phot.mag.B;em.opt.B           Subaru Bj AB magnitude 
+B_06_ERR            12  mag       stat.error;phot.mag;em.opt.B  1 Sigma error on Subaru Bj AB magnitude  
+V_06                13  mag       phot.mag.V;em.opt.V           Subaru Vj AB magnitude 
+V_06_ERR            14  mag       stat.error;phot.mag;em.opt.V  1 Sigma error on Subaru Vj AB magnitude  
+G_06                15  mag       phot.mag.G;em.opt.G           Subaru g+ AB magnitude 
+G_06_ERR            16  mag       stat.error;phot.mag;em.opt.G  1 Sigma error on Subaru g+ AB magnitude  
+R_06                17  mag       phot.mag.R;em.opt.R           Subaru r+ AB magnitude 
+R_06_ERR            18  mag       stat.error;phot.mag;em.opt.R  1 Sigma error on Subaru r= AB magnitude  
+I_06                19  mag       phot.mag.I;em.opt.I           Subaru i+ AB magnitude 
+I_06_ERR            20  mag       stat.error;phot.mag;em.opt.I  1 Sigma error on Subaru i+ AB magnitude  
+Z_06                21  mag       phot.mag.Z;em.opt.Z           Subaru z+ AB magnitude 
+Z_06_ERR            22  mag       stat.error;phot.mag;em.opt.Z  1 Sigma error on Subaru z+ AB magnitude  
+K_06                23  mag       phot.mag.K;em.IR.K            CTIO/KPNO Ks AB magnitude 
+K_06_ERR            24  mag       stat.error;phot.mag;em.IR.K   1 Sigma error on  CTIO/KPNO Ks AB magnitude  
+I_CFHT_06           25  mag       phot.mag.I;em.opt.I           CFHT i* AB magnitude 
+I_CFHT_06_ERR       26  mag       stat.error;phot.mag;em.opt.I  1 Sigma error on CFHT i* AB magnitude  
+U_SDSS_06           27  mag       phot.mag.U;em.opt.U           SDSS u AB magnitude 
+U_SDSS_06_ERR       28  mag       stat.error;phot.mag;em.opt.U  1 Sigma error on SDSS u AB magnitude  
+G_SDSS_06           29  mag       phot.mag.G;em.opt.G           SDSS g AB magnitude 
+G_SDSS_06_ERR       30  mag       stat.error;phot.mag;em.opt.G  1 Sigma error on SDSS g AB magnitude  
+R_SDSS_06           31  mag       phot.mag.R;em.opt.R           SDSS r AB magnitude 
+R_SDSS_06_ERR       32  mag       stat.error;phot.mag;em.opt.R  1 Sigma error on SDSS r AB magnitude  
+I_SDSS_06           33  mag       phot.mag.I;em.opt.I           SDSS i AB magnitude 
+I_SDSS_06_ERR       34  mag       stat.error;phot.mag;em.opt.I  1 Sigma error on SDSS i AB magnitude  
+Z_SDSS_06           35  mag       phot.mag.Z;em.opt.Z           SDSS z AB magnitude 
+Z_SDSS_06_ERR       36  mag       stat.error;phot.mag;em.opt.Z  1 Sigma error on SDSS z AB magnitude  
+F814W_06            37  mag       phot.mag;em.opt               HST F814 magnitude 
+F814W_06_ERR        38  mag       stat.error;phot.mag;em.opt    1 Sigma error on HST F814 magnitude   
+NB816_06            39  mag       phot.mag;em.opt               Subaru NB816 magnitude 
+NB816_06_ERR        40  mag       stat.error;phot.mag;em.opt    1 Sigma error on Subaru NB816 magnitude 
+LOGMASS_06          41  dex       phys.mass                     Stellar mass
+STAR_06             42  -         meta.code                     Star flag 
+B_MASK_06           43  arcsec^2  phys.angArea;em.opt.B         Bad pixel mask for Subaru Bj image 
+V_MASK_06           44  arcsec^2  phys.angArea;em.opt.V         Bad pixel mask for Subaru Vj image 
+I_MASK_06           45  arcsec^2  phys.angArea;em.opt.I         Bad pixel mask for Subaru i+ image 
+Z_MASK_06           46  arcsec^2  phys.angArea;em.opt.Z         Bad pixel mask for Subaru z+ image 
+ID_08               47  -         meta.id.cross                 COSMOS survey unique 2008 ID    	  
+RA_08               48  deg       pos.eq.ra                     Right Ascension (J2000.0) 
+DEC_08              49  deg       pos.eq.ra                     Declination (J2000.0) 
+I_FWHM_08           50  pixel     phys.angSize;em.opt.I         FWHM on i-band image
+I_STAR_08           51  -         src.class.starGalaxy          I-band Sextractor stellarity parameter
+I_AUTO_08           52  mag       phot.mag.I;em.opt.I           Total magnitude in I band   
+AUTO_FLAG_08        53  -         meta.code                     Flag for i-band image used 
+U_08                54  mag       phot.mag.U;em.opt.U           CFHT u* AB magnitude  	
+U_08_ERR            55  mag       stat.error;phot.mag;em.opt.U  1 Sigma error on CFHT u* AB magnitude  
+B_08                56  mag       phot.mag.B;em.opt.B           Subaru Bj AB magnitude  
+B_08_ERR            57  mag       stat.error;phot.mag;em.opt.B  1 Sigma error on Subaru Bj AB magnitude  
+V_08                58  mag       phot.mag.V;em.opt.V           Subaru Vj AB magnitude  
+V_08_ERR            59  mag       stat.error;phot.mag;em.opt.V  1 Sigma error on Subaru Vj AB magnitude  
+G_08                60  mag       phot.mag.G;em.opt.G           Subaru g+ AB magnitude  
+G_08_ERR            61  mag       stat.error;phot.mag;em.opt.G  1 Sigma error on Subaru g+ AB magnitude   
+R_08                62  mag       phot.mag.R;em.opt.R           Subaru r+ AB magnitude  
+R_08_ERR            63  mag       stat.error;phot.mag;em.opt.R  1 Sigma error on Subaru r= AB magnitude  
+I_08                64  mag       phot.mag.I;em.opt.I           Subaru i+ AB magnitude  
+I_08_ERR            65  mag       stat.error;phot.mag;em.opt.I  1 Sigma error on Subaru i+ AB magnitude  
+Z_08                66  mag       phot.mag.Z;em.opt.Z           Subaru z+ AB magnitude  
+Z_08_ERR            67  mag       stat.error;phot.mag;em.opt.Z  1 Sigma error on Subaru z+ AB magnitude  
+K_08                68  mag       phot.mag.K;em.IR.K            CTIO/KPNO Ks AB magnitude  
+K_08_ERR            69  mag       stat.error;phot.mag;em.IR.K   1 Sigma error on CTIO/KPNO Ks AB magnitude  
+IC_08               70  mag       phot.mag.Z;em.opt.Z           CFHT i* band AB magnitude   
+IC_08_ERR           71  mag       stat.error;phot.mag;em.opt.I  1 Sigma error on CFHT i* AB magnitude    
+U_SDSS_08           72  mag       phot.mag.U;em.opt.U           SDSS u AB magnitude 
+U_SDSS_08_ERR       73  mag       stat.error;phot.mag;em.opt.U  1 Sigma error on SDSS u AB magnitude 
+G_SDSS_08           74  mag       phot.mag.G;em.opt.G           SDSS g AB magnitude 
+G_SDSS_08_ERR       75  mag       stat.error;phot.mag;em.opt.G  1 Sigma error on SDSS g AB magnitude 
+R_SDSS_08           76  mag       phot.mag.R;em.opt.R           SDSS r AB magnitude 
+R_SDSS_08_ERR       77  mag       stat.error;phot.mag;em.opt.R  1 Sigma error on SDSS r AB magnitude 
+I_SDSS_08           78  mag       phot.mag.I;em.opt.I           SDSS i AB magnitude 
+I_SDSS_08_ERR       79  mag       stat.error;phot.mag;em.opt.I  1 Sigma error on SDSS i AB magnitude 
+Z_SDSS_08           80  mag       phot.mag.Z;em.opt.Z           SDSS z AB magnitude measured  on original image
+Z_SDSS_08_ERR       81  mag       stat.error;phot.mag;em.opt.Z  1 Sigma error on SDSS z AB magnitude 
+F814W_08            82  mag       phot.mag;em.opt               HST F814W band AB magnitude    
+F814W_08_ERR        83  mag       stat.error;phot.mag;em.opt    Error on HST F814W band AB magnitude   
+NB816_08            84  mag       phot.mag;em.opt               Subaru NB816 band AB magnitude 
+NB816_08_ERR        85  mag       stat.error;phot.mag;em.opt    Error on Subaru NB816 band AB magnitude  
+IA427_08            86  mag       phot.mag;em.opt               Subaru IA427 band AB magnitude    
+DIA427_08_ERR       87  mag       stat.error;phot.mag;em.opt    Error on Subaru IA band AB magnitude     
+IA464_08            88  mag       phot.mag;em.opt               Subaru IA464 band AB magnitude    
+IA464_08_ERR        89  mag       stat.error;phot.mag;em.opt    Error on Subaru IA464 band AB magnitude     
+IA505_08            90  mag       phot.mag;em.opt               Subaru IA505 band AB magnitude    
+IA505_08_ERR        91  mag       stat.error;phot.mag;em.opt    Error on Subaru IA505 band AB magnitude   
+IA574_08            92  mag       phot.mag;em.opt               Subaru IA574 band AB magnitude   
+IA574_08_ERR        93  mag       stat.error;phot.mag;em.opt    Error on Subaru IA574 band AB magnitude     
+IA709_08            94  mag       phot.mag;em.opt               Subaru IA709 band AB magnitude    
+IA709_08_ERR        95  mag       stat.error;phot.mag;em.opt    Error on Subaru IA709 band AB magnitude    
+IA827_08            96  mag       phot.mag;em.opt               Subaru IA827 band AB magnitude    
+IA827_08_ERR        97  mag       stat.error;phot.mag;em.opt    Error on Subaru IA827 band AB magnitude    
+NB711_08            98  mag       phot.mag;em.opt               Subaru NB711 band AB magnitude    
+NB711_08_ERR        99  mag       stat.error;phot.mag;em.opt    Error on Subaru NB711 band AB magnitude     
+KC_08              100  mag       phot.mag;em.opt               CFHT Ks band AB magnitude    
+DKC_08_ERR         101  mag       stat.error;phot.mag;em.opt    Error on CFHT Ks band AB magnitude   
+J_08               102  mag       phot.mag;em.opt               UKIRT J band AB magnitude   
+J_08_ERR           103  mag       stat.error;phot.mag;em.opt    Error on UKIRT J band AB magnitude    
+IA484_08           104  mag       phot.mag;em.opt               Subaru IA484 band AB magnitude    
+IA484_08_ERR       105  mag       stat.error;phot.mag;em.opt    Error on Subaru IA484 band AB magnitude  
+IA527_08           106  mag       phot.mag;em.opt               Subaru IA527 band AB magnitude     
+IA527_08_ERR       107  mag       stat.error;phot.mag;em.opt    Error on Subaru IA527 band AB magnitude    
+IA624_08           108  mag       phot.mag;em.opt               Subaru IA624 band AB magnitude   
+IA624_08_ERR       109  mag       stat.error;phot.mag;em.opt    Error on Subaru IA624 band AB magnitude   
+IA679_08           110  mag       phot.mag;em.opt               Subaru IA679 band AB magnitude   
+IA679_08_ERR       111  mag       stat.error;phot.mag;em.opt    Error on Subaru IA679 band AB magnitude  
+IA738_08           112  mag       phot.mag;em.opt               Subaru IA738 band AB magnitude  
+IA738_08_ERR       113  mag       stat.error;phot.mag;em.opt    Error on Subaru IA738 band AB magnitude    
+IA767_08           114  mag       phot.mag;em.opt               Subaru IA767 band AB magnitude   
+IA767_08_ERR       115  mag       stat.error;phot.mag;em.opt    Error on Subaru IA767 band AB magnitude  
+EB_V_08            116  mag       phot.color                    Galactic extinction E(B-V)  
+FUV_08             117  mag       phot.mag;em.opt               GALEX FUV PSF Fit AB magnitude 
+FUV_08_ERR         118  mag       stat.error;phot.mag;em.opt    Error on GALEX FUV PSF Fit AB magnitude
+NUV_08             119  mag       phot.mag;em.opt               GALEX NUV PSF Fit AB magnitude
+NUV_08_ERR         120  mag       stat.error;phot.mag;em.opt    Error on GALEX NUV PSF Fit AB magnitude  
+MASK_FUV_08        121  -         phys.angArea;em.UV            Bad pixel mask for GALEX FUV  
+MASK_NUV_08        122  -         phys.angArea;em.UV            Bad pixel mask for GALEX FUV     
+B_MASK_08          123  arcsec^2  phys.angArea;em.opt.B         Bad pixel mask for Subaru Bj    
+V_MASK_08          124  arcsec^2  phys.angArea;em.opt.V         Bad pixel mask for Subaru Vj 
+I_MASK_08          125  arcsec^2  phys.angArea;em.opt.I         Bad pixel mask for Subaru i+  
+Z_MASK_08          126  arcsec^2  phys.angArea;em.opt.Z         Bad pixel mask for Subaru z+    
+DEEP_MASK_08       127  arcsec^2  phys.angArea;em.opt           Mask for deep area.   
+ZP_ILBERT          128  -         src.redshift.phot             Best Photometric Redshift from Ilbert et al (2008)
+STAR_GALAXY_CLASS  129  -         meta.code                     Stellar flag  	  
+ZL68_ILBERT        130  -         src.redshift.phot             lower limit, 68% confidence level 
+ZU68_ILBERT        131  -         src.redshift.phot             upper limit, 68% confidence level   
+ZL99_ILBERT        132  -         src.redshift.phot             lower limit, 99% confidence level    
+ZU99_ILBERT        133  -         src.redshift.phot             upper limit, 99% confidence level   
+CHI2_ILBERT        134  -         stat.fit.residual             reduced chi2 for photometric redshift			    
+RA_ZCOS            135  deg       pos.eq.ra                     RA (J2000.0) from zCOSMOS-bright 10k   
+DEC_ZCOS           136  deg       pos.eq.dec                    Dec (J2000.0) from zCOSMOS-bright 10k    
+Z_ZCOS             137  -         src.redshift                  Spectroscopic redshift from zCOSMOS-bright 10k  
+ZQUALITY_ZCOS      138  -         meta.code                     Quality flag zCOSMOS-bright 10k     
+filename_ZCOS      139  -         meta.id                       Filename of zCOSMOS-bright 10k 1D reduced spectrum
+RA_PRIMUS          140  deg       pos.eq.ra                     RA (J2000.0) from PRIMUS     			      
+DEC_PRIMUS         141  deg       pos.eq.dec                    Dec (J2000.0) from PRIMUS      
+Z_PRIMUS           142  -         src.redshift                  Spectroscopic redshift from PRIMUS  
+ZQUALITY_PRIMUS    143  -         meta.code                     Quality flag from PRIMUS 
+SLIT_RA_14         144  deg       pos.eq.ra                     RA (J2000.0) of slit position
+SLIT_DEC_14        145  deg       pos.eq.dec                    Dec (J2000.0) of slit position 
+SLIT_OFF           146  arcsec    pos.angDistance               Offset between SLIT_RA, SLIT_DEC and RA_06, DEC_06
+Z_BEST             147  -         src.redshift                  The best-fit redshift from Davies et al. (2014)  
+Z_GEN              148  -         meta.code                     Numerical code quantifying redshift matches
+Z_USE              149  -         meta.code                     Numerical code indicating use of redshift
+AUTOZ1             150  -         src.redshift                  Best-fit AUTOZ 
+AUTOZ1_SIGMA       151  -         stat.weight                   Statistical significance of best-fit AUTOZ 
+AUTOZ1_TEMP        152  -         meta.id                       Model galaxy template from best-fit AUTOZ 
+AUTOZ2             153  -         src.redshift                  2nd best-fit AUTOZ 
+AUTOZ2_SIGMA       154  -         stat.weight                   Statistical significance of 2nd best-fit AUTOZ 
+AUTOZ2_TEMP        155  -         meta.id                       Model galaxy template from 2nd best-fit AUTOZ 
+AUTOZ3             156  -         src.redshift                  3rd best-fit AUTOZ 
+AUTOZ3_SIGMA       157  -         stat.weight                   Statistical significance of 3rd best-fit AUTOZ 
+AUTOZ3_TEMP        158  -         meta.id                       Model galaxy template from 3rd best-fit AUTOZ 
+AUTOZ4             159  -         src.redshift                  4th best-fit AUTOZ 
+AUTOZ4_SIGMA       160  -         stat.weight                   Statistical significance of 4th best-fit AUTOZ 
+AUTOZ4_TEMP        161  -         meta.id                       Model galaxy template from 4th best-fit AUTOZ 
+SPEC_FILENAME      162  -         meta.id                       Filename of 1D reduced spectrum
+Z_EYE              163  -         src.redshift                  Redshift from visual inspection 	
+ZQUALITY_EYE       164  -         meta.code                     Quality flag from visual inspection 
+R_MAG_BEST         165  -         phot.mag;em.opt.R             Best R-band magnitude 
+QUALITY_FLAG       166  -         meta.code                     Spectral quality flag
+RA_VVDS            167  deg       pos.eq.ra                     RA (J2000.0) from VVDS
+DEC_VVDS           168  deg       pos.eq.dec                    Dec (J2000.0) from VVDS 
+Z_VVDS             169  -         src.redshift                  Spectroscopic redshift from VVDS
+ZQUALITY_VVDS      170  -         meta.code                     Quality flag from VVDS 
+RA_SDSS            171  deg       pos.eq.ra                     RA (J2000.0) from SDSS-DR10    
+DEC_SDSS           172  deg       pos.eq.ra                     Dec (J2000.0) from SDSS-DR10  
+CLASS_SDSS         173  deg       meta.code                     STAR/GALAXY class from SDSS-DR10   
+Z_SDSS             174  -         src.redshift                  Spectroscopic redshift from SDSS-DR10 
+Z_ERR_SDSS         175  -         src.redshift                  Error on the spectroscopic redshift from SDSS-DR10 
+ZP_COSMOS2015	   176	-	  src.redshift.phot		Photometric Redshift from Laigale et al (2016)
+ZL68_COSMOS2015	   177	-	  src.redshift.phot		Lower limit, 68% confidence level for ZP_COSMOS2015 redshift
+ZU68_COSMOS2015	   178	-	  src.redshift.phot		Upper limit, 68% confidence level for ZP_COSMOS2015  redshift
+CHI2_COSMOS2015	   179	-	  stat.fit.residual		chi^2 value for the best fit galaxy template used in the
+
