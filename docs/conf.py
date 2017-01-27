@@ -19,10 +19,10 @@
 #
 import os
 import sys
-import site
+from distutils.sysconfig import get_python_lib
 
 sys.path.insert(0, '..')
-sys.path.insert(0, site.getsitepackages())
+sys.path.insert(0, get_python_lib())
 
 # -- General configuration ------------------------------------------------
 
