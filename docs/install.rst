@@ -1,5 +1,5 @@
 
-Installation and Getting Started
+Installation
 ==================
 
 Short description
@@ -35,7 +35,7 @@ Via pip or conda, e.g.,
     python setup.py build_ext --inplace
     python setup.py install
 
-4. Run a full test. Nothing should fail!
+4. Run the tests. Nothing should fail!
 
 .. code-block:: bash
 
@@ -47,6 +47,7 @@ Via pip or conda, e.g.,
 Getting Started
 ----------------
 
+- :ref:`Tutorial - getting started with Delight`
 - :ref:`Example - filling missing bands`
-- The ./notebooks directory contains a number of notebooks.
+- The ./notebooks directory contains some other notebooks.
 - The code in the ./scripts directory is also a good start.

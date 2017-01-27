@@ -22,7 +22,7 @@ with a flexible SED model quickly via our photo-z GP.
 
 
 Creating the parameter file
-===========================
+---------------------------
 
 Let's create a parameter file from scratch.
 
@@ -245,10 +245,10 @@ Let's write this to a file.
         out.write(paramfile_txt)
 
 Running Delight
-===============
+---------------
 
 Processing the filters and templates, and create a mock catalog
----------------------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 First, we must fit the band filters with a gaussian mixture. This is
 done with this script:
@@ -273,7 +273,7 @@ Third, we will make some mock data with those filters and SEDs:
 
 
 Train and apply
----------------
+~~~~~~~~~~~~~~~
 
 Run the scripts below. There should be a little bit of feedback as it is
 going through the lines. For up to 1e4 objects it should only take a few
@@ -307,20 +307,20 @@ minutes max, depending on the settings above.
     Number of Training Objects 1000
     Number of Target Objects 1000
     Thread  0  analyzes lines  0  to  1000
-    0 0.09858012199401855 0.010704994201660156 0.005975961685180664
-    100 0.06897997856140137 0.006321907043457031 0.006414175033569336
-    200 0.09090709686279297 0.006384849548339844 0.007424116134643555
-    300 0.08357095718383789 0.007916927337646484 0.006414175033569336
-    400 0.07995009422302246 0.00786590576171875 0.0066890716552734375
-    500 0.08601593971252441 0.006869077682495117 0.0073490142822265625
-    600 0.08824896812438965 0.009083986282348633 0.007201194763183594
-    700 0.10718202590942383 0.0078029632568359375 0.012565851211547852
-    800 0.10094809532165527 0.007643938064575195 0.011996030807495117
-    900 0.09623408317565918 0.00860285758972168 0.009649038314819336
+    0 0.1311957836151123 0.014869213104248047 0.013804912567138672
+    100 0.06870007514953613 0.006330966949462891 0.004736900329589844
+    200 0.10263180732727051 0.008839130401611328 0.011183977127075195
+    300 0.07733988761901855 0.007596015930175781 0.007447004318237305
+    400 0.07348513603210449 0.006279945373535156 0.006253957748413086
+    500 0.07892394065856934 0.007573127746582031 0.014636993408203125
+    600 0.0829770565032959 0.0071430206298828125 0.0066449642181396484
+    700 0.11001420021057129 0.008404970169067383 0.007412910461425781
+    800 0.1179349422454834 0.009317159652709961 0.011492013931274414
+    900 0.13953113555908203 0.012920856475830078 0.010159015655517578
 
 
 Analyze the outputs
-===================
+-------------------
 
 .. code:: python
 
@@ -393,7 +393,7 @@ Analyze the outputs
 
 .. parsed-literal::
 
-    341 149 631 741 719 263 185 809 749 595 940 733 204 246 870 119 763 861 228 19 
+    569 381 281 54 883 76 253 910 73 297 813 155 744 473 89 582 571 762 414 627 
 
 
 .. image:: _static/Tutorial%20-%20getting%20started%20with%20Delight_files/Tutorial%20-%20getting%20started%20with%20Delight_35_1.png
@@ -476,7 +476,7 @@ Analyze the outputs
 
 .. parsed-literal::
 
-    <matplotlib.text.Text at 0x11dca1198>
+    <matplotlib.text.Text at 0x11dc77a20>
 
 
 
@@ -485,7 +485,7 @@ Analyze the outputs
 
 
 Conclusion
-==========
+----------
 
 Don't be too harsh with the results of the standard template fitting or
 the new methods since both have a lot of parameters which can be
