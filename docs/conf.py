@@ -19,7 +19,10 @@
 #
 import os
 import sys
+import site
+
 sys.path.insert(0, '..')
+sys.path.insert(0, site.getsitepackages())
 
 # -- General configuration ------------------------------------------------
 

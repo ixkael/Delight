@@ -42,7 +42,7 @@ Via pip or conda, e.g.,
     python scripts/processFilters.py tests/parametersTest.cfg
     python scripts/processSEDs.py tests/parametersTest.cfg
     python scripts/simulateWithSEDs.py tests/parametersTest.cfg
-    coverage run --source delight -m py.test --ignore=old_2D_stuff
+    coverage run --source delight -m py.test
 
 Getting Started
 ----------------
