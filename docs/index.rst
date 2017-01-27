@@ -13,6 +13,7 @@ Contents:
 
    install
    code
+   Tutorial - getting started with Delight
    Example - filling missing bands
 
 Indices and tables
