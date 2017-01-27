@@ -28,6 +28,7 @@ setup(
   version=version,
   cmdclass={"build_ext": build_ext,
             'build_sphinx': BuildDoc},
+  packages=['delight'],
   command_options={
         'build_sphinx': {
             'project': (None, "delight"),
