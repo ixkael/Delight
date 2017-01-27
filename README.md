@@ -5,6 +5,7 @@
 
 [![alt tag](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/ixkael/Delight/blob/master/LICENSE)
 [![alt tag](https://travis-ci.org/ixkael/Delight.svg?branch=master)](https://travis-ci.org/ixkael/Delight)
+[![Documentation Status](https://readthedocs.org/projects/delight/badge/?version=latest&style=flat)](http://delight.readthedocs.io/en/latest/?badge=latest)
 [![Latest PDF](https://img.shields.io/badge/PDF-latest-orange.svg)](https://github.com/ixkael/Delight/blob/master/paper/PhotoZviaGP_paper.pdf)
 [![Coverage Status](https://coveralls.io/repos/github/ixkael/Delight/badge.svg?branch=master)](https://coveralls.io/github/ixkael/Delight?branch=master)
 
@@ -17,11 +18,12 @@
 **./tests/**: test suite for the main code </br>
 **./notebooks/**: demo notebooks using delight </br>
 **./data/**: some useful inputs for tests/demos </br>
+**./docs/**: documentation </br>
 **./other/**: useful mathematica notebooks, etc </br>
 
 ## Requirements
 
-Python 3.5, cython, numpy, scipy, pytest, pylint, coveralls, matplotlib, astropy </br>
+Python 3.5, cython, numpy, scipy, pytest, pylint, coveralls, matplotlib, astropy, mpi4py </br>
 
 ## Authors
 
