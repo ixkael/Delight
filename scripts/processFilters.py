@@ -7,7 +7,8 @@ from scipy.optimize import leastsq
 from delight.utils import *
 from delight.io import *
 
-numCoefs = 15  # number of components for the fit
+numCoefs = 20  # number of components for the fit
+make_plots = False
 
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
@@ -16,7 +17,6 @@ bandNames = params['bandNames']
 fmt = '.res'
 max_redshift = params['redshiftMax']  # for plotting purposes
 root = params['bands_directory']
-make_plots = False
 if make_plots:
     import matplotlib.pyplot as plt
     cm = plt.get_cmap('brg')
@@ -52,7 +52,7 @@ for iband, band in enumerate(bandNames):
     mus = np.linspace(lambdaMin+sig0[0], lambdaMax-sig0[-1], num=numCoefs)
     amp0 = interp1d(x, y)(mus)
     p0 = np.concatenate((amp0, sig0))
-    print(band)
+    print(band, end=" ")
     popt, pcov = leastsq(dfunc, p0, args=(x, y))
     coefs[:, 0] = np.abs(popt[0:numCoefs])  # amplitudes
     coefs[:, 1] = mus  # positions

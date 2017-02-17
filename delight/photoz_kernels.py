@@ -241,7 +241,7 @@ class Photoz_kernel:
         self.KLd, self.KCd = np.zeros((NO1,)), np.zeros((NO1,))
         self.D_alpha_Cd, self.D_alpha_Ld =\
             np.zeros((NO1,)), np.zeros((NO1,))
-        self.KTd = np.ones((X.shape[0],))
+        self.KTd = np.ones((NO1,))
         self.Zprefacd = (1.+X[:, 1])**2 /\
             (self.fourpi * self.g_AB * self.DL_z(X[:, 1])**2)
 
@@ -263,7 +263,7 @@ class Photoz_kernel:
 
         else:  # not use interpolators
             fz1 = 1 + X[:, 1]
-            kernelparts_diag(self.nz, self.numCoefs, self.numLines,
+            kernelparts_diag(NO1, self.numCoefs, self.numLines,
                              self.alpha_C, self.alpha_L,
                              self.fcoefs_amp, self.fcoefs_mu,
                              self.fcoefs_sig,
@@ -413,3 +413,79 @@ class Photoz_kernel:
                                                       assume_sorted=True,
                                                       bounds_error=False,
                                                       fill_value="extrapolate")
+
+
+class Photoz_SN_kernel(Photoz_kernel):
+    """
+    Photoz kernel based on RBF kernel in SED space.
+
+    Args:
+        fcoefs_amp: ``numpy.array`` of size (numBands, numCoefs)
+            describint the amplitudes of the Gaussians approximating the
+            photometric filters.
+        fcoefs_mu: ``numpy.array`` of size (numBands, numCoefs)
+            describint the positions of the Gaussians approximating the
+            photometric filters.
+        fcoefs_sig: ``numpy.array`` of size (numBands, numCoefs)
+            describint the widths of the Gaussians approximating the
+            photometric filters.
+        lines_mu: ``numpy.array`` of SED line positions
+        lines_sig: ``numpy.array`` of SED line widths
+        var_C: GP variance for SED continuum correlations.
+            Should be a ``float`, preferably between 1e-3 and 1e2.
+        var_L: GP variance for SED line correlations.
+            Should be a ``float`, preferably between 1e-3 and 1e2.
+        alpha_T: GP lengthscale for smoothness of time correlations.
+            Should be a ``float`.
+        alpha_C: GP lengthscale for smoothness of SED continuum correlations.
+            Should be a ``float`, preferably between 1e1 and 1e4.
+        alpha_L: GP lengthscale for smoothness of SED line correlations.
+            Should be a ``float`, preferably between 1e1 and 1e4.
+        lambdaRef (Optional): Pivot space for the SEDs
+            (``float``, default: ``4.5e3``)
+        g_AB (Optional): AB photometric normalization constant
+            (``float``, default: ``1.0``)
+        DL_z (Optional): function for computing the luminosity distance
+            as a fct of redshift. Default: an analytic approximation.
+        redshiftGrid (Optional): redshift grid (array) for computing the GP.
+            (default: some fine grid.)
+        use_interpolators (Optional): ``boolean`` indicating if the GP
+            should be used for all predictions,
+            or if an interpolation scheme should be used (default: ``True``)
+    """
+    def __init__(self,
+                 fcoefs_amp, fcoefs_mu, fcoefs_sig,
+                 lines_mu, lines_sig,
+                 var_C,
+                 var_L,
+                 alpha_T,
+                 alpha_C,
+                 alpha_L,
+                 g_AB=1.0,
+                 DL_z=None,
+                 redshiftGrid=None,
+                 use_interpolators=True):
+        """ Constructor."""
+        self.alpha_T = alpha_T
+        super().__init__(
+            fcoefs_amp, fcoefs_mu, fcoefs_sig,
+            lines_mu, lines_sig, var_C, var_L,
+            alpha_C, alpha_L, g_AB, DL_z,
+            redshiftGrid, use_interpolators)
+
+    def Kdiag(self, X):
+        """
+        Compute GP kernel on the diagonal only.
+        """
+        return super().Kdiag(X[:, 0:3])
+
+    def K(self, X, X2=None):
+        """
+        Compute GP kernel, auto or cross depending on whether X2 is set.
+        """
+        if X2 is None:
+            X2 = X
+        t1 = X[:, 3]
+        t2 = X2[:, 3]
+        kt = np.exp(-(X[:, None, 3] - X2[None, :, 3])**2/self.alpha_T)
+        return kt * super().K(X[:, 0:3], X2[:, 0:3])

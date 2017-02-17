@@ -11,7 +11,113 @@ from delight.photoz_kernels import *
 
 log_2_pi = np.log(2*np.pi)
 
-__all__ = ["PhotozGP"]
+__all__ = ["PhotozGP", "PhotozGP_SN"]
+
+
+class PhotozGP_SN:
+    """
+    Photo-z Gaussian process, with physical kernel and mean function.
+
+    Args:
+        bandCoefAmplitudes: ``numpy.array`` of size (numBands, numCoefs)
+            describint the amplitudes of the Gaussians approximating the
+            photometric filters.
+        bandCoefPositions: ``numpy.array`` of size (numBands, numCoefs)
+            describint the positions of the Gaussians approximating the
+            photometric filters.
+        bandCoefWidths: ``numpy.array`` of size (numBands, numCoefs)
+            describint the widths of the Gaussians approximating the
+            photometric filters.
+        lines_pos: ``numpy.array`` of SED line positions
+        lines_width: ``numpy.array`` of SED line widths
+        var_C: GP variance for SED continuum correlations.
+            Should be a ``float`, preferably between 1e-3 and 1e2.
+        var_L: GP variance for SED line correlations.
+            Should be a ``float`, preferably between 1e-3 and 1e2.
+        alpha_T: GP lengthscale for smoothness of time correlations.
+            Should be a ``float`.
+        alpha_C: GP lengthscale for smoothness of SED continuum correlations.
+            Should be a ``float`, preferably between 1e1 and 1e4.
+        alpha_L: GP lengthscale for smoothness of SED line correlations.
+            Should be a ``float`, preferably between 1e1 and 1e4.
+        redshiftGridGP: redshift grid (array) for computing the GP.
+        use_interpolators (Optional): ``boolean`` indicating if the GP
+            should be used for all predictions,
+            or if an interpolation scheme should be used (default: ``True``)
+        lambdaRef (Optional): Pivot space for the SEDs
+            (``float``, default: ``4.5e3``)
+        g_AB (Optional): AB photometric normalization constant
+            (``float``, default: ``1.0``)
+    """
+    def __init__(self,
+                 bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+                 lines_pos, lines_width,
+                 var_C, var_L, alpha_T, alpha_C, alpha_L,
+                 redshiftGridGP,
+                 use_interpolators=True,
+                 lambdaRef=4.5e3,
+                 g_AB=1.0):
+
+        DL = approx_DL()
+        self.bands = np.arange(bandCoefAmplitudes.shape[0])
+        self.kernel = Photoz_SN_kernel(
+            bandCoefAmplitudes, bandCoefPositions, bandCoefWidths,
+            lines_pos, lines_width, var_C, var_L, alpha_T, alpha_C, alpha_L,
+            g_AB=g_AB, DL_z=DL, redshiftGrid=redshiftGridGP,
+            use_interpolators=use_interpolators)
+        self.redshiftGridGP = redshiftGridGP
+
+    def setData(self, X, Y, Yvar):
+        """
+        Set data content for the Gaussian process.
+
+        Args:
+            X: array of size (nobj, 4) containing the GP inputs.
+                The column order is band, redshift, and luminosity.
+            Y: array of size (nobj, 1) containing the GP outputs.
+                Contains the photometric fluxes corresponding to the inputs.
+            Yvar: array of size (nobj, 1) containing the GP outputs.
+                Contains the flux variances corresponding to the inputs.
+        """
+        self.X = X
+        self.Y = Y.reshape((-1, 1))
+        self.Yvar = Yvar.reshape((-1, 1))
+        self.KXX = self.kernel.K(self.X)
+        self.A = self.KXX + np.diag(self.Yvar.flatten())
+        sign, self.logdet = np.linalg.slogdet(self.A)
+        self.logdet *= sign
+        self.L = scipy.linalg.cholesky(self.A, lower=True)
+        self.D = 1*self.Y
+        self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
+
+    def margLike(self):
+        """
+        Returns marginalized likelihood of GP.
+        """
+        return 0.5 * np.sum(self.beta * self.D) +\
+            0.5 * self.logdet + 0.5 * self.D.size * log_2_pi
+
+    def predict(self, x_pred, diag=True):
+        """
+        Raw way to predict outputs with the GP.
+        Args:
+            x_pred: input array of size (nobj, 4).
+                The column order is band, redshift, and luminosity.
+            diag (Optional): return the predicted variance on the diagonal only
+        """
+        assert x_pred.shape[1] == 4
+        KXXp = self.kernel.K(x_pred, self.X)
+        v = scipy.linalg.cho_solve((self.L, True), KXXp.T)
+        if diag:
+            y_pred_cov = self.kernel.Kdiag(x_pred)
+            for i in range(x_pred.shape[0]):
+                y_pred_cov[i] -= KXXp[i, :].dot(v[:, i])
+        else:
+            KXpXp = self.kernel.K(x_pred)
+            v = scipy.linalg.cho_solve((self.L, True), KXXp.T)
+            y_pred_cov = KXpXp - KXXp.dot(v)
+        y_pred = np.dot(KXXp, self.beta)
+        return y_pred, y_pred_cov
 
 
 class PhotozGP:
