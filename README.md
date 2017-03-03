@@ -34,7 +34,7 @@ Please cite [Leistedt and Hogg (2016)]
 (https://arxiv.org/abs/1612.00847) if you use this code your
 research. The BibTeX entry is:
 
-    `@article{delight,
+    @article{delight,
         author         = "Leistedt, Boris and Hogg, David W.",
         title          = "{Data-driven, interpretable photometric redshifts trained on heterogeneous and unrepresentative data}",
         year           = "2016",
@@ -42,7 +42,7 @@ research. The BibTeX entry is:
         archivePrefix  = "arXiv",
         primaryClass   = "astro-ph.CO",
         SLACcitation   = "%%CITATION = ARXIV:1612.00847;%%"
-    }`
+    }
 
 
 ## License
