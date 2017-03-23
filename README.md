@@ -34,15 +34,20 @@ Please cite [Leistedt and Hogg (2016)]
 (https://arxiv.org/abs/1612.00847) if you use this code your
 research. The BibTeX entry is:
 
-    `@article{delight,
-        author         = "Leistedt, Boris and Hogg, David W.",
-        title          = "{Data-driven, interpretable photometric redshifts trained on heterogeneous and unrepresentative data}",
-        year           = "2016",
+    @article{delight,
+        author  = "Boris Leistedt and David W. Hogg",
+        title   = "Data-driven, Interpretable Photometric Redshifts Trained on Heterogeneous and Unrepresentative Data",
+        journal = "The Astrophysical Journal",
+        volume  = "838",
+        number  = "1",
+        pages   = "5",
+        url     = "http://stacks.iop.org/0004-637X/838/i=1/a=5",
+        year    = "2017",
         eprint         = "1612.00847",
         archivePrefix  = "arXiv",
         primaryClass   = "astro-ph.CO",
         SLACcitation   = "%%CITATION = ARXIV:1612.00847;%%"
-    }`
+    }
 
 
 ## License
