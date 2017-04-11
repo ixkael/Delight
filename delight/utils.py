@@ -77,10 +77,7 @@ def flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None):
 def approx_flux_likelihood_multiobj(
         f_obs,  # no, nf
         f_obs_var,  # no, nf
-        f_mod,  # no, nt, nf
-        ell_hat,  # 1
-        ell_var,  # 1
-        returnChi2=False,
+        f_mod,  # nz, nt, nf
         normalized=True):
 
     assert len(f_obs.shape) == 2
@@ -90,22 +87,17 @@ def approx_flux_likelihood_multiobj(
     f_obs_r = f_obs[:, None, :]
     var = f_obs_var[:, None, :]
     invvar = np.where(f_obs_r/var < 1e-6, 0.0, var**-1.0)  # nz * nt * nf
-    FOT = np.sum(f_mod * f_obs_r * invvar, axis=2)\
-        + ell_hat / ell_var  # no * nt
-    FTT = np.sum(f_mod**2 * invvar, axis=2)\
-        + 1. / ell_var  # no * nt
-    FOO = np.sum(f_obs_r**2 * invvar, axis=2)\
-        + ell_hat**2 / ell_var  # no * nt
+    FOT = np.sum(f_mod * f_obs_r * invvar, axis=2)# no * nt
+    FTT = np.sum(f_mod**2 * invvar, axis=2)  # no * nt
+    FOO = np.sum(f_obs_r**2 * invvar, axis=2) # no * nt
     sigma_det = np.prod(var, axis=2)
     chi2 = FOO - FOT**2.0 / FTT  # no * nt
     denom = np.sqrt(FTT)
+    ellML = (FOT / FTT)[:, :, None]
     if normalized:
-        denom *= np.sqrt(sigma_det * (2*np.pi)**nf * ell_var)
+        denom *= np.sqrt(sigma_det * (2*np.pi)**nf)
     like = np.exp(-0.5*chi2) / denom  # no * nt
-    if returnChi2:
-        return chi2
-    else:
-        return like
+    return like, ellML
 
 
 def dirichlet(alphas, rsize=1):
