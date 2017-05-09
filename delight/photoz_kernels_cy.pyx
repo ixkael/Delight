@@ -5,20 +5,6 @@ from cpython cimport bool
 cimport cython
 from libc.math cimport sqrt, M_PI, exp, pow
 
-def find_positions(
-        int NO1, int nz,
-        double[:] fz1,
-        long[:] p1s,
-        double[:] fzGrid
-        ):
-
-    cdef long p1, o1
-    for o1 in prange(NO1, nogil=True):
-        for p1 in range(nz-1):
-            if fz1[o1] >= fzGrid[p1] and fz1[o1] <= fzGrid[p1+1]:
-                p1s[o1] = p1
-                break;
-
 
 def kernel_parts_interp(
             int NO1, int NO2,

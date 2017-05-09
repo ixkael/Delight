@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from scipy.interpolate import interp2d
 from delight.utils import *
 from astropy.cosmology import FlatLambdaCDM
 from delight.utils import approx_flux_likelihood
 from delight.utils_cy import approx_flux_likelihood_cy
+from delight.utils_cy import find_positions, bilininterp_precomputedbins
 from time import time
 
 relative_accuracy = 0.05
@@ -66,18 +68,68 @@ def test_flux_likelihood_approxscalemarg():
         for j in range(nt):
             model_covar[i, j, :, :] = np.diag(model_var[i, j, :])
 
-    ell, ell_var = 1, 1e6
+    ell, ell_var = 0, 0
     like_grid1 = approx_flux_likelihood(
         fluxes, fluxesVar,
         model_mean,
         f_mod_covar=0*model_var,
         ell_hat=ell,
         ell_var=ell_var,
-        normalized=False
+        normalized=False, marginalizeEll=True
     )
-    like_grid2 = scalefree_flux_likelihood(
+    like_grid2, ells = scalefree_flux_likelihood(
         fluxes, fluxesVar,
         model_mean
     )
     relative_accuracy = 1e-2
-    np.allclose(like_grid1, like_grid2, rtol=relative_accuracy)
+    assert np.allclose(like_grid1, like_grid2, rtol=relative_accuracy)
+
+
+def test_interp():
+
+    numBands, nobj = 3, 10
+    nz1, nz2 = 40, 50
+    grid1, grid2 = np.logspace(0., 1., nz1), np.linspace(1., 10., nz2)
+
+    v1s, v2s = np.random.uniform(1, 10, nobj), np.random.uniform(1, 10, nobj)
+    p1s = np.zeros((nobj, ), dtype=int)
+    find_positions(nobj, nz1, v1s, p1s, grid1)
+    p2s = np.zeros((nobj, ), dtype=int)
+    find_positions(nobj, nz2, v2s, p2s, grid2)
+
+    Kgrid = np.zeros((numBands, nz1, nz2))
+    for b in range(numBands):
+        Kgrid[b, :, :] = (grid1[:, None] * grid2[None, :])**(b+1.)
+
+    Kinterp = np.zeros((numBands, nobj))
+    bilininterp_precomputedbins(numBands, nobj, Kinterp, v1s, v2s, p1s, p2s,
+                                grid1, grid2, Kgrid)
+    Kinterp2 = np.zeros((numBands, nobj))
+
+    for b in range(numBands):
+        interp = interp2d(grid2, grid1, Kgrid[b, :, :])
+        for o in range(nobj):
+            Kinterp2[b, o] = interp(v1s[o], v2s[o])
+
+    assert np.allclose(Kinterp, Kinterp2, rtol=relative_accuracy)
+
+
+def test_correlatedgaussianfactorization():
+
+    mu_ell, mu_lnz, var_ell, var_lnz, rho = np.random.uniform(0, 1, 5)
+    rho *= np.sqrt(var_ell*var_lnz)
+
+    for i in range(10):
+        lnz, ell = np.random.uniform(-1, 2, 2)
+        mu_ell_prime = mu_ell + rho * (lnz - mu_lnz) / var_lnz
+        var_ell_prime = var_ell - rho**2 / var_lnz
+        val1 = gaussian(mu_ell_prime, ell, var_ell_prime**0.5)
+        val1 *= gaussian(mu_lnz, lnz, var_lnz**0.5)
+        val2 = gaussian2d(ell, lnz, mu_ell, mu_lnz, var_ell, var_lnz, rho)
+        assert np.abs(val1/val2) - 1 < 1e-12
+
+        rho = 0
+        val2 = gaussian2d(ell, lnz, mu_ell, mu_lnz, var_ell, var_lnz, rho)
+        val3 = gaussian(ell, mu_ell, var_ell**0.5) *\
+            gaussian(lnz, mu_lnz, var_lnz**0.5)
+        assert np.abs(val2/val3) - 1 < 1e-12

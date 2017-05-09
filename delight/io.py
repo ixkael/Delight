@@ -213,9 +213,16 @@ def createGrids(params):
     """
     redshiftDistGrid = np.arange(0, params['redshiftMax'],
                                  params['redshiftDisBinSize'])
-    redshiftGrid = np.arange(params['redshiftMin'],
-                             params['redshiftMax'],
-                             params['redshiftBinSize'])
+    if False:
+        redshiftGrid = np.arange(params['redshiftMin'],
+                                 params['redshiftMax'],
+                                 params['redshiftBinSize'])
+    else:
+        num = int((params['redshiftMax'] - params['redshiftMin']) /
+                  params['redshiftBinSize'])
+        redshiftGrid = np.logspace(np.log10(params['redshiftMin']),
+                                   np.log10(params['redshiftMax']*1.01),
+                                   num)
     redshiftGridGP = np.logspace(np.log10(params['redshiftMin']),
                                  np.log10(params['redshiftMax']*1.01),
                                  params['redshiftNumBinsGPpred'])
@@ -226,9 +233,7 @@ def readSEDs(params):
     """
     Read SED parameters.
     """
-    redshiftGrid = np.arange(params['redshiftMin'],
-                             params['redshiftMax'],
-                             params['redshiftBinSize'])
+    redshiftDistGrid, redshiftGrid, redshiftGridGP = createGrids(params)
     f_mod = np.zeros((len(params['templates_names']),
                       len(params['bandNames'])), dtype=object)
     for it, sed_name in enumerate(params['templates_names']):

@@ -63,7 +63,7 @@ def test_meanfunction():
                 f_mod[k] += np.trapz(sed*yf, x=xf) / norms[bands[k]] * fac
 
         f_mod2 = mf.f(X).ravel()
-        np.allclose(f_mod, f_mod2, rtol=relative_accuracy)
+        assert np.allclose(f_mod, f_mod2, rtol=relative_accuracy)
 
 
 def test_interpolation():

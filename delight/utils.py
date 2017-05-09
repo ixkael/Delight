@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from scipy.misc import derivative
 
 
 class approx_DL():
@@ -74,26 +75,27 @@ def flux_likelihood(f_obs, f_obs_var, f_mod, f_mod_var=None):
     return np.exp(-0.5*np.sum(df**2/sigma, axis=2)) / den
 
 
-def approx_flux_likelihood_multiobj(
-        f_obs,  # no, nf
-        f_obs_var,  # no, nf
-        f_mod,  # nz, nt, nf
+def scalefree_flux_likelihood_multiobj(
+        f_obs,  # no, ..., nf
+        f_obs_var,  # no, ..., nf
+        f_mod,  # ..., nf
         normalized=True):
 
-    assert len(f_obs.shape) == 2
-    assert len(f_obs_var.shape) == 2
-    assert len(f_mod.shape) == 3
-    no, nt, nf = f_mod.shape
-    f_obs_r = f_obs[:, None, :]
-    var = f_obs_var[:, None, :]
-    invvar = np.where(f_obs_r/var < 1e-6, 0.0, var**-1.0)  # nz * nt * nf
-    FOT = np.sum(f_mod * f_obs_r * invvar, axis=2)# no * nt
-    FTT = np.sum(f_mod**2 * invvar, axis=2)  # no * nt
-    FOO = np.sum(f_obs_r**2 * invvar, axis=2) # no * nt
-    sigma_det = np.prod(var, axis=2)
+    assert len(f_obs.shape) == len(f_mod.shape)
+    assert len(f_obs_var.shape) == len(f_mod.shape)
+    assert len(f_mod.shape) >= 2
+    nf = f_mod.shape[-1]
+    assert f_obs.shape[-1] == nf
+    assert f_obs_var.shape[-1] == nf
+    # nz * nt * nf
+    invvar = np.where(f_obs/f_obs_var < 1e-6, 0.0, f_obs_var**-1.0)
+    FOT = np.sum(f_mod * f_obs * invvar, axis=-1)  # no * nt
+    FTT = np.sum(f_mod**2 * invvar, axis=-1)  # no * nt
+    FOO = np.sum(f_obs**2 * invvar, axis=-1)  # no * nt
+    sigma_det = np.prod(f_obs_var, axis=-1)
     chi2 = FOO - FOT**2.0 / FTT  # no * nt
     denom = np.sqrt(FTT)
-    ellML = (FOT / FTT)[:, :, None]
+    ellML = FOT / FTT
     if normalized:
         denom *= np.sqrt(sigma_det * (2*np.pi)**nf)
     like = np.exp(-0.5*chi2) / denom  # no * nt
@@ -114,8 +116,8 @@ def approx_flux_likelihood(
         f_obs,  # nf
         f_obs_var,  # nf
         f_mod,  # nz, nt, nf
-        ell_hat=1,  # 1 or nz, nt
-        ell_var=1e12,  # 1 or nz, nt
+        ell_hat=0,  # 1 or nz, nt
+        ell_var=0,  # 1 or nz, nt
         f_mod_covar=None,  # nz, nt, nf (, nf)
         marginalizeEll=True,
         normalized=True,
@@ -143,12 +145,13 @@ def approx_flux_likelihood(
                 var = f_obs_var[None, None, :]
             invvar = 1/var  # nz * nt * nf
             # np.where(f_obs_r/var < 1e-6, 0.0, var**-1.0)  # nz * nt * nf
-            FOT = np.sum(f_mod * f_obs_r * invvar, axis=2)\
-                + ell_hat / ell_var  # nz * nt
-            FTT = np.sum(f_mod**2 * invvar, axis=2)\
-                + 1. / ell_var  # nz * nt
-            FOO = np.sum(f_obs_r**2 * invvar, axis=2)\
-                + ell_hat**2 / ell_var  # nz * nt
+            FOT = np.sum(f_mod * f_obs_r * invvar, axis=2)
+            FTT = np.sum(f_mod**2 * invvar, axis=2)
+            FOO = np.sum(f_obs_r**2 * invvar, axis=2)
+            if np.all(ell_var > 0):
+                FOT += ell_hat / ell_var  # nz * nt
+                FTT += 1. / ell_var  # nz * nt
+                FOO += ell_hat**2 / ell_var  # nz * nt
             sigma_det = np.prod(var, axis=2)
             ellbk = 1*ellML
             ellML = (FOT / FTT)[:, :, None]
@@ -160,10 +163,12 @@ def approx_flux_likelihood(
     denom = 1
     if normalized:
         denom = denom * np.sqrt(sigma_det * (2*np.pi)**nf)
-        if np.all(ell_var != 1e12):
+        if np.all(ell_var > 0):
             denom = denom * np.sqrt(2*np.pi * ell_var)
     if marginalizeEll:
-        denom = denom * np.sqrt(FTT / (2*np.pi))
+        denom = denom * np.sqrt(FTT)
+        if np.all(ell_var > 0):
+            denom = denom / np.sqrt(2*np.pi)
     like = np.exp(-0.5*chi2) / denom  # nz * nt
     return like
 
@@ -217,3 +222,85 @@ def computeMetrics(ztrue, redshiftGrid, PDF, confIntervals):
     ]
     return [ztrue, zmean, zstdzmean, zmap, zstdzmap, pdfAtZ, cumPdfAtZ]\
         + confidencelevels
+
+
+def gaussian2d(x1, x2, mu1, mu2, cov1, cov2, corr):
+    dx = np.array([x1 - mu1, x2 - mu2])
+    cov = np.array([[cov1, corr], [corr, cov2]])
+    v = np.exp(-0.5*np.dot(dx, np.linalg.solve(cov, dx)))
+    v /= (2*np.pi) * np.sqrt(np.linalg.det(cov))
+    return v
+
+
+def gaussian(x, mu, sig):
+    return np.exp(-0.5*((x-mu)/sig)**2.0) / np.sqrt(2*np.pi) / sig
+
+
+def lngaussian(x, mu, sig):
+    return - 0.5*((x - mu)/sig)**2 - 0.5*np.log(2*np.pi) - np.log(sig)
+
+
+def lngaussian_gradmu(x, mu, sig):
+    return (x - mu) / sig**2
+
+
+def derivative_test(x0, fun, fun_grad, relative_accuracy,
+                    n=1, lim=0, order=9, dxfac=0.01,
+                    verbose=False, superverbose=False):
+    grads = fun_grad(x0)
+    for i in range(x0.size):
+        if verbose:
+            print(i, end=" ")
+
+        def f(v):
+            x = 1*x0
+            x[i] = v
+            return fun(x)
+        grads2 = derivative(f, x0[i], dx=dxfac*x0[i], order=order, n=n)
+        if superverbose:
+            print(i, 'analytical:', grads[i], 'numerical:', grads2)
+        if np.abs(grads2) >= lim:
+            np.testing.assert_allclose(grads2, grads[i],
+                                       rtol=relative_accuracy)
+
+
+def multiobj_flux_likelihood_margell(
+        f_obs,  # nobj * nf
+        f_obs_var,  # nobj * nf
+        f_mod,  # nt * nz * nf
+        ell_hat,  # nt * nz
+        ell_var,  # nt * nz
+        marginalizeEll=True,
+        normalized=True):
+    """
+    TODO
+    """
+    assert len(f_obs.shape) == 2
+    assert len(f_obs_var.shape) == 2
+    assert len(f_mod.shape) == 3
+    assert len(ell_hat.shape) == 2
+    assert len(ell_var.shape) == 2
+    nt, nz, nf = f_mod.shape
+    FOT = np.sum(
+        f_mod[None, :, :, :] *
+        f_obs[:, None, None, :] / f_obs_var[:, None, None, :],
+        axis=3) +\
+        ell_hat[None, :, :] / ell_var[None, :, :]
+    FTT = np.sum(
+        f_mod[None, :, :, :]**2 / f_obs_var[:, None, None, :],
+        axis=3) + 1 / ell_var[None, :, :]
+    FOO = np.sum(
+        f_obs[:, None, None, :]**2 / f_obs_var[:, None, None, :],
+        axis=3) +\
+        ell_hat[None, :, :]**2.0 / ell_var[None, :, :]
+    sigma_det = np.prod(f_obs_var[:, None, None, :], axis=3)
+    chi2 = FOO - FOT**2.0 / FTT  # nobj * nt * nz
+    denom = 1.
+    if normalized:
+        denom = denom *\
+            np.sqrt(sigma_det * (2*np.pi)**nf) *\
+            np.sqrt(2*np.pi * ell_var[None, :, :])
+    if marginalizeEll:
+        denom = denom * np.sqrt(FTT) / np.sqrt(2*np.pi)
+    like = np.exp(-0.5*chi2) / denom  # nobj * nt * nz
+    return like

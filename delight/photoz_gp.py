@@ -183,7 +183,7 @@ class PhotozGP:
             use_interpolators=use_interpolators)
         self.redshiftGridGP = redshiftGridGP
 
-    def setData(self, X, Y, Yvar, bestType):
+    def setData(self, X, Y, Yvar, bestType=None):
         """
         Set data content for the Gaussian process.
 
@@ -200,23 +200,6 @@ class PhotozGP:
         self.Yvar = Yvar.reshape((-1, 1))
         if isinstance(self.mean_fct, Photoz_mean_function):
             mf = self.mean_fct.f(X)
-        elif isinstance(self.mean_fct, Photoz_linear_sed_basis):
-            mf = None
-            if False:  # old stuff, that might be useful one day.
-                hx = self.mean_fct.f(self.X).T
-
-                def fun(betas):
-                    chi2 = (np.dot(hx.T, betas) -
-                            self.Y[:, 0])**2 / self.Yvar[:, 0]
-                    return chi2.sum()
-                ell = self.X[:, 2].mean()
-                x0 = np.repeat(ell / self.mean_fct.nt, self.mean_fct.nt)
-                res = minimize(fun, x0, method='L-BFGS-B',
-                               bounds=[(0, 15*ell)] * self.mean_fct.nt)
-                if res.success is False > 1e-2:
-                    raise Exception("Problem!", res)
-                self.betas = res.x
-                mf = np.dot(hx.T, self.betas)[:, None]
         else:
             mf = None
         self.KXX = self.kernel.K(self.X)
@@ -224,24 +207,14 @@ class PhotozGP:
         sign, self.logdet = np.linalg.slogdet(self.A)
         self.logdet *= sign
         self.L = scipy.linalg.cholesky(self.A, lower=True)
-        if False:  # old stuff, that might be useful one day.
-            marglikes = np.zeros(self.mean_fct.nt)
-            for i in range(self.mean_fct.nt):
-                self.betas = np.zeros(self.mean_fct.nt)
-                self.betas[i] = 1.0
-                self.D = self.Y - np.dot(mf.T, self.betas)[:, None]
-                self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
-                marglikes[i] = 0.5 * np.sum(self.beta * self.D) +\
-                    0.5 * self.D.size * log_2_pi + 0.5 * self.logdet
-            i = np.argmin(marglikes)
-            print("marglikes", marglikes, "i=", i)
-        self.bestType = bestType
         self.D = 1*self.Y
         self.betas = np.zeros(self.nt)
         if self.mean_fct is not None:  # set mean fct to best fit template
+            self.bestType = bestType
             self.betas[bestType] = 1.0
             which = np.where(self.betas > 0)[0]
             hx = self.mean_fct.f(self.X, which=which).T
+            hx[~np.isfinite(hx)] = 0
             self.D -= np.dot(hx.T, self.betas)[:, None]
         self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
 
@@ -418,6 +391,45 @@ class PhotozGP:
         self.setData(self.X, self.Y, self.Yvar)  # Need to recompute core
 
         return self.mean_fct.alpha, self.X[0, 2]
+
+    def optimizeHyperparamaters(self, x0=None, verbose=False):
+        """
+        Optimize Hyperparamaters with marglike as objective.
+        """
+        assert self.kernel.use_interpolators is False
+        if x0 is None:
+            x0 = [1.0, 1e3]  # V_C, V_L, alpha_C
+        res = minimize(self.updateHyperparamatersAndReturnMarglike, x0,
+                       method='L-BFGS-B',
+                       bounds=[(1e-12, 1e12), (1e2, 1e4)])
+        V_C, alpha_C = res.x
+        if verbose:
+            print("Optimized parameters: ", res.x)
+        self.kernel.var_C, self.kernel.var_L = 1*V_C, 1*V_C
+        self.kernel.alpha_C, self.kernel.alpha_L = 1*alpha_C, 1*alpha_C
+
+    def updateHyperparamatersAndReturnMarglike(self, pars):
+        """
+        For optimizing Hyperparamaters with marglike as objective using scipy.
+        """
+        V_C, alpha_C = pars
+        self.kernel.var_C, self.kernel.var_L = 1*V_C, 1*V_C
+        self.kernel.alpha_C, self.kernel.alpha_L = 1*alpha_C, 1*alpha_C
+        self.KXX = self.kernel.K(self.X)
+        self.A = self.KXX + np.diag(self.Yvar.flatten())
+        sign, self.logdet = np.linalg.slogdet(self.A)
+        self.logdet *= sign
+        self.L = scipy.linalg.cholesky(self.A, lower=True)
+        self.D = 1*self.Y
+        self.betas = np.zeros(self.nt)
+        if self.mean_fct is not None:  # set mean fct to best fit template
+            # self.bestType = bestType
+            # self.betas[bestType] = 1.0
+            which = np.where(self.betas > 0)[0]
+            hx = self.mean_fct.f(self.X, which=which).T
+            self.D -= np.dot(hx.T, self.betas)[:, None]
+        self.beta = scipy.linalg.cho_solve((self.L, True), self.D)
+        return self.margLike()
 
     def optimizeAlpha_GP(self):
         """

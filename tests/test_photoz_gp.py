@@ -36,8 +36,7 @@ def use_interpolators(request):
     return request.param
 
 
-@pytest.fixture()
-def create_gp(use_interpolators):
+def test_create_gp(use_interpolators):
     """Create valid GP with reasonable parameters, kernel, mean fct"""
 
     redshiftGrid = np.logspace(-2, np.log10(4), num=numZ)
@@ -57,5 +56,7 @@ def create_gp(use_interpolators):
         use_interpolators=use_interpolators
         )
     gp.setData(X, Y, Yvar, np.random.randint(numTemplates))
+
+    gp.optimizeHyperparamaters()
 
     return gp

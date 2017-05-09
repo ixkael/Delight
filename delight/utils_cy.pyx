@@ -5,6 +5,50 @@ from cpython cimport bool
 cimport cython
 from libc.math cimport sqrt, M_PI, exp, pow
 
+
+def find_positions(
+        int NO1, int nz,
+        double[:] fz1,
+        long[:] p1s,
+        double[:] fzGrid
+        ):
+
+    cdef long p1, o1
+    for o1 in prange(NO1, nogil=True):
+        for p1 in range(nz-1):
+            if fz1[o1] >= fzGrid[p1] and fz1[o1] <= fzGrid[p1+1]:
+                p1s[o1] = p1
+                break;
+
+
+def bilininterp_precomputedbins(
+            int numBands, int nobj,
+            double[:, :] Kinterp, # nbands x nobj
+            double[:] v1s, # nobj (val in grid1)
+            double[:] v2s, # nobj (val in grid1)
+            long[:] p1s, # nobj (pos in grid1)
+            long[:] p2s, # nobj (pos in grid2)
+            double[:] grid1,
+            double[:] grid2,
+            double[:, :, :] Kgrid): # nbands x ngrid1 x ngrid2
+
+    cdef int p1, p2, o, b
+    cdef double dzm2, v1, v2
+    for o in prange(nobj, nogil=True):
+        p1 = p1s[o]
+        p2 = p2s[o]
+        v1 = v1s[o]
+        v2 = v2s[o]
+        dzm2 = 1. / (grid1[p1+1] - grid1[p1]) / (grid2[p2+1] - grid2[p2])
+        for b in range(numBands):
+            Kinterp[b, o] = dzm2 * (
+                (grid1[p1+1] - v1) * (grid2[p2+1] - v2) * Kgrid[b, p1, p2]
+                + (v1 - grid1[p1]) * (grid2[p2+1] - v2) * Kgrid[b, p1+1, p2]
+                + (grid1[p1+1] - v1) * (v2 - grid2[p2]) * Kgrid[b, p1, p2+1]
+                + (v1 - grid1[p1]) * (v2 - grid2[p2]) * Kgrid[b, p1+1, p2+1]
+                )
+
+
 def kernel_parts_interp(
             int NO1, int NO2,
             double[:,:] Kinterp,
