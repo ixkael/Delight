@@ -129,4 +129,4 @@ def test_MultiTypePopulationPrior():
     print(prob_grad(theta))
     derivative_test(theta, prob, prob_grad, relative_accuracy,
                     dxfac=1e-1, order=15, lim=1e6, superverbose=True)
-    assert 0
+    # assert 0

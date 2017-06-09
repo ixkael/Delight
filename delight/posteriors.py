@@ -2,182 +2,95 @@
 
 import numpy as np
 
-from delight.utils import multiobj_flux_likelihood_margell,\
-    gaussian, gaussian2d
-
-from scipy.misc import logsumexp
-from scipy.misc import derivative
-
-
-def lnposterior_onetype_lzd(t, elli_s, z_is, d_is,
-                            fluxObs_ibs, fluxObsEr_ibs,
-                            fluxModInterps_tbs, grad=False):
-    na = 0  # alphas.size
-    nobj, nb = fluxObs_ibs.shape
-    nt, nb2 = fluxModInterps_tbs.shape
-    assert nb == nb2
-    lnpriors_its = 0.0  # lnprior_ts(z_is, d_is, ell_is, alphas)  # nobj * nt
-    fluxMod_tbs = np.zeros((nobj, nb))  # nobj * nt * nb
-    for b in range(nb):
-        fluxMod_tbs[:, b] = elli_s * fluxModInterps_tbs[t, b](z_is,
-                                                              d_is, grid=False)
-    lnlikes_itbs = lngaussian(fluxObs_ibs[:, :],
-                              fluxMod_tbs[:, :],
-                              fluxObsEr_ibs[:, :])  # nobj * nb
-    lnlikes_its = np.sum(lnlikes_itbs, axis=1)  # nobj
-    lnprob_is = lnpriors_its + lnlikes_its  # nobj
-    if grad is False:
-        return np.sum(lnprob_is, axis=0)  # nobj
-    lnlikes_itbs_gradfluxes = lngaussian_gradmu(fluxObs_ibs[:, :],
-                                                fluxMod_tbs[:, :],
-                                                fluxObsEr_ibs[:, :])
-    fluxMod_tbs_grad_zis = np.zeros((nobj, nb))  # nobj * nt * nb
-    fluxMod_tbs_grad_ellis = np.zeros((nobj, nb))  # nobj * nt * nb
-    fluxMod_tbs_grad_dis = np.zeros((nobj, nb))  # nobj * nt * nb
-    for b in range(nb):
-        fluxMod_tbs_grad_ellis[:, b] =\
-            fluxModInterps_tbs[t, b](z_is, d_is, grid=False)
-        fluxMod_tbs_grad_zis[:, b] = elli_s *\
-            fluxModInterps_tbs[t, b](z_is, d_is, dx=1, dy=0, grid=False)
-        fluxMod_tbs_grad_dis[:, b] = elli_s *\
-            fluxModInterps_tbs[t, b](z_is, d_is, dx=0, dy=1, grid=False)
-    lnpost_grad_its = np.zeros((na + nobj*3, ))
-    lnprobfac = np.exp(lnlikes_its + lnpriors_its - lnprob_is)
-    lnprobfac_grad = np.sum(lnlikes_itbs_gradfluxes *
-                            fluxMod_tbs_grad_ellis, axis=1)
-    lnpost_grad_its[na:na+nobj] = lnprobfac * lnprobfac_grad
-    lnprobfac_grad = np.sum(lnlikes_itbs_gradfluxes *
-                            fluxMod_tbs_grad_zis, axis=1)
-    lnpost_grad_its[na+nobj:na+2*nobj] = lnprobfac * lnprobfac_grad  # nobj
-    lnprobfac_grad = np.sum(lnlikes_itbs_gradfluxes *
-                            fluxMod_tbs_grad_dis, axis=1)
-    lnpost_grad_its[na+2*nobj:na+3*nobj] = lnprobfac * lnprobfac_grad  # nobj
-    return np.sum(lnprob_is, axis=0), lnpost_grad_its
+import autograd.numpy as np
+from autograd.scipy.misc import logsumexp
+from autograd import grad, hessian
+# from scipy.misc import logsumexp
+# from scipy.misc import derivative
 
 
-def lnposterior_lzd(elli_s, z_is, d_is,
-                    fluxObs_ibs, fluxObsEr_ibs,
-                    fluxModInterps_tbs, grad=False):
-    na = 0  # alphas.size
-    nobj, nb = fluxObs_ibs.shape
-    nt, nb2 = fluxModInterps_tbs.shape
-    if len(z_is.shape) > 1 and len(elli_s.shape) > 1 and len(d_is.shape) > 1:
-        multitypes = True
-        assert z_is.shape[1] == nt
-        assert elli_s.shape[1] == nt
-        assert d_is.shape[1] == nt
-    else:
-        multitypes = False
-    assert nb == nb2
-    lnpriors_its = 0.0  # lnprior_ts(z_is, d_is, ell_is, alphas)  # nobj * nt
-    fluxMod_tbs = np.zeros((nobj, nt, nb))  # nobj * nt * nb
-    for t in range(nt):
-        for b in range(nb):
-            if multitypes:
-                fluxMod_tbs[:, t, b] = elli_s[:, t] *\
-                    fluxModInterps_tbs[t, b](z_is[:, t], d_is[:, t],
-                                             grid=False)
-            else:
-                fluxMod_tbs[:, t, b] = elli_s *\
-                    fluxModInterps_tbs[t, b](z_is, d_is, grid=False)
-    lnlikes_itbs = lngaussian(fluxObs_ibs[:, None, :],
-                              fluxMod_tbs[:, :, :],
-                              fluxObsEr_ibs[:, None, :])  # nobj * nt * nb
-    lnlikes_its = np.sum(lnlikes_itbs, axis=2)  # nobj * nt
-    lnprob_is = logsumexp(lnpriors_its + lnlikes_its, axis=1)  # nobj
-    if grad is False:
-        return np.sum(lnprob_is, axis=0)  # scalar
-    lnlikes_itbs_gradfluxes = lngaussian_gradmu(fluxObs_ibs[:, None, :],
-                                                fluxMod_tbs[:, :, :],
-                                                fluxObsEr_ibs[:, None, :])
-    fluxMod_tbs_grad_zis = np.zeros((nobj, nt, nb))  # nobj * nt * nb
-    fluxMod_tbs_grad_ellis = np.zeros((nobj, nt, nb))  # nobj * nt * nb
-    fluxMod_tbs_grad_dis = np.zeros((nobj, nt, nb))  # nobj * nt * nb
-    for t in range(nt):
-        for b in range(nb):
-            if multitypes:
-                fluxMod_tbs_grad_ellis[:, t, b] =\
-                    fluxModInterps_tbs[t, b](z_is[:, t], d_is[:, t],
-                                             grid=False)
-                fluxMod_tbs_grad_zis[:, t, b] = elli_s[:, t] *\
-                    fluxModInterps_tbs[t, b](z_is[:, t], d_is[:, t],
-                                             dx=1, grid=False)
-                fluxMod_tbs_grad_dis[:, t, b] = elli_s[:, t] *\
-                    fluxModInterps_tbs[t, b](z_is[:, t], d_is[:, t],
-                                             dy=1, grid=False)
-            else:
-                fluxMod_tbs_grad_ellis[:, t, b] =\
-                    fluxModInterps_tbs[t, b](z_is, d_is, grid=False)
-                fluxMod_tbs_grad_zis[:, t, b] = elli_s *\
-                    fluxModInterps_tbs[t, b](z_is, d_is, dx=1, dy=0,
-                                             grid=False)
-                fluxMod_tbs_grad_dis[:, t, b] = elli_s *\
-                    fluxModInterps_tbs[t, b](z_is, d_is, dx=0, dy=1,
-                                             grid=False)
-    lnpost_grad_its = np.zeros((na + nobj*3, nt))
-    lnprobfac = np.exp(lnlikes_its + lnpriors_its - lnprob_is[:, None])
-    lnprobfac_grad = np.sum(lnlikes_itbs_gradfluxes *
-                            fluxMod_tbs_grad_ellis, axis=2)
-    lnpost_grad_its[na:na+nobj, :] = lnprobfac * lnprobfac_grad
-    lnprobfac_grad = np.sum(lnlikes_itbs_gradfluxes *
-                            fluxMod_tbs_grad_zis, axis=2)
-    lnpost_grad_its[na+nobj:na+2*nobj, :] = lnprobfac * lnprobfac_grad
-    # nobj * nt
-    lnprobfac_grad = np.sum(lnlikes_itbs_gradfluxes *
-                            fluxMod_tbs_grad_dis, axis=2)
-    lnpost_grad_its[na+2*nobj:na+3*nobj, :] = lnprobfac * lnprobfac_grad
-    # nobj * nt
-    if multitypes:
-        return np.sum(lnprob_is, axis=0), lnpost_grad_its
-    else:
-        return np.sum(lnprob_is, axis=0), np.sum(lnpost_grad_its, axis=1)
+def hypercube2simplex(zs):
+    fac = np.concatenate((1 - zs, np.array([1])))
+    zsb = np.concatenate((np.array([1]), zs))
+    fs = np.cumprod(zsb) * fac
+    return fs
 
 
-def lnposterior_ell_redshift_dust(elli_s, z_is,
-                                  fluxObs_ibs, fluxObsEr_ibs,
-                                  fluxModInterps_tbs, grad=False):
-    na = 0  # alphas.size
-    nobj, nb = fluxObs_ibs.shape
-    nt, nb2 = fluxModInterps_tbs.shape
-    lnpriors_its = 0.0  # lnprior_ts(z_is, d_is, ell_is, alphas)  # nobj * nt
-    fluxMod_tbs = np.zeros((nobj, nt, nb))  # nobj * nt * nb
-    for t in range(nt):
-        for b in range(nb):
-            if multitypes:
-                fluxMod_tbs[:, t, b] = elli_s[:, t] *\
-                    fluxModInterps_tbs[t, b](z_is[:, t], d_is[:, t],
-                                             grid=False)
-            else:
-                fluxMod_tbs[:, t, b] = elli_s *\
-                    fluxModInterps_tbs[t, b](z_is, d_is, grid=False)
-    lnlikes_itbs = lngaussian(fluxObs_ibs[:, None, :],
-                              fluxMod_tbs[:, :, :],
-                              fluxObsEr_ibs[:, None, :])  # nobj * nt * nb
-    lnlikes_its = np.sum(lnlikes_itbs, axis=2)  # nobj * nt
-    lnprob_is = logsumexp(lnpriors_its + lnlikes_its, axis=1)  # nobj
-    if grad is False:
-        return np.sum(lnprob_is, axis=0)  # scalar
-    lnlikes_itbs_gradfluxes = lngaussian_gradmu(fluxObs_ibs[:, None, :],
-                                                fluxMod_tbs[:, :, :],
-                                                fluxObsEr_ibs[:, None, :])
-    fluxMod_tbs_grad_zis = np.zeros((nobj, nt, nb))  # nobj * nt * nb
-    fluxMod_tbs_grad_ellis = np.zeros((nobj, nt, nb))  # nobj * nt * nb
-    for t in range(nt):
-        for b in range(nb):
-            fluxMod_tbs_grad_ellis[:, t, b] =\
-                fluxModInterps_tbs[t, b](z_is)
-            fluxMod_tbs_grad_zis[:, t, b] = elli_s *\
-                fluxModInterps_tbs[t, b](z_is, nu=1)
-    lnpost_grad_its = np.zeros((na + nobj*3, nt))
-    lnprobfac = np.exp(lnlikes_its + lnpriors_its - lnprob_is[:, None])
-    lnprobfac_grad = np.sum(lnlikes_itbs_gradfluxes *
-                            fluxMod_tbs_grad_ellis, axis=2)
-    lnpost_grad_its[na:na+nobj, :] = lnprobfac * lnprobfac_grad
-    lnprobfac_grad = np.sum(lnlikes_itbs_gradfluxes *
-                            fluxMod_tbs_grad_zis, axis=2)
-    lnpost_grad_its[na+nobj:na+2*nobj, :] = lnprobfac * lnprobfac_grad
-    # nobj * nt
-    return np.sum(lnprob_is, axis=0), np.sum(lnpost_grad_its, axis=1)
+def hypercube2simplex_jacobian(fs, zs):
+    jaco = np.zeros((zs.size, fs.size))
+    for j in range(fs.size):
+        for i in range(zs.size):
+            if i < j:
+                jaco[i, j] = fs[j] / zs[i]
+            if i == j:
+                jaco[i, j] = fs[j] / (zs[j] - 1)
+    return jaco
+
+
+def gaussian2d(x1, x2, mu1, mu2, cov1, cov2, corr):
+    dx = np.array([x1 - mu1, x2 - mu2])
+    cov = np.array([[cov1, corr], [corr, cov2]])
+    v = np.exp(-0.5*np.dot(dx, np.linalg.solve(cov, dx)))
+    v /= (2*np.pi) * np.sqrt(np.linalg.det(cov))
+    return v
+
+
+def gaussian(x, mu, sig):
+    return np.exp(-0.5*((x-mu)/sig)**2.0) / np.sqrt(2*np.pi) / sig
+
+
+def lngaussian(x, mu, sig):
+    return - 0.5*((x - mu)/sig)**2 - 0.5*np.log(2*np.pi) - np.log(sig)
+
+
+def lngaussian_gradmu(x, mu, sig):
+    return (x - mu) / sig**2
+
+
+def multiobj_flux_likelihood_margell(
+        f_obs,  # nobj * nf
+        f_obs_var,  # nobj * nf
+        f_mod,  # nt * nz * nf
+        ell_hat,  # nt * nz
+        ell_var,  # nt * nz
+        marginalizeEll=True,
+        normalized=True):
+    """
+    TODO
+    """
+    assert len(f_obs.shape) == 2
+    assert len(f_obs_var.shape) == 2
+    assert len(f_mod.shape) == 3
+    assert len(ell_hat.shape) == 2
+    assert len(ell_var.shape) == 2
+    nt, nz, nf = f_mod.shape
+    FOT = np.sum(
+        f_mod[None, :, :, :] *
+        f_obs[:, None, None, :] / f_obs_var[:, None, None, :],
+        axis=3) +\
+        ell_hat[None, :, :] / ell_var[None, :, :]
+    FTT = np.sum(
+        f_mod[None, :, :, :]**2 / f_obs_var[:, None, None, :],
+        axis=3) + 1 / ell_var[None, :, :]
+    FOO = np.sum(
+        f_obs[:, None, None, :]**2 / f_obs_var[:, None, None, :],
+        axis=3) +\
+        ell_hat[None, :, :]**2.0 / ell_var[None, :, :]
+    sigma_det = np.prod(f_obs_var[:, None, None, :], axis=3)
+    chi2 = FOO - FOT**2.0 / FTT  # nobj * nt * nz
+    denom = 1.
+    if normalized:
+        denom = denom *\
+            np.sqrt(sigma_det * (2*np.pi)**nf) *\
+            np.sqrt(2*np.pi * ell_var[None, :, :])
+    if marginalizeEll:
+        denom = denom * np.sqrt(FTT) / np.sqrt(2*np.pi)
+    like = np.exp(-0.5*chi2) / denom  # nobj * nt * nz
+    return like
+
+
+def trapz(x, y, axis=0):
+    return 0.5 * np.sum((y[1:]+y[:-1])*(x[1:]-x[:-1]), axis=axis)
 
 
 def object_evidences_marglnzell(
@@ -185,23 +98,29 @@ def object_evidences_marglnzell(
     f_obs_var,  # nobj * nf
     f_mod,  # nt * nz * nf
     z_grid,
-    mu_ell, mu_lnz, var_ell, var_lnz, rho  # nt x 1
+    mu_ell, mu_lnz, var_ell, var_lnz, rho  # nt
         ):
     numTypes, nz = f_mod.shape[0], f_mod.shape[1]
     lnz_grid_t = np.log(z_grid[None, :]) * np.ones((numTypes, 1))  # nt * nz
-    mu_ell_prime = mu_ell + rho * (lnz_grid_t - mu_lnz) / var_lnz  # nt * nz
-    var_ell_prime = (var_ell - rho**2 / var_lnz) * np.ones((1, nz))  # nt * nz
+    mu_ell_prime = mu_ell[:, None] +\
+        rho[:, None] * (lnz_grid_t - mu_lnz[:, None]) / var_lnz[:, None]
+    # nt * nz
+    var_ell_prime = (var_ell[:, None] - rho[:, None]**2 / var_lnz[:, None])\
+        * np.ones((1, nz))  # nt * nz
 
     marglike = multiobj_flux_likelihood_margell(
             f_obs, f_obs_var,  # nobj * nf
             f_mod,  # nt * nz * nf
             mu_ell_prime, var_ell_prime,  # nobj * nt * nz
             marginalizeEll=True, normalized=True)  # nobj * nt * nz
-    prior_lnz = gaussian(lnz_grid_t, mu_lnz, var_lnz**0.5)  # nt * nz
-    print(prior_lnz.shape)
-    print(marglike.shape)
+    prior_lnz = gaussian(lnz_grid_t, mu_lnz[:, None], var_lnz[:, None]**0.5)
+    # nt * nz
 
-    evidences_it = np.trapz(prior_lnz[None, :, :] * marglike, x=z_grid, axis=2)
+    # evidences_it = np.trapz(prior_lnz[None, :, :] * marglike, x=z_grid, axis=2)
+    x = z_grid[None, None, :]
+    y = prior_lnz[None, :, :] * marglike
+    evidences_it = 0.5 * np.sum((y[:, :, 1:]+y[:, :, :-1]) *
+                                (x[:, :, 1:]-x[:, :, :-1]), axis=2)
     # nobj * nt
 
     return evidences_it
@@ -212,7 +131,7 @@ def object_evidences_numerical(
     f_obs_var,  # nobj * nf
     f_mod,  # nt * nz * nf
     z_grid, ell_grid,
-    mu_ell, mu_lnz, var_ell, var_lnz, rho  # nt x 1
+    mu_ell, mu_lnz, var_ell, var_lnz, rho  # nt
         ):
     nobj = f_obs.shape[0]
     nt, nz = f_mod.shape[0], f_mod.shape[1]
@@ -227,8 +146,8 @@ def object_evidences_numerical(
             for il, el in enumerate(ell_grid):
                 prior_lnzell[it, iz, il] =\
                     gaussian2d(np.log(z), el,
-                               mu_lnz[it, 0], mu_ell[it, 0],
-                               var_lnz[it, 0], var_ell[it, 0], rho[it, 0])
+                               mu_lnz[it], mu_ell[it],
+                               var_lnz[it], var_ell[it], rho[it])
                 v = gaussian(f_obs[:, :], el*f_mod[it, iz, :],
                              f_obs_var[:, :]**0.5)
                 like_lnzell[:, it, iz, il] = np.prod(v, axis=1)

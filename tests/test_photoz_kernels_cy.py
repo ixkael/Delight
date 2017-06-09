@@ -3,8 +3,8 @@
 import numpy as np
 from delight.utils import *
 from delight.photoz_kernels_cy import \
-    kernelparts, kernelparts_diag,\
-    find_positions, int
+    kernelparts, kernelparts_diag, kernel_parts_interp
+from delight.utils_cy import find_positions
 
 size = 50
 nz = 150
@@ -68,7 +68,7 @@ def test_find_positions():
     np.testing.assert_almost_equal(pos, [0, 2, 2, 3, 3])
 
 
-def test_int():
+def test_kernel_parts_interp():
 
     fcoefs_amp, fcoefs_mu, fcoefs_sig = random_filtercoefs(numBands, numCoefs)
     lines_mu, lines_sig = random_linecoefs(numLines)
@@ -140,7 +140,7 @@ def test_int():
         np.zeros((NO1, NO2)),\
         np.zeros((NO1, NO2))
 
-    int(size, size,
+    kernel_parts_interp(size, size,
                         KC_interp,
                         b1, fz1, p1s,
                         b2, fz2, p2s,
@@ -149,7 +149,7 @@ def test_int():
     assert np.mean(np.abs(KC_interp/KC_rand - 1)) < relative_accuracy
     assert np.max(np.abs(KC_interp/KC_rand - 1)) < relative_accuracy
 
-    int(size, size,
+    kernel_parts_interp(size, size,
                         D_alpha_C_interp,
                         b1, fz1, p1s,
                         b2, fz2, p2s,

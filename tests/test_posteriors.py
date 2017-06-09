@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
+import numpy as onp
 from delight.priors import *
 from delight.utils import *
 from delight.posteriors import *
@@ -9,11 +9,11 @@ from delight.posteriors import *
 def test_multiobj_flux_likelihood_margell():
 
     nt = 1
-    mu_ell = np.zeros((nt, 1)) + np.random.uniform(0, 1, 1)
-    mu_lnz = np.zeros((nt, 1)) + np.random.uniform(-1, 1, 1)
-    var_ell = np.zeros((nt, 1)) + np.random.uniform(0, 1, 1)
-    var_lnz = np.zeros((nt, 1)) + np.random.uniform(0, 1, 1)
-    rho = np.zeros((nt, 1)) + np.random.uniform(0, 1, 1)
+    mu_ell = np.random.uniform(0, 1, nt)
+    mu_lnz = np.random.uniform(-1, 1, nt)
+    var_ell = np.random.uniform(0, 1, nt)
+    var_lnz = np.random.uniform(0, 1, nt)
+    rho = np.random.uniform(0, 1, nt)
     rho *= np.sqrt(var_lnz*var_ell)
 
     nz = 5
@@ -41,4 +41,4 @@ def test_multiobj_flux_likelihood_margell():
         z_grid, ell_grid,
         mu_ell, mu_lnz, var_ell, var_lnz, rho)
 
-    np.testing.assert_allclose(vals1, vals2, rtol=1e-1)
+    onp.testing.assert_allclose(vals1, vals2, rtol=1e-4)

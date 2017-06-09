@@ -57,6 +57,7 @@ def test_create_gp(use_interpolators):
         )
     gp.setData(X, Y, Yvar, np.random.randint(numTemplates))
 
-    gp.optimizeHyperparamaters()
+    if use_interpolators is False:
+        gp.optimizeHyperparamaters()
 
     return gp

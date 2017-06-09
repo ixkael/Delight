@@ -36,7 +36,7 @@
 
 
 \newcommand{\todo}[1]{\textcolor{blue}{[TODO: #1]}}
-\newcommand{\bl}[1]{\textcolor{blue}{[BL: #1]}}
+\newcommand{\bl}[1]{\textcolor{red}{#1}}
 \newcommand{\dwh}[1]{\textcolor{cyan}{[DWH: #1]}}
 
 
@@ -57,7 +57,7 @@
   \affiliation{Flatiron Institute, 162 Fifth Avenue, New York, NY 10010, USA}
   
 \begin{abstract}
-We present a new method for inferring photometric redshifts in deep galaxy and quasar surveys, based on a data driven model of latent spectral energy distributions (SEDs) and a physical model of photometric fluxes as a function of redshift. This conceptually novel approach combines the advantages of both machine-learning and template-fitting methods by building template SEDs directly from the training data. This is made computationally tractable with Gaussian Processes operating in flux--redshift space, encoding the physics of redshift and the projection of galaxy SEDs onto photometric band passes. This method alleviates the need of acquiring representative training data or constructing detailed galaxy SED models; it requires only that the photometric band passes and calibrations be known or have parameterized unknowns. The training data can consist of a combination of spectroscopic and deep many-band photometric data, which do not need to entirely spatially overlap with the target survey of interest or even involve the same photometric bands. We showcase the method on the $i$-magnitude-selected, spectroscopically-confirmed galaxies in the COSMOS field. The model is trained on the deepest bands (from SUBARU and HST) and photometric redshifts are derived using the shallower SDSS optical bands only. We demonstrate that we obtain accurate redshift point estimates and probability distributions despite the training and target sets having very different redshift distributions, noise properties, and even photometric bands. Our model can also be used to predict missing photometric fluxes, or to simulate populations of galaxies with realistic fluxes and redshifts, for example. This method opens a new era in which photometric redshifts for large photometric surveys are derived using a flexible yet physical model of the data trained on all available surveys (spectroscopic and photometric).
+We present a new method for inferring photometric redshifts in deep galaxy and quasar surveys, based on a data driven model of latent spectral energy distributions (SEDs) and a physical model of photometric fluxes as a function of redshift. This conceptually novel approach combines the advantages of both machine-learning and template-fitting methods by building template SEDs directly from the \bl{spectroscopic} training data. This is made computationally tractable with Gaussian Processes operating in flux--redshift space, encoding the physics of redshift and the projection of galaxy SEDs onto photometric band passes. This method alleviates the need of acquiring representative training data or constructing detailed galaxy SED models; it requires only that the photometric band passes and calibrations be known or have parameterized unknowns. The training data can consist of a combination of spectroscopic and deep many-band photometric data \bl{with reliable redshifts}, which do not need to entirely spatially overlap with the target survey of interest or even involve the same photometric bands. We showcase the method on the $i$-magnitude-selected, spectroscopically-confirmed galaxies in the COSMOS field. The model is trained on the deepest bands (from SUBARU and HST) and photometric redshifts are derived using the shallower SDSS optical bands only. We demonstrate that we obtain accurate redshift point estimates and probability distributions despite the training and target sets having very different redshift distributions, noise properties, and even photometric bands. Our model can also be used to predict missing photometric fluxes, or to simulate populations of galaxies with realistic fluxes and redshifts, for example. 
 \end{abstract}
 
 \pacs{98.62.Py, 98.80.Es}
@@ -110,10 +110,6 @@ It exploits spatial information and the proximity of galaxies in real space (sky
 Since it does not directly uses flux information we will not discuss it further, and we will assume that any flux-based \photoz method (such as the one presented below) could be improved by adding spatial information.
 
 Recent analyses of galaxy surveys (DES, KIDS) and various detailed \photoz investigations have highlighted the advantages and drawbacks discussed above \citep[see \eg][]{Newman:2013cac, Dahlen:2013fea, Sanchez:2014zgq, Schmidt:2014ela, Bonnett:2015pww}. 
-%Typically, machine learning methods \citep[\eg][]{Kind:2013eka, Collister:2003cz, Sadeh:2015lsa} provide accurate redshift estimates for bright, low redshift galaxies, but are unreliable at high redshift or faint magnitudes because of the lack of training data.
-%Template fitting methods \citep[\eg][]{Benitez:1998br, Brammer:2008qv, Feldmann:2006wg} behave well at high redshift since the underlying physical model allows to extrapolate.
-%However, their redshift estimates suffer from various systematics due to the limitations of the template sets in existence, which are small and constructed from low redshift galaxies.
-%They are also very sensitive to the prior knowledge about the abundance and redshift dependence of the various types modeled.
 Most of those could be (and are being) resolved via time-consuming validation and ad-hoc corrections, but they demonstrate the limitation of standard \photoz techniques.
 The method presented here is an attempt at addressing those issues altogether and harnessing the flexibility of both machine learning and template fitting, via the construction of a large collection of latent SED templates from the training data.
 We will present a generic approach to perform this construction directly in flux--redshift space without explicitly going through galaxy spectra, by exploiting Gaussian Processes with kernels capturing the effect of cosmological redshift and the projection onto photometric band-passes.
@@ -422,6 +418,10 @@ In both cases, we use the 8 classic SED templates from the CWW library \citep{Co
 They are the central ingredient to standard template fitting, while in our method they form the mean function of the Gaussian Process and weakly affect the results. 
 We adopt the likelihood function of \equref{eq:likelihood} in both cases.
 
+\bl{For the samples and parameters adopted here, the construction of the model and its application take a few minutes. 
+This is an order of magnitude slower than standard template fitting, but could be easily improved with further optimizations and parallelization of likelihood evaluations.
+For instance, a significant speed up can be obtained by using a machine learning algorithm to precompute which likelihood evaluations are expected to be non-zero based on the fluxes of the training and target sets.}
+
 We now discuss a few technical details relevant to our use of the standard template fitting.
 First, the likelihood function does not include theoretical uncertainties ($\mat{\Sigma}^*_\mat{F}=0$) since those templates do not have uncertainties. 
 Second, we marginalize over $\ell$ with a flat prior, as commonly done with such \photoz methods to focus on color information.
@@ -452,6 +452,7 @@ $\{\mu_i\} = \{ 6500, 5002, 3732 \}$,
 $\{\sigma_i\} = \{ 20, 20, 20 \}$.
 We expect that the results presented below could be significantly improved by performing a more detailed optimization of the parameters and the use of more complicated priors, for example in terms of redshift and luminosity.
 Here we only aim at showing how constructing templates directly from the training set with weak assumptions about galaxy SEDs is straightforward and can improve upon standard template fitting, which relies on templates constructed from low redshift data or complicated physical models.
+\bl{For a full analysis on a multi-million object data set, one should explore the space of hyperparameters to marginalize over their values, via MCMC or variational inference, for example.}
 
 
 
@@ -535,7 +536,7 @@ The $c$'s should be uniformly distributed in $[0, 1]$, indicating that the confi
 The cumulative distribution $F(c)$ should follow the $F(c)=c$ diagonal; this is known as a Q-Q plot.  
 Q-Q plots for the four redshift bins are shown in \figref{fig:cipdfs}.
 We recover a well-known result \citep[\eg][]{Wittman:2016}: standard template fitting significantly underestimate \photoz errors.
-This is typically resulted by artificially inflate the PDF, which cannot address the fundamental limitations of the method and reduce extreme outliers due to type degeneracies not captured with the template library.
+\bl{This is typically corrected by artificially inflating the PDF}, which cannot address the fundamental limitations of the method and reduce extreme outliers due to type degeneracies not captured with the template library.
 In our method, we can optimize physically meaningful parameters to improve the confidence intervals.
 Even though we have not optimized the parameters in this example, we see that the confidence intervals are more robust.
 
@@ -633,13 +634,26 @@ The G10/COSMOS redshift catalogue, photometric catalogue and cutout tool uses da
 
 As presented in \equref{eq:likelihood}, our likelihood function comparing observed and model fluxes reads
 \eqn{
-	p\bigl(\hat{\mat{F}}| z, z_i, \hat{\mat{F}}_i\bigr) &=& \int \d\ell \ \mathcal{N}\left( \hat{\mat{F}} - \ell\  \mat{F}^*(z); \mat{\Sigma}_{\hat{\mat{F}}} + \ell^2 \mat{\Sigma^*_{{\mat{F}}}}(z)  \right) \  \mathcal{N}(\hat{\ell}; \sigma^2_\ell).
+	p\bigl(\hat{\mat{F}}| z, z_i, \hat{\mat{F}}_i\bigr) &=& \int \d\ell \ \mathcal{N}\left( \hat{\mat{F}} - \ell\  \mat{F}^*(z); \mat{\Sigma}_{\hat{\mat{F}}} + \ell^2 \mat{\Sigma^*_{{\mat{F}}}}(z)  \right) \  \mathcal{N}(\hat{\ell}-\ell; \sigma^2_\ell),\label{eq:ellmarg}
 }
+\bl{\ie with a Gaussian prior on $\ell$.}
 \appref{sec:gppred} shows how to compute $ \mat{F}^*(z)$ and $\mat{\Sigma^*_{{\mat{F}}}}(z)$ from $z, z_i, \hat{\mat{F}}_i$.
 Notice that they are both scaled by $\ell$, to be marginalized over. 
-Unfortunately, for this reason there is no analytical solution for this marginalization, unlike for the case where only the mean is scaled.
-However, we find that an iterative approach yields satisfactory results.
-In particular, we solve and iterate over the following system of equations, with a starting value $\hat{\ell}^2_\mathrm{MAP}(z)  = 0$,
+Unfortunately, for this reason there is no analytic solution for this marginalization, unlike for the case where only the mean is scaled. \bl{In this case, the model variance $\mat{\Sigma^*_{{\mat{F}}}}(z)$ is neglected, and the marginalization can be performed analytically with
+\eqn{
+	p\bigl(\hat{\mat{F}}| z, z_i, \hat{\mat{F}}_i\bigr)  & = & \left( (2\pi)^B F_\mathrm{tt}(z)\ \sigma_\ell^2\ \det\mat{\Sigma_{\hat{\mat{F}}}}(z) \right)^{-\frac{1}{2}} \exp \left( -\frac{1}{2}F_\mathrm{oo}(z) + \frac{1}{2}\frac{F^2_\mathrm{to}(z)}{F_\mathrm{tt}(z)} \right),
+}
+where 
+\eqn{
+	F_\mathrm{oo}(z) &=& \hat{\mat{F}}^T \mat{\Sigma_{\hat{\mat{F}}}}(z)^{-1} \hat{\mat{F}} \ +\  \hat{\ell}^2 / \sigma_\ell^2 \\
+	F_\mathrm{tt}(z) &=& \mat{F}^{*T} \mat{\Sigma_{\hat{\mat{F}}}}(z)^{-1} \mat{F}^* \ +\  1/\sigma_\ell^2\\
+	F_\mathrm{to}(z) &=&  \mat{F}^{*T} \mat{\Sigma_{\hat{\mat{F}}}}(z)^{-1} \hat{\mat{F}} \ +\ \hat{\ell}/\sigma_\ell^2 \\
+	\hat{\ell}_\mathrm{MAP}(z) &=& F_\mathrm{to}(z)/F_\mathrm{tt}(z),
+}
+where $\hat{\ell}_\mathrm{MAP}(z)$ is the maximum a posteriori solution for $\ell$ given the data, the model, and the Gaussian prior centered at $\hat{\ell}$.}
+
+\bl{Even though the full integral of \equref{eq:ellmarg}, including the model variance, does not admit an analytic solution, we find that an iterative approach yields satisfactory results.}
+We solve and iterate over the following system of equations, with a starting value $\hat{\ell}^2_\mathrm{MAP}(z)  = 0$,
 \eqn{
 	\mat{\Sigma}(z)&=& \mat{\Sigma}_{\hat{\mat{F}}} \ +\  \hat{\ell}^2_\mathrm{MAP}(z) \mat{\Sigma^*_{{\mat{F}}}}(z) \\
 	F_\mathrm{oo}(z) &=& \hat{\mat{F}}^T \mat{\Sigma}(z)^{-1} \hat{\mat{F}} \ +\  \hat{\ell}^2 / \sigma_\ell^2 \\
@@ -683,7 +697,7 @@ with
 assuming that the various lines $\mathcal{N}(\lambda, \lambda_l, \sigma^2_l)$ don't overlap significantly so that cross terms can be neglected. 
 Those assumptions could be relaxed, but they greatly simplify the calculations and have a small effect on the resulting fluxes in the case of broad photometric bands.
 
-We now consider the specific case of all kernels being Gaussian (which is sometimes called a Radial Basis Function in the Gaussian Process litterature),
+We now consider the specific case of all kernels being Gaussian (which is sometimes called a Radial Basis Function in the Gaussian Process literature),
 \eqn{
 	k^C(\lambda, \lambda') &=&  V_C\  \mathcal{N}\left(\lambda - \lambda'; {\alpha}^2_C\right) \\
 	k^L(\lambda, \lambda') &=&  V_L\ \mathcal{N}\left(\lambda - \lambda'; {\alpha}^2_L\right).

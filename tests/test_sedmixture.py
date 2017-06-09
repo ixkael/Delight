@@ -19,15 +19,23 @@ def test_PhotometricFilter():
     assert np.allclose(res2, res1, rtol=relative_accuracy)
 
 
-def test_SpectralTemplate():
+def test_PhotometricFluxPolynomialInterpolation():
+
     def f(x):
         return np.exp(-0.5*((x-3e3)/1e2)**2)
     x = np.linspace(2e3, 4e3, 1000)
     y = f(x)
-    photometricBands = [PhotometricFilter('I', x, y)]
+    bandName = 'I'
+    photometricBands = [PhotometricFilter(bandName, x, y)]
     x = np.linspace(2e1, 4e5, 1000)
     y = f(x)
-    aTemplate = SpectralTemplate(x, y, photometricBands,
-                                 redshiftGrid=np.linspace(1e-2, 1.0, 10),
-                                 dustGrid=np.linspace(1e-2, 1.0, 2))
-    aTemplate.flux(1.0, 1.0, 1e3)
+    aTemplate = SpectralTemplate_z(x, y, photometricBands,
+                                   redshiftGrid=np.linspace(1e-2, 1.0, 10))
+
+    redshifts = np.random.uniform(1e-2, 1.0, 10)
+
+    f1 = aTemplate.photometricFlux(redshifts, bandName)
+    f2 = aTemplate.photometricFlux_bis(redshifts, bandName)
+
+    f1 = aTemplate.photometricFlux_gradz(redshifts, bandName)
+    f2 = aTemplate.photometricFlux_gradz_bis(redshifts, bandName)

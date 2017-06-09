@@ -7,8 +7,8 @@ import scipy.linalg
 from scipy.interpolate import interp1d, interp2d, RectBivariateSpline
 
 from delight.photoz_kernels_cy import kernelparts, kernelparts_diag,\
-    kernel_parts_interp, find_positions
-
+    kernel_parts_interp
+from delight.utils_cy import find_positions
 from delight.utils import approx_DL
 
 kind = "linear"

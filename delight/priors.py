@@ -216,8 +216,8 @@ class MultiTypePopulationPrior(Model):
             self.nofz(redshifts[None, :]) *\
             self.lumFct.jac(redshifts[None, :], luminosities[None, :])
         if self.maglim is not None and detprob is None:
-            grads[self.numTypes-1, :, :] *= self.detprob(redshifts[None, :],
-                                  luminosities[None, :])
+            grads[self.numTypes-1, :, :] *= \
+                self.detprob(redshifts[None, :], luminosities[None, :])
         if self.maglim is not None and detprob is not None:
             grads[self.numTypes-1, :, :] *= detprob[None, :]
         return grads  # numpars * numtypes * numzL

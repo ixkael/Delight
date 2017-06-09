@@ -98,11 +98,10 @@ class SpectralTemplate_z:
     """
     def __init__(self,
                  tabulatedWavelength, tabulatedSpectrum, photometricBands,
-                 redshiftGrid=None):
+                 redshiftGrid=None, order=15):
         self.DL = approx_DL()
         self.photometricBands = photometricBands
         self.numBands = len(photometricBands)
-        self.fbinterps = {}
         self.sed_interp = interp1d(tabulatedWavelength, tabulatedSpectrum)
         if redshiftGrid is None:
             self.redshiftGrid = np.logspace(np.log10(1e-2),
@@ -111,6 +110,9 @@ class SpectralTemplate_z:
         else:
             self.redshiftGrid = redshiftGrid
 
+        self.fbcoefs = {}
+        self.fbinterps = {}
+        self.order = order
         for filt in photometricBands:
             fmodgrid = np.zeros((self.redshiftGrid.size, ))
             for iz in range(self.redshiftGrid.size):
@@ -122,11 +124,30 @@ class SpectralTemplate_z:
                 ysedext = facz * ysed
                 fmodgrid[iz] =\
                     np.trapz(ysedext * yf_z, x=xf_z) / filt.norm
-            self.fbinterps[filt.bandName] = UnivariateSpline(
-                self.redshiftGrid, fmodgrid, s=0)
+            # self.fbinterps[filt.bandName] = UnivariateSpline(
+            #    self.redshiftGrid, fmodgrid, s=0)
+            self.fbcoefs[filt.bandName] = np.polyfit(
+                self.redshiftGrid, np.log(fmodgrid), self.order-1)
+            self.fbinterps[filt.bandName] =\
+                np.poly1d(self.fbcoefs[filt.bandName])
 
     def photometricFlux(self, redshifts, bandName):
-        return self.fbinterps[bandName](redshifts)
+        return np.exp(self.fbinterps[bandName](redshifts))
+
+    def photometricFlux_bis(self, redshifts, bandName):
+        xgg = redshifts[:, None] ** np.arange(self.order-1, -1, -1)[None, :]
+        return np.exp(np.sum(xgg * self.fbcoefs[bandName][None, :], axis=1))
+
+    def photometricFlux_gradz(self, redshifts, bandName):
+        mod_der = np.poly1d(np.polyder(self.fbcoefs[bandName]))
+        return mod_der(redshifts) * self.photometricFlux(redshifts, bandName)
+
+    def photometricFlux_gradz_bis(self, redshifts, bandName):
+        xgg = redshifts[:, None] ** np.arange(self.order-2, -1, -1)[None, :]
+        der = np.arange(self.order-1, 0, -1)
+        flux = self.photometricFlux_bis(redshifts, bandName)
+        return np.sum(xgg * der * self.fbcoefs[bandName][None, :-1],
+                      axis=1) * flux
 
     def flux(self, redshift, wave):
         opz = 1. + redshift

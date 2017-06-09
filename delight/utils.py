@@ -224,26 +224,6 @@ def computeMetrics(ztrue, redshiftGrid, PDF, confIntervals):
         + confidencelevels
 
 
-def gaussian2d(x1, x2, mu1, mu2, cov1, cov2, corr):
-    dx = np.array([x1 - mu1, x2 - mu2])
-    cov = np.array([[cov1, corr], [corr, cov2]])
-    v = np.exp(-0.5*np.dot(dx, np.linalg.solve(cov, dx)))
-    v /= (2*np.pi) * np.sqrt(np.linalg.det(cov))
-    return v
-
-
-def gaussian(x, mu, sig):
-    return np.exp(-0.5*((x-mu)/sig)**2.0) / np.sqrt(2*np.pi) / sig
-
-
-def lngaussian(x, mu, sig):
-    return - 0.5*((x - mu)/sig)**2 - 0.5*np.log(2*np.pi) - np.log(sig)
-
-
-def lngaussian_gradmu(x, mu, sig):
-    return (x - mu) / sig**2
-
-
 def derivative_test(x0, fun, fun_grad, relative_accuracy,
                     n=1, lim=0, order=9, dxfac=0.01,
                     verbose=False, superverbose=False):
@@ -262,45 +242,3 @@ def derivative_test(x0, fun, fun_grad, relative_accuracy,
         if np.abs(grads2) >= lim:
             np.testing.assert_allclose(grads2, grads[i],
                                        rtol=relative_accuracy)
-
-
-def multiobj_flux_likelihood_margell(
-        f_obs,  # nobj * nf
-        f_obs_var,  # nobj * nf
-        f_mod,  # nt * nz * nf
-        ell_hat,  # nt * nz
-        ell_var,  # nt * nz
-        marginalizeEll=True,
-        normalized=True):
-    """
-    TODO
-    """
-    assert len(f_obs.shape) == 2
-    assert len(f_obs_var.shape) == 2
-    assert len(f_mod.shape) == 3
-    assert len(ell_hat.shape) == 2
-    assert len(ell_var.shape) == 2
-    nt, nz, nf = f_mod.shape
-    FOT = np.sum(
-        f_mod[None, :, :, :] *
-        f_obs[:, None, None, :] / f_obs_var[:, None, None, :],
-        axis=3) +\
-        ell_hat[None, :, :] / ell_var[None, :, :]
-    FTT = np.sum(
-        f_mod[None, :, :, :]**2 / f_obs_var[:, None, None, :],
-        axis=3) + 1 / ell_var[None, :, :]
-    FOO = np.sum(
-        f_obs[:, None, None, :]**2 / f_obs_var[:, None, None, :],
-        axis=3) +\
-        ell_hat[None, :, :]**2.0 / ell_var[None, :, :]
-    sigma_det = np.prod(f_obs_var[:, None, None, :], axis=3)
-    chi2 = FOO - FOT**2.0 / FTT  # nobj * nt * nz
-    denom = 1.
-    if normalized:
-        denom = denom *\
-            np.sqrt(sigma_det * (2*np.pi)**nf) *\
-            np.sqrt(2*np.pi * ell_var[None, :, :])
-    if marginalizeEll:
-        denom = denom * np.sqrt(FTT) / np.sqrt(2*np.pi)
-    like = np.exp(-0.5*chi2) / denom  # nobj * nt * nz
-    return like
