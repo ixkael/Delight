@@ -19,7 +19,7 @@ else # if it does not exist, we need to install miniconda
     conda config --set always_yes yes --set changeps1 no
     conda update -q conda
     conda info -a # for debugging
-    conda install numpy scipy matplotlib cython pytest pylint pep8 mpi4py astropy specutils sphinx
+    conda install numpy scipy matplotlib cython pytest pylint pep8 mpi4py astropy sphinx
     conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
 fi
 
