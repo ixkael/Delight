@@ -2,11 +2,7 @@
 
 import numpy as np
 
-import autograd.numpy as np
-from autograd.scipy.misc import logsumexp
-from autograd import grad, hessian
-# from scipy.misc import logsumexp
-# from scipy.misc import derivative
+from scipy.misc import logsumexp
 
 
 def hypercube2simplex(zs):
