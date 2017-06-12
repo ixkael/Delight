@@ -112,7 +112,8 @@ def object_evidences_marglnzell(
     prior_lnz = gaussian(lnz_grid_t, mu_lnz[:, None], var_lnz[:, None]**0.5)
     # nt * nz
 
-    # evidences_it = np.trapz(prior_lnz[None, :, :] * marglike, x=z_grid, axis=2)
+    # evidences_it = \
+    # np.trapz(prior_lnz[None, :, :] * marglike, x=z_grid, axis=2)
     x = z_grid[None, None, :]
     y = prior_lnz[None, :, :] * marglike
     evidences_it = 0.5 * np.sum((y[:, :, 1:]+y[:, :, :-1]) *
