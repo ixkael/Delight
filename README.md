@@ -1,6 +1,8 @@
 # Delight
 **Photometric redshift via Gaussian processes with physical kernels.**
 
+Read the documentation here: [http://delight.readthedocs.io](http://delight.readthedocs.io)
+
 *Warning: this code is still in active development and is not quite ready to be blindly applied to arbitrary photometric galaxy surveys. But this day will come.*
 
 [![alt tag](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://github.com/ixkael/Delight/blob/master/LICENSE)
