@@ -66,7 +66,7 @@ for z, normedRefFlux, bands, fluxes, fluxesVar,\
     # like_grid, _ = scalefree_flux_likelihood(
     #    fluxes, fluxesVar,
     #    f_mod[:, :, bands])
-    #ell_hat_z = normedRefFlux * 4 * np.pi\
+    # ell_hat_z = normedRefFlux * 4 * np.pi\
     #    * params['fluxLuminosityNorm'] \
     #    * (DL(redshiftGrid)**2. * (1+redshiftGrid))[:, None]
     ell_hat_z = 1
