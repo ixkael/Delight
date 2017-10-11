@@ -1,4 +1,14 @@
 # Project specific
+
+checkpoints
+events
+SAGA
+redmagic*
+DES_Y1
+data
+hst3d
+SN_DES_SIM
+Buzzard_HighRes
 data/*.png
 data/*.pdf
 data/FILTERS/*pdf
