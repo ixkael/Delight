@@ -170,10 +170,10 @@ def approx_flux_likelihood(
         logDenom = logDenom + np.log(FTT)
         if np.all(ell_var > 0):
             logDenom = logDenom - np.log(2*np.pi)
-    like = -0.5*chi2 - 0.5*logDenom # nz * nt
+    like = -0.5*chi2 - 0.5*logDenom  # nz * nt
     if renormalize:
         like -= like.max()
-    return np.exp(like) # nz * nt
+    return np.exp(like)  # nz * nt
 
 
 def scalefree_flux_likelihood(f_obs, f_obs_var,
