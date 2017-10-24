@@ -130,7 +130,7 @@ for chunk in range(numChunks):
                 fluxesVar,
                 model_mean[:, sel, :][:, :, bands],
                 f_mod_covar=model_covar[:, sel, :][:, :, bands],
-                marginalizeEll=True, normalized=True,
+                marginalizeEll=True, normalized=False,
                 ell_hat=ell_hat_z,
                 ell_var=(ell_hat_z*params['ellPriorSigma'])**2
             )

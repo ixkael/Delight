@@ -120,7 +120,8 @@ def approx_flux_likelihood(
         ell_var=0,  # 1 or nz, nt
         f_mod_covar=None,  # nz, nt, nf (, nf)
         marginalizeEll=True,
-        normalized=True,
+        normalized=False,
+        renormalize=True,
         returnChi2=False,
         returnEllML=False):
     """
@@ -152,7 +153,7 @@ def approx_flux_likelihood(
                 FOT += ell_hat / ell_var  # nz * nt
                 FTT += 1. / ell_var  # nz * nt
                 FOO += ell_hat**2 / ell_var  # nz * nt
-            sigma_det = np.prod(var, axis=2)
+            log_sigma_det = np.sum(np.log(var), axis=2)
             ellbk = 1*ellML
             ellML = (FOT / FTT)[:, :, None]
     if returnEllML:
@@ -160,17 +161,19 @@ def approx_flux_likelihood(
     chi2 = FOO - FOT**2.0 / FTT  # nz * nt
     if returnChi2:
         return chi2
-    denom = 1
+    logDenom = 0.
     if normalized:
-        denom = denom * np.sqrt(sigma_det * (2*np.pi)**nf)
+        logDenom = logDenom + log_sigma_det + nf * np.log(2*np.pi)
         if np.all(ell_var > 0):
-            denom = denom * np.sqrt(2*np.pi * ell_var)
+            logDenom = logDenom + np.log(2*np.pi * ell_var)
     if marginalizeEll:
-        denom = denom * np.sqrt(FTT)
+        logDenom = logDenom + np.log(FTT)
         if np.all(ell_var > 0):
-            denom = denom / np.sqrt(2*np.pi)
-    like = np.exp(-0.5*chi2) / denom  # nz * nt
-    return like
+            logDenom = logDenom - np.log(2*np.pi)
+    like = -0.5*chi2 - 0.5*logDenom # nz * nt
+    if renormalize:
+        like -= like.max()
+    return np.exp(like) # nz * nt
 
 
 def scalefree_flux_likelihood(f_obs, f_obs_var,

@@ -3,6 +3,10 @@ import sys
 from mpi4py import MPI
 import numpy as np
 from scipy.interpolate import interp1d
+
+import sys, os
+sys.path.append('/Users/bl/Dropbox/repos/Delight/')
+
 from delight.io import *
 from delight.utils import *
 from delight.photoz_gp import PhotozGP
@@ -72,7 +76,8 @@ for z, normedRefFlux, bands, fluxes, fluxesVar,\
     ell_hat_z = 1
     params['ellPriorSigma'] = 1e12
     like_grid = approx_flux_likelihood(
-        fluxes, fluxesVar, f_mod[:, :, bands], marginalizeEll=True,
+        fluxes, fluxesVar, f_mod[:, :, bands],
+        normalized=True, marginalizeEll=True,
         ell_hat=ell_hat_z, ell_var=(ell_hat_z*params['ellPriorSigma'])**2)
     b_in = np.array(params['p_t'])[None, :]
     beta2 = np.array(params['p_z_t'])**2.0

@@ -3,7 +3,7 @@ cimport numpy as np
 from cython.parallel import prange
 from cpython cimport bool
 cimport cython
-from libc.math cimport sqrt, M_PI, exp, pow
+from libc.math cimport sqrt, M_PI, exp, pow, log
 
 
 def find_positions(
@@ -93,25 +93,35 @@ def approx_flux_likelihood_cy(
     ):
 
     cdef long i, i_t, i_z, i_f, niter=2
-    cdef double var, FOT, FTT, FOO, chi2, ellML, denom
-    for i_t in prange(nt, nogil=True):
-        for i_z in range(nz):
+    cdef double var, FOT, FTT, FOO, chi2, ellML, logDenom, loglikemax
+    for i_z in prange(nz, nogil=True):
+        for i_t in range(nt):
             ellML = 0
             for i in range(niter):
                 FOT = ell_hat[i_z] / ell_var[i_z]
                 FTT = 1. / ell_var[i_z]
                 FOO = ell_hat[i_z]**2 / ell_var[i_z]
-                denom = 1
+                logDenom = 0
                 for i_f in range(nf):
                     var = (f_obs_var[i_f] + ellML**2 * f_mod_covar[i_z, i_t, i_f])
                     FOT = FOT + f_mod[i_z, i_t, i_f] * f_obs[i_f] / var
                     FTT = FTT + pow(f_mod[i_z, i_t, i_f], 2) / var
                     FOO = FOO + pow(f_obs[i_f], 2) / var
-                    if i == 1:
-                        denom = denom * sqrt(var*2*M_PI)
+                    if i == niter - 1:
+                        logDenom = logDenom + log(var*2*M_PI)
                 ellML = FOT / FTT
-                if i == 1:
+                if i == niter - 1:
                     chi2 = FOO - pow(FOT, 2) / FTT
-                    denom = denom * sqrt(2*M_PI*ell_var[i_z])
-                    denom = denom * sqrt(FTT / (2*M_PI))
-                    like[i_z, i_t] = exp(-0.5*chi2) / denom  # nz * nt
+                    logDenom = logDenom + log(2*M_PI*ell_var[i_z])
+                    logDenom = logDenom + log(FTT / (2*M_PI))
+                    like[i_z, i_t] = -0.5*chi2 - 0.5*logDenom  # nz * nt
+
+    if True:
+        loglikemax = like[0, 0]
+        for i_z in range(nz):
+            for i_t in range(nt):
+                if like[i_z, i_t] > loglikemax:
+                    loglikemax = like[i_z, i_t]
+        for i_z in range(nz):
+            for i_t in range(nt):
+                like[i_z, i_t] = exp(like[i_z, i_t] - loglikemax)
