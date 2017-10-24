@@ -4,9 +4,6 @@ from mpi4py import MPI
 import numpy as np
 from scipy.interpolate import interp1d
 
-import sys, os
-sys.path.append('/Users/bl/Dropbox/repos/Delight/')
-
 from delight.io import *
 from delight.utils import *
 from delight.photoz_gp import PhotozGP
