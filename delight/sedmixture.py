@@ -112,9 +112,12 @@ class SpectralTemplate_z:
 
         self.fbcoefs = {}
         self.fbinterps = {}
+        self.logfbinterps = {}
         self.order = order
-        for filt in photometricBands:
-            fmodgrid = np.zeros((self.redshiftGrid.size, ))
+        self.fmodgrid = np.zeros((self.redshiftGrid.size, len(photometricBands)))
+        self.bandNames = []
+        for ib, filt in enumerate(photometricBands):
+            self.bandNames.append(filt.bandName)
             for iz in range(self.redshiftGrid.size):
                 opz = (self.redshiftGrid[iz] + 1)
                 xf_z = filt.wavelengthGrid / opz
@@ -122,17 +125,20 @@ class SpectralTemplate_z:
                 ysed = self.sed_interp(xf_z)
                 facz = opz**2. / (4*np.pi*self.DL(self.redshiftGrid[iz])**2.)
                 ysedext = facz * ysed
-                fmodgrid[iz] =\
+                self.fmodgrid[iz, ib] =\
                     np.trapz(ysedext * yf_z, x=xf_z) / filt.norm
-            # self.fbinterps[filt.bandName] = UnivariateSpline(
-            #    self.redshiftGrid, fmodgrid, s=0)
+            self.fbinterps[filt.bandName] = UnivariateSpline(
+                self.redshiftGrid, self.fmodgrid[:, ib], s=0)
             self.fbcoefs[filt.bandName] = np.polyfit(
-                self.redshiftGrid, np.log(fmodgrid), self.order-1)
-            self.fbinterps[filt.bandName] =\
+                self.redshiftGrid, np.log(self.fmodgrid[:, ib]), self.order-1)
+            self.logfbinterps[filt.bandName] =\
                 np.poly1d(self.fbcoefs[filt.bandName])
 
+    def photometricFlux_spline(self, redshifts, bandName):
+        return self.fbinterps[bandName](redshifts)
+
     def photometricFlux(self, redshifts, bandName):
-        return np.exp(self.fbinterps[bandName](redshifts))
+        return np.exp(self.logfbinterps[bandName](redshifts))
 
     def photometricFlux_bis(self, redshifts, bandName):
         xgg = redshifts[:, None] ** np.arange(self.order-1, -1, -1)[None, :]

@@ -4,6 +4,7 @@ from cython.parallel import prange
 from cpython cimport bool
 cimport cython
 from libc.math cimport sqrt, M_PI, exp, pow, log
+from libc.stdlib cimport malloc, free
 
 
 def find_positions(
@@ -125,3 +126,155 @@ def approx_flux_likelihood_cy(
         for i_z in range(nz):
             for i_t in range(nt):
                 like[i_z, i_t] = exp(like[i_z, i_t] - loglikemax)
+
+
+cdef double gauss_prob(double x, double mu, double var) nogil:
+    return exp(- 0.5 * pow(x - mu, 2.)/var) / sqrt(2.*M_PI*var)
+
+
+cdef double gauss_lnprob(double x, double mu, double var) nogil:
+    return - 0.5 * pow(x - mu, 2)/var - 0.5 * log(2*M_PI*var)
+
+
+cdef double logsumexp(double* arr, long dim) nogil:
+    cdef int i
+    cdef double result = 0.0
+    cdef double largest_in_a = arr[0]
+    for i in range(1, dim):
+        if (arr[i] > largest_in_a):
+            largest_in_a = arr[i]
+    for i in range(dim):
+        result += exp(arr[i] - largest_in_a)
+    return largest_in_a + log(result)
+
+
+def photoobj_evidences_marglnzell(
+    double [:] logevidences, # nobj
+    double [:] alphas, # nt
+    long nobj, long numTypes, long nz, long nf,
+    double [:, :] f_obs,  # nobj * nf
+    double [:, :] f_obs_var,  # nobj * nf
+    double [:, :, :] f_mod,  # nt * nz * nf
+    double [:] z_grid_centers, # nz
+    double [:] z_grid_sizes, # nz
+    double [:] mu_ell, # nt
+    double [:] mu_lnz, double [:] var_ell,  # nt
+    double [:] var_lnz, double [:] rho  # nt
+        ):
+
+    cdef long o, i_t, i_z, i_f
+    cdef double FOT, FTT, FOO, chi2, ellML, logDenom
+    cdef double mu_ell_prime, var_ell_prime, lnprior_lnz
+    cdef double *logpost
+
+    for o in range(nobj):#prange(nobj, nogil=True):
+
+        logpost = <double *> malloc(sizeof(double) * (nz*numTypes))
+        for i_z in range(nz):
+            for i_t in range(numTypes):
+                mu_ell_prime = mu_ell[i_t] + rho[i_t] * (log(z_grid_centers[i_z]) - mu_lnz[i_t]) / var_lnz[i_t]
+                var_ell_prime = (var_ell[i_t] - pow(rho[i_t], 2) / var_lnz[i_t])
+                FOT = mu_ell_prime / var_ell_prime
+                FTT = 1. / var_ell_prime
+                FOO = pow(mu_ell_prime, 2) / var_ell_prime
+                logDenom = 0
+                for i_f in range(nf):
+                    FOT = FOT + f_mod[i_t, i_z, i_f] * f_obs[o, i_f] / f_obs_var[o, i_f]
+                    FTT = FTT + pow(f_mod[i_t, i_z, i_f], 2) / f_obs_var[o, i_f]
+                    FOO = FOO + pow(f_obs[o, i_f], 2) / f_obs_var[o, i_f]
+                    logDenom = logDenom + log(f_obs_var[o, i_f]*2*M_PI)
+                # ellML = FOT / FTT
+                chi2 = FOO - pow(FOT, 2) / FTT
+                logDenom = logDenom + log(var_ell_prime) + log(FTT)
+                lnprior_lnz = gauss_lnprob(log(z_grid_centers[i_z]), mu_lnz[i_t], var_lnz[i_t])
+                logpost[i_t*nz+i_z] = log(alphas[i_t]) - 0.5*chi2 - 0.5*logDenom  + lnprior_lnz + log(z_grid_sizes[i_z])
+
+        for i_t in range(numTypes):
+            logevidences[o] = logsumexp(logpost, nz*numTypes)
+
+        free(logpost)
+
+
+def specobj_evidences_margell(
+    double [:] logevidences, # nobj
+    double [:] alphas, # nt
+    long nobj, long numTypes, long nf,
+    double [:, :] f_obs,  # nobj * nf
+    double [:, :] f_obs_var,  # nobj * nf
+    double [:, :, :] f_mod,  # nt * nobj * nf
+    double [:] redshifts, # nobj
+    double [:] mu_ell, # nt
+    double [:] mu_lnz, double [:] var_ell,  # nt
+    double [:] var_lnz, double [:] rho  # nt
+        ):
+
+    cdef long o, i_t, i_f
+    cdef double FOT, FTT, FOO, chi2, ellML, logDenom
+    cdef double mu_ell_prime, var_ell_prime, lnprior_lnz
+    cdef double *logpost
+
+    for o in range(nobj):#prange(nobj, nogil=True):
+
+        logpost = <double *> malloc(sizeof(double) * (numTypes))
+        for i_t in range(numTypes):
+            mu_ell_prime = mu_ell[i_t] + rho[i_t] * (log(redshifts[o]) - mu_lnz[i_t]) / var_lnz[i_t]
+            var_ell_prime = (var_ell[i_t] - pow(rho[i_t], 2) / var_lnz[i_t])
+            FOT = mu_ell_prime / var_ell_prime
+            FTT = 1. / var_ell_prime
+            FOO = pow(mu_ell_prime, 2) / var_ell_prime
+            logDenom = 0
+            for i_f in range(nf):
+                FOT = FOT + f_mod[i_t, o, i_f] * f_obs[o, i_f] / f_obs_var[o, i_f]
+                FTT = FTT + pow(f_mod[i_t, o, i_f], 2) / f_obs_var[o, i_f]
+                FOO = FOO + pow(f_obs[o, i_f], 2) / f_obs_var[o, i_f]
+                logDenom = logDenom + log(f_obs_var[o, i_f]*2*M_PI)
+            # ellML = FOT / FTT
+            chi2 = FOO - pow(FOT, 2) / FTT
+            logDenom = logDenom + log(var_ell_prime) + log(FTT)
+            lnprior_lnz = gauss_lnprob(log(redshifts[o]), mu_lnz[i_t], var_lnz[i_t])
+            logpost[i_t] = log(alphas[i_t]) - 0.5*chi2 - 0.5*logDenom + lnprior_lnz
+
+        for i_t in range(numTypes):
+            logevidences[o] = logsumexp(logpost, numTypes)
+
+        free(logpost)
+
+
+def photoobj_lnpost_zgrid_margell(
+    double [:, :, :] lnpost, # nobj * nt * nz
+    double [:] alphas, # nt
+    long nobj, long numTypes, long nz, long nf,
+    double [:, :] f_obs,  # nobj * nf
+    double [:, :] f_obs_var,  # nobj * nf
+    double [:, :, :] f_mod,  # nt * nz * nf
+    double [:] z_grid_centers, # nz
+    double [:] z_grid_sizes, # nz
+    double [:] mu_ell, # nt
+    double [:] mu_lnz, double [:] var_ell,  # nt
+    double [:] var_lnz, double [:] rho  # nt
+        ):
+
+    cdef long o, i_t, i_z, i_f
+    cdef double FOT, FTT, FOO, chi2, ellML, logDenom
+    cdef double mu_ell_prime, var_ell_prime, lnprior_lnz
+
+    for o in prange(nobj, nogil=True):
+
+        for i_z in range(nz):
+            for i_t in range(numTypes):
+                mu_ell_prime = mu_ell[i_t] + rho[i_t] * (log(z_grid_centers[i_z]) - mu_lnz[i_t]) / var_lnz[i_t]
+                var_ell_prime = (var_ell[i_t] - pow(rho[i_t], 2) / var_lnz[i_t])
+                FOT = mu_ell_prime / var_ell_prime
+                FTT = 1. / var_ell_prime
+                FOO = pow(mu_ell_prime, 2) / var_ell_prime
+                logDenom = 0
+                for i_f in range(nf):
+                    FOT = FOT + f_mod[i_t, i_z, i_f] * f_obs[o, i_f] / f_obs_var[o, i_f]
+                    FTT = FTT + pow(f_mod[i_t, i_z, i_f], 2) / f_obs_var[o, i_f]
+                    FOO = FOO + pow(f_obs[o, i_f], 2) / f_obs_var[o, i_f]
+                    logDenom = logDenom + log(f_obs_var[o, i_f]*2*M_PI)
+                # ellML = FOT / FTT
+                chi2 = FOO - pow(FOT, 2) / FTT
+                logDenom = logDenom + log(var_ell_prime) + log(FTT)
+                lnprior_lnz = gauss_lnprob(log(z_grid_centers[i_z]), mu_lnz[i_t], var_lnz[i_t])
+                lnpost[o, i_t, i_z] = log(alphas[i_t]) - 0.5*chi2 - 0.5*logDenom + lnprior_lnz

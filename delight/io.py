@@ -213,7 +213,7 @@ def createGrids(params):
     """
     redshiftDistGrid = np.arange(0, params['redshiftMax'],
                                  params['redshiftDisBinSize'])
-    if False:
+    if True:
         redshiftGrid = np.arange(params['redshiftMin'],
                                  params['redshiftMax'],
                                  params['redshiftBinSize'])
