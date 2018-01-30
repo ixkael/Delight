@@ -30,8 +30,8 @@ before_script:
   - python scripts/simulateWithSEDs.py tests/parametersTest.cfg
 script:
   - coverage run --source delight -m py.test
-  - pep8 delight/*py
-  - pep8 tests/*py
-  - pep8 scripts/*py
+  - pycodestyle delight/*py
+  - pycodestyle tests/*py
+  - pycodestyle scripts/*py
 after_success:
   coveralls
