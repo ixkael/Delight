@@ -2,7 +2,7 @@ numpy
 cython
 pytest
 pylint
-pep8
+pycodestyle
 scipy
 matplotlib
 coveralls
