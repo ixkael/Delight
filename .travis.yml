@@ -30,8 +30,5 @@ before_script:
   - python scripts/simulateWithSEDs.py tests/parametersTest.cfg
 script:
   - coverage run --source delight -m py.test
-  - pycodestyle delight/*py
-  - pycodestyle tests/*py
-  - pycodestyle scripts/*py
 after_success:
   coveralls
