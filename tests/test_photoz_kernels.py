@@ -60,7 +60,7 @@ def test_meanfunction():
                 xfz = xf/oneplusz[k]
                 sed = ell * np.exp(-mf.alpha*(xfz-4.5e3))
                 fac = oneplusz[k] / mf.DL_z(redshifts[k])**2 / (4*np.pi)
-                f_mod[k] += np.trapz(sed*yf, x=xf) / norms[bands[k]] * fac
+                f_mod[k] += mu[k] * np.trapz(sed*yf, x=xf) / norms[bands[k]] * fac
 
         f_mod2 = mf.f(X).ravel()
         assert np.allclose(f_mod, f_mod2, rtol=relative_accuracy)
