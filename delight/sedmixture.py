@@ -14,7 +14,7 @@ class PhotometricFilter:
         self.wavelengthGrid = tabulatedWavelength
         self.tabulatedResponse = tabulatedResponse
         self.interp = interp1d(tabulatedWavelength, tabulatedResponse)
-        self.norm = np.trapz(tabulatedResponse, x=tabulatedWavelength)
+        self.norm = np.trapz(tabulatedResponse/tabulatedWavelength, x=tabulatedWavelength)
         ind = np.where(
             tabulatedResponse > 0.001*np.max(tabulatedResponse)
                             )[0]
@@ -102,7 +102,8 @@ class SpectralTemplate_z:
         self.DL = approx_DL()
         self.photometricBands = photometricBands
         self.numBands = len(photometricBands)
-        self.sed_interp = interp1d(tabulatedWavelength, tabulatedSpectrum)
+        self.sed_interp = interp1d(tabulatedWavelength, tabulatedSpectrum,
+                                   bounds_error=False, fill_value="extrapolate")
         if redshiftGrid is None:
             self.redshiftGrid = np.logspace(np.log10(1e-2),
                                             np.log10(2.0),
@@ -114,7 +115,8 @@ class SpectralTemplate_z:
         self.fbinterps = {}
         self.logfbinterps = {}
         self.order = order
-        self.fmodgrid = np.zeros((self.redshiftGrid.size, len(photometricBands)))
+        self.fmodgrid = np.zeros((self.redshiftGrid.size,
+                                    len(photometricBands)))
         self.bandNames = []
         for ib, filt in enumerate(photometricBands):
             self.bandNames.append(filt.bandName)
