@@ -84,6 +84,7 @@ class Photoz_mean_function():
         self.numCoefs = fcoefs_amp.shape[1]
         self.norms = np.sqrt(2*np.pi)\
             * np.sum(self.fcoefs_amp * self.fcoefs_sig, axis=1)
+        self.fcoefs_amp *= self.fcoefs_mu
 
     def f(self, X):
         """
