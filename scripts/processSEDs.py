@@ -2,6 +2,8 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+
+
 from delight.io import *
 from delight.utils import *
 
@@ -21,7 +23,7 @@ numZ = redshiftGrid.size
 # Loop over SEDs
 for sed_name in sed_names:
     seddata = np.genfromtxt(dir_seds + '/' + sed_name + fmt)
-    seddata[:, 1] *= seddata[:, 0]**2. / 3e18
+    seddata[:, 1] *= seddata[:, 0]
     ref = np.interp(lambdaRef, seddata[:, 0], seddata[:, 1])
     seddata[:, 1] /= ref
     sed_interp = interp1d(seddata[:, 0], seddata[:, 1])
@@ -32,11 +34,11 @@ for sed_name in sed_names:
         fname_in = dir_filters + '/' + band + '.res'
         data = np.genfromtxt(fname_in)
         xf, yf = data[:, 0], data[:, 1]
-        yf /= xf  # divide by lambda
+        #yf /= xf  # divide by lambda
         # Only consider range where >1% max
         ind = np.where(yf > 0.01*np.max(yf))[0]
         lambdaMin, lambdaMax = xf[ind[0]], xf[ind[-1]]
-        norm = np.trapz(yf, x=xf)
+        norm = np.trapz(yf/xf, x=xf)
 
         for iz in range(redshiftGrid.size):
             opz = (redshiftGrid[iz] + 1)
