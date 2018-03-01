@@ -7,8 +7,8 @@ from scipy.optimize import leastsq
 from delight.utils import *
 from delight.io import *
 
-numCoefs = 20  # number of components for the fit
-make_plots = False
+numCoefs = 7  # number of components for the fit
+make_plots = True
 
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
@@ -42,7 +42,7 @@ for iband, band in enumerate(bandNames):
     data = np.genfromtxt(fname_in)
     coefs = np.zeros((numCoefs, 3))
     x, y = data[:, 0], data[:, 1]
-    y /= x  # divide by lambda
+    #y /= x  # divide by lambda
     # Only consider range where >1% max
     ind = np.where(y > 0.01*np.max(y))[0]
     lambdaMin, lambdaMax = x[ind[0]], x[ind[-1]]
