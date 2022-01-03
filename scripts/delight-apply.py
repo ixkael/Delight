@@ -1,6 +1,6 @@
 
 import sys
-from mpi4py import MPI
+#from mpi4py import MPI
 import numpy as np
 from delight.io import *
 from delight.utils import *
@@ -8,9 +8,9 @@ from delight.photoz_gp import PhotozGP
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 from delight.utils_cy import approx_flux_likelihood_cy
 from time import time
-comm = MPI.COMM_WORLD
-threadNum = comm.Get_rank()
-numThreads = comm.Get_size()
+#comm = MPI.COMM_WORLD
+threadNum = 0
+numThreads = 1
 
 # Parse parameters file
 if len(sys.argv) < 2:
@@ -54,7 +54,7 @@ numLines = lastLine - firstLine
 if threadNum == 0:
     print('Number of Training Objects', numObjectsTraining)
     print('Number of Target Objects', numObjectsTarget)
-comm.Barrier()
+#comm.Barrier()
 print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
 
 DL = approx_DL()
@@ -91,8 +91,7 @@ for chunk in range(numChunks):
     for loc, (z, ell, bands, X, B, flatarray) in enumerate(trainingDataIter):
         t1 = time()
         redshifts[loc] = z
-        gp.setCore(X, B, nt,
-                   flatarray[0:nt+B+B*(B+1)//2])
+        gp.setCore(X, B, nt,flatarray[0:nt+B+B*(B+1)//2])
         bestTypes[loc] = gp.bestType
         ells[loc] = ell
         model_mean[:, loc, :], model_covar[:, loc, :] =\
@@ -102,8 +101,7 @@ for chunk in range(numChunks):
 
     # p_t = params['p_t'][bestTypes][None, :]
     # p_z_t = params['p_z_t'][bestTypes][None, :]
-    prior = np.exp(-0.5*((redshiftGrid[:, None]-redshifts[None, :]) /
-                         params['zPriorSigma'])**2)
+    prior = np.exp(-0.5*((redshiftGrid[:, None]-redshifts[None, :]) /params['zPriorSigma'])**2)
     # prior[prior < 1e-6] = 0
     # prior *= p_t * redshiftGrid[:, None] *
     # np.exp(-0.5 * redshiftGrid[:, None]**2 / p_z_t) / p_z_t
@@ -178,7 +176,7 @@ for chunk in range(numChunks):
         fC.close()
         fCI.close()
 
-comm.Barrier()
+#comm.Barrier()
 if threadNum == 0:
     globalPDFs = np.zeros((numObjectsTarget, numZ))
     globalCompressIndices = np.zeros((numObjectsTarget, Ncompress), dtype=int)
@@ -198,23 +196,28 @@ numLines = [lastLines[k] - firstLines[k] for k in range(numThreads)]
 
 sendcounts = tuple([numLines[k] * numZ for k in range(numThreads)])
 displacements = tuple([firstLines[k] * numZ for k in range(numThreads)])
-comm.Gatherv(localPDFs,
-             [globalPDFs, sendcounts, displacements, MPI.DOUBLE])
+
+
+#comm.Gatherv(localPDFs,[globalPDFs, sendcounts, displacements, MPI.DOUBLE])
+globalPDFs = localPDFs
 
 sendcounts = tuple([numLines[k] * Ncompress for k in range(numThreads)])
 displacements = tuple([firstLines[k] * Ncompress for k in range(numThreads)])
-comm.Gatherv(localCompressIndices,
-             [globalCompressIndices, sendcounts, displacements, MPI.LONG])
-comm.Gatherv(localCompEvidences,
-             [globalCompEvidences, sendcounts, displacements, MPI.DOUBLE])
-comm.Barrier()
+#comm.Gatherv(localCompressIndices,
+#             [globalCompressIndices, sendcounts, displacements, MPI.LONG])
+globalCompressIndices = localCompressIndices
+#comm.Gatherv(localCompEvidences,
+#             [globalCompEvidences, sendcounts, displacements, MPI.DOUBLE])
+globalCompEvidences = localCompEvidences
+#comm.Barrier()
 
 sendcounts = tuple([numLines[k] * numMetrics for k in range(numThreads)])
 displacements = tuple([firstLines[k] * numMetrics for k in range(numThreads)])
-comm.Gatherv(localMetrics,
-             [globalMetrics, sendcounts, displacements, MPI.DOUBLE])
+#comm.Gatherv(localMetrics,
+#             [globalMetrics, sendcounts, displacements, MPI.DOUBLE])
+globalMetrics = localMetrics
 
-comm.Barrier()
+#comm.Barrier()
 
 if threadNum == 0:
     fmt = '%.2e'
