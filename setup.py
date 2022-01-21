@@ -4,7 +4,7 @@ from Cython.Distutils import build_ext
 import numpy
 from sphinx.setup_command import BuildDoc
 
-version = '1.0.0'
+version = '1.0.1'
 
 args = {
     "libraries": ["m"],
@@ -28,7 +28,10 @@ setup(
   version=version,
   cmdclass={"build_ext": build_ext,
             'build_sphinx': BuildDoc},
-  packages=['delight'],
+  #packages=['delight'],
+  packages=['delight','interfaces.rail'],
+  package_dir={'delight': './delight','interfaces.rail':'./interfaces/rail'},
+  #package_data={'delightdata': ['data/BROWN_SEDs/*.dat', 'data/CWW_SEDs/*.dat','data/FILTERS/*.res']},
   command_options={
         'build_sphinx': {
             'project': (None, "delight"),
