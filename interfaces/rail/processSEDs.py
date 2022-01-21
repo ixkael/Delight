@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
 
-from rail.estimation.algos.include_delightPZ.delight_io import *
-# from delight.io import *
+#from rail.estimation.algos.include_delightPZ.delight_io import *
+from delight.io import *
 from delight.utils import *
 
 import coloredlogs

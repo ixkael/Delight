@@ -7,13 +7,13 @@
 #  Some other parameter are hardcoded in this file
 # The fina goal is to retrieve those parameters from RAIL config file
 #####################################################################################################
-#from delight.utils import *
+from delight.utils import *
 #from rail.estimation.algos.include_delightPZ.delight_io import *
 import coloredlogs
 import logging
 import os
 
-from pkg_resources import resource_filename
+
 
 # Create a logger object.
 logger = logging.getLogger(__name__)

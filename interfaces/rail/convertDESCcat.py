@@ -13,7 +13,7 @@ import os
 import numpy as np
 from functools import reduce
 
-from rail.estimation.algos.include_delightPZ.delight_io import *
+#from rail.estimation.algos.include_delightPZ.delight_io import *
 from delight.utils import *
 from tables_io import io
 import coloredlogs
@@ -309,129 +309,127 @@ def convertDESCcatChunk(configfilename,data,chunknum,flag_filter_validation = Tr
 
 
 
-def convertDESCcat(configfilename,desctraincatalogfile,desctargetcatalogfile,\
-                   flag_filter_training=True,flag_filter_validation=True,snr_cut_training=5,snr_cut_validation=5):
+#def convertDESCcat(configfilename,desctraincatalogfile,desctargetcatalogfile,\                  #flag_filter_training=True,flag_filter_validation=True,snr_cut_training=5,snr_cut_validation=5):
 
-    """
-    convertDESCcat(configfilename,desctraincatalogfile,desctargetcatalogfile,\
-                   flag_filter_training=True,flag_filter_validation=True,snr_cut_training=5,snr_cut_validation=5):
-
-
-    Convert files in ascii format to be used by Delight
-
-    input args:
-    - configfilename : Delight configuration file containingg path for output files (flux variances and redshifts)
-    - desctraincatalogfile : training file provided by RAIL (hdf5 format)
-    - desctargetcatalogfile : target file provided by RAIL (hdf5 format)
-    - flag_filter_training : Activate filtering on training data
-    - flag_filter_validation : Activate filtering on validation data
-    - snr_cut_training : Cut on flux SNR in training data
-    - snr_cut_validation : Cut on flux SNR in validation data
-
-    output :
-    - the Delight training and target file which path is in configuration file
-
-    :return: nothing
-
-    """
+#    """
+#    convertDESCcat(configfilename,desctraincatalogfile,desctargetcatalogfile,\
+#                   flag_filter_training=True,flag_filter_validation=True,snr_cut_training=5,snr_cut_validation=5):
 
 
-    logger.info("--- Convert DESC training and target catalogs ---")
+#    Convert files in ascii format to be used by Delight
 
-    if FLAG_CONVERTFLUX_TODELIGHTUNIT:
-        flux_multiplicative_factor = 2.22e10
-    else:
-        flux_multiplicative_factor = 1
+#    input args:
+#    - configfilename : Delight configuration file containingg path for output files (flux variances and redshifts)
+#    - desctraincatalogfile : training file provided by RAIL (hdf5 format)
+#    - desctargetcatalogfile : target file provided by RAIL (hdf5 format)
+#    - flag_filter_training : Activate filtering on training data
+#    - flag_filter_validation : Activate filtering on validation data
+#    - snr_cut_training : Cut on flux SNR in training data
+#    - snr_cut_validation : Cut on flux SNR in validation data
+
+#    output :
+#    - the Delight training and target file which path is in configuration file
+
+#    :return: nothing
+
+#    """
+
+
+#    logger.info("--- Convert DESC training and target catalogs ---")
+
+#    if FLAG_CONVERTFLUX_TODELIGHTUNIT:
+#        flux_multiplicative_factor = 2.22e10
+#    else:
+#        flux_multiplicative_factor = 1
 
 
 
     # 1) DESC catalog file
-    msg="read DESC hdf5 training file {} ".format(desctraincatalogfile)
-    logger.debug(msg)
+#    msg="read DESC hdf5 training file {} ".format(desctraincatalogfile)
+#    logger.debug(msg)
 
-    f = io.readHdf5ToDict(desctraincatalogfile, groupname='photometry')
+#    f = io.readHdf5ToDict(desctraincatalogfile, groupname='photometry')
     
     # produce a numpy array
-    magdata = group_entries(f)
+#    magdata = group_entries(f)
 
     # remember the number of entries
-    Nin = magdata.shape[0]
-    msg = "Number of objects = {} , in  training dataset".format(Nin)
-    logger.debug(msg)
+#    Nin = magdata.shape[0]
+#    msg = "Number of objects = {} , in  training dataset".format(Nin)
+#    logger.debug(msg)
 
 
 
     # keep indexes to filter data with bad magnitudes
-    if flag_filter_training:
-        indexes_bad_mag = filter_mag_entries(magdata)
+#    if flag_filter_training:
+#        indexes_bad_mag = filter_mag_entries(magdata)
         # magdata_f = np.delete(magdata, indexes_bad_mag, axis=0)
-        magdata_f = magdata  # filtering will be done later
-    else:
-        indexes_bad_mag = np.array([])
-        magdata_f = magdata
+#        magdata_f = magdata  # filtering will be done later
+#    else:
+#        indexes_bad_mag = np.array([])
+#        magdata_f = magdata
 
-    Nbadmag = len(indexes_bad_mag)
-    msg = "Number of objects with bad magnitudes {}  in training dataset".format(Nbadmag)
-    logger.debug(msg)
+#    Nbadmag = len(indexes_bad_mag)
+#    msg = "Number of objects with bad magnitudes {}  in training dataset".format(Nbadmag)
+#    logger.debug(msg)
 
 
     # convert mag to fluxes
-    fdata = mag_to_flux(magdata_f)
+#    fdata = mag_to_flux(magdata_f)
 
     # keep indexes to filter data with bad SNR
-    if flag_filter_training:
-        indexes_bad_snr = filter_flux_entries(fdata, nsig=snr_cut_training)
-        fdata_f = fdata
-        # fdata_f = np.delete(fdata, indexes_bad, axis=0)
-        # magdata_f = np.delete(magdata_f, indexes_bad, axis=0)
-    else:
-        fdata_f = fdata
-        indexes_bad_snr = np.array([])
+#    if flag_filter_training:
+#        indexes_bad_snr = filter_flux_entries(fdata, nsig=snr_cut_training)
+#        fdata_f = fdata
+       
+#    else:
+#        fdata_f = fdata
+#        indexes_bad_snr = np.array([])
 
-    Nbadsnr = len(indexes_bad_snr)
-    msg = "Number of objects with bad SNR = {} , in  training dataset".format(Nbadsnr)
-    logger.debug(msg)
+#    Nbadsnr = len(indexes_bad_snr)
+#    msg = "Number of objects with bad SNR = {} , in  training dataset".format(Nbadsnr)
+#    logger.debug(msg)
 
     # make union of indexes (unique id) before removing them for Delight
-    idxToRemove = reduce(np.union1d, (indexes_bad_mag, indexes_bad_snr))
-    NtoRemove = len(idxToRemove)
-    msg = "Number of objects filtered out = {} , in training dataset".format(NtoRemove)
-    logger.debug(msg)
+#    idxToRemove = reduce(np.union1d, (indexes_bad_mag, indexes_bad_snr))
+#    NtoRemove = len(idxToRemove)
+#    msg = "Number of objects filtered out = {} , in training dataset".format(NtoRemove)
+#    logger.debug(msg)
 
 
     # fdata_f contains the fluxes and errors to be send to Delight
 
     # indexes of full input dataset
-    idxInitial = np.arange(Nin)
+#    idxInitial = np.arange(Nin)
 
-    if NtoRemove > 0:
-        fdata_f = np.delete(fdata_f, idxToRemove, axis=0)
-        idxFinal = np.delete(idxInitial, idxToRemove, axis=0)
-    else:
-        idxFinal = idxInitial
-
-
-    Nkept = len(idxFinal)
-    msg = "Number of objects kept = {} , in training dataset".format(Nkept)
-    logger.debug(msg)
+#    if NtoRemove > 0:
+#        fdata_f = np.delete(fdata_f, idxToRemove, axis=0)
+#        idxFinal = np.delete(idxInitial, idxToRemove, axis=0)
+#    else:
+#        idxFinal = idxInitial
 
 
+#    Nkept = len(idxFinal)
+#    msg = "Number of objects kept = {} , in training dataset".format(Nkept)
+#    logger.debug(msg)
 
-    gid = fdata_f[:, 0]
-    rs = fdata_f[:, 1]
+
+
+#    gid = fdata_f[:, 0]
+#    rs = fdata_f[:, 1]
 
 
     # 2) parameter file
 
-    params = parseParamFile(configfilename, verbose=False, catFilesNeeded=False)
+#    params = parseParamFile(configfilename, verbose=False, catFilesNeeded=False)
 
-    numB = len(params['bandNames'])
-    numObjects = len(gid)
+#    numB = len(params['bandNames'])
+#    numObjects = len(gid)
 
-    msg = "get {} objects ".format(numObjects)
-    logger.debug(msg)
+#    msg = "get {} objects ".format(numObjects)
+#    logger.debug(msg)
 
-    logger.debug(params['bandNames'])
+#    logger.debug(params['bandNames'])
 
 
 
@@ -440,52 +438,52 @@ def convertDESCcat(configfilename,desctraincatalogfile,desctargetcatalogfile,\
 
 
     # what is fluxes and fluxes variance
-    fluxes, fluxesVar = np.zeros((numObjects, numB)), np.zeros((numObjects, numB))
+#    fluxes, fluxesVar = np.zeros((numObjects, numB)), np.zeros((numObjects, numB))
 
     # loop on objects to simulate for the training and save in output training file
-    for k in range(numObjects):
+#    for k in range(numObjects):
         #loop on number of bands
-        for i in range(numB):
-            trueFlux = fdata_f[k,2+i]
-            noise    = fdata_f[k,8+i]
+#        for i in range(numB):
+#            trueFlux = fdata_f[k,2+i]
+#            noise    = fdata_f[k,8+i]
 
             # put the DC2 data to the internal units of Delight
-            trueFlux *= flux_multiplicative_factor
-            noise *= flux_multiplicative_factor
+#            trueFlux *= flux_multiplicative_factor
+#            noise *= flux_multiplicative_factor
 
 
             #fluxes[k, i] = trueFlux + noise * np.random.randn() # noisy flux
-            fluxes[k, i] = trueFlux
+#            fluxes[k, i] = trueFlux
 
-            if fluxes[k, i]<0:
+#            if fluxes[k, i]<0:
                 #fluxes[k, i]=np.abs(noise)/10.
-                fluxes[k, i] = trueFlux
+#                fluxes[k, i] = trueFlux
 
-            fluxesVar[k, i] = noise**2.
+#            fluxesVar[k, i] = noise**2.
 
     # container for training galaxies output
     # at some redshift, provides the flux and its variance inside each band
-    data = np.zeros((numObjects, 1 + len(params['training_bandOrder'])))
-    bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,refBandColumn = readColumnPositions(params, prefix="training_")
+#    data = np.zeros((numObjects, 1 + len(params['training_bandOrder'])))
+#    bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,refBandColumn = readColumnPositions(params, prefix="training_")
 
-    for ib, pf, pfv in zip(bandIndices, bandColumns, bandVarColumns):
-        data[:, pf] = fluxes[:, ib]
-        data[:, pfv] = fluxesVar[:, ib]
-    data[:, redshiftColumn] = rs
-    data[:, -1] = 0  # NO type
-
-
-    msg="write training file {}".format(params['trainingFile'])
-    logger.debug(msg)
-
-    outputdir=os.path.dirname(params['trainingFile'])
-    if not os.path.exists(outputdir):
-        msg = " outputdir not existing {} then create it ".format(outputdir)
-        logger.info(msg)
-        os.makedirs(outputdir)
+#    for ib, pf, pfv in zip(bandIndices, bandColumns, bandVarColumns):
+#        data[:, pf] = fluxes[:, ib]
+#        data[:, pfv] = fluxesVar[:, ib]
+#    data[:, redshiftColumn] = rs
+#    data[:, -1] = 0  # NO type
 
 
-    np.savetxt(params['trainingFile'], data)
+#    msg="write training file {}".format(params['trainingFile'])
+#    logger.debug(msg)
+
+#    outputdir=os.path.dirname(params['trainingFile'])
+#    if not os.path.exists(outputdir):
+#        msg = " outputdir not existing {} then create it ".format(outputdir)
+#        logger.info(msg)
+#        os.makedirs(outputdir)
+
+
+#    np.savetxt(params['trainingFile'], data)
 
 
 
@@ -494,130 +492,130 @@ def convertDESCcat(configfilename,desctraincatalogfile,desctargetcatalogfile,\
     #-----------------------------------------------------------
 
     # 1) DESC catalog file
-    msg = "read DESC hdf5 validation file {} ".format(desctargetcatalogfile)
-    logger.debug(msg)
+#    msg = "read DESC hdf5 validation file {} ".format(desctargetcatalogfile)
+#    logger.debug(msg)
 
-    f = io.readHdf5ToDict(desctargetcatalogfile, groupname='photometry')
+#    f = io.readHdf5ToDict(desctargetcatalogfile, groupname='photometry')
 
     # produce a numpy array
-    magdata = group_entries(f)
+#    magdata = group_entries(f)
 
 
     # remember the number of entries
-    Nin = magdata.shape[0]
-    msg = "Number of objects = {} , in  validation dataset".format(Nin)
-    logger.debug(msg)
+#    Nin = magdata.shape[0]
+#    msg = "Number of objects = {} , in  validation dataset".format(Nin)
+#    logger.debug(msg)
 
 
     # filter bad data
     # keep indexes to filter data with bad magnitudes
-    if flag_filter_validation:
-        indexes_bad_mag = filter_mag_entries(magdata)
+#    if flag_filter_validation:
+#        indexes_bad_mag = filter_mag_entries(magdata)
         # magdata_f = np.delete(magdata, indexes_bad_mag, axis=0)
-        magdata_f = magdata  # filtering will be done later
-    else:
-        indexes_bad_mag = np.array([])
-        magdata_f = magdata
+#        magdata_f = magdata  # filtering will be done later
+#    else:
+#        indexes_bad_mag = np.array([])
+#        magdata_f = magdata
 
-    Nbadmag = len(indexes_bad_mag)
-    msg = "Number of objects with bad magnitudes = {} , in validation dataset".format(Nbadmag)
-    logger.debug(msg)
+#    Nbadmag = len(indexes_bad_mag)
+#    msg = "Number of objects with bad magnitudes = {} , in validation dataset".format(Nbadmag)
+#    logger.debug(msg)
 
 
 
     # convert mag to fluxes
-    fdata = mag_to_flux(magdata_f)
+#    fdata = mag_to_flux(magdata_f)
 
     # keep indexes to filter data with bad SNR
-    if flag_filter_validation:
-        indexes_bad_snr = filter_flux_entries(fdata, nsig=snr_cut_validation)
-        fdata_f = fdata
+#    if flag_filter_validation:
+#        indexes_bad_snr = filter_flux_entries(fdata, nsig=snr_cut_validation)
+#        fdata_f = fdata
         # fdata_f = np.delete(fdata, indexes_bad, axis=0)
         # magdata_f = np.delete(magdata_f, indexes_bad, axis=0)
-    else:
-        fdata_f = fdata
-        indexes_bad_snr = np.array([])
+#    else:
+#        fdata_f = fdata
+#        indexes_bad_snr = np.array([])
 
-    Nbadsnr = len(indexes_bad_snr)
-    msg = "Number of objects with bad SNR = {} , in  validation dataset".format(Nbadsnr)
-    logger.debug(msg)
+#    Nbadsnr = len(indexes_bad_snr)
+#    msg = "Number of objects with bad SNR = {} , in  validation dataset".format(Nbadsnr)
+#    logger.debug(msg)
 
     # make union of indexes (unique id) before removing them for Delight
-    idxToRemove = reduce(np.union1d, (indexes_bad_mag, indexes_bad_snr))
-    NtoRemove = len(idxToRemove)
-    msg = "Number of objects filtered out = {} , in validation dataset".format(NtoRemove)
-    logger.debug(msg)
+#    idxToRemove = reduce(np.union1d, (indexes_bad_mag, indexes_bad_snr))
+#    NtoRemove = len(idxToRemove)
+#    msg = "Number of objects filtered out = {} , in validation dataset".format(NtoRemove)
+#    logger.debug(msg)
 
     # fdata_f contains the fluxes and errors to be send to Delight
 
     # indexes of full input dataset
-    idxInitial = np.arange(Nin)
+#    idxInitial = np.arange(Nin)
 
-    if NtoRemove > 0:
-        fdata_f = np.delete(fdata_f, idxToRemove, axis=0)
-        idxFinal = np.delete(idxInitial, idxToRemove, axis=0)
-    else:
-        idxFinal = idxInitial
+#    if NtoRemove > 0:
+#        fdata_f = np.delete(fdata_f, idxToRemove, axis=0)
+#        idxFinal = np.delete(idxInitial, idxToRemove, axis=0)
+#    else:
+#        idxFinal = idxInitial
 
 
-    Nkept = len(idxFinal)
-    msg = "Number of objects kept = {} , in validation dataset".format(Nkept)
-    logger.debug(msg)
+#    Nkept = len(idxFinal)
+#    msg = "Number of objects kept = {} , in validation dataset".format(Nkept)
+#    logger.debug(msg)
 
-    gid = fdata_f[:, 0]
-    rs = fdata_f[:, 1]
+#    gid = fdata_f[:, 0]
+#    rs = fdata_f[:, 1]
 
-    numObjects = len(gid)
-    msg = "get {} objects ".format(numObjects)
-    logger.debug(msg)
+#    numObjects = len(gid)
+#    msg = "get {} objects ".format(numObjects)
+#    logger.debug(msg)
 
-    fluxes, fluxesVar = np.zeros((numObjects, numB)), np.zeros((numObjects, numB))
+#    fluxes, fluxesVar = np.zeros((numObjects, numB)), np.zeros((numObjects, numB))
 
     # loop on objects in target files
-    for k in range(numObjects):
+#    for k in range(numObjects):
         # loop on bands
-        for i in range(numB):
+#        for i in range(numB):
             # compute the flux in that band at the redshift
-            trueFlux = fdata_f[k, 2 + i]
-            noise = fdata_f[k, 8 + i]
+#            trueFlux = fdata_f[k, 2 + i]
+#            noise = fdata_f[k, 8 + i]
 
             # put the DC2 data to the internal units of Delight
-            trueFlux *= flux_multiplicative_factor
-            noise *= flux_multiplicative_factor
+#            trueFlux *= flux_multiplicative_factor
+#            noise *= flux_multiplicative_factor
 
             #fluxes[k, i] = trueFlux + noise * np.random.randn()
-            fluxes[k, i] = trueFlux
+#            fluxes[k, i] = trueFlux
 
-            if fluxes[k, i]<0:
+#            if fluxes[k, i]<0:
                 #fluxes[k, i]=np.abs(noise)/10.
-                fluxes[k, i] = trueFlux
+#                fluxes[k, i] = trueFlux
 
-            fluxesVar[k, i] = noise**2
+#            fluxesVar[k, i] = noise**2
 
 
 
-    data = np.zeros((numObjects, 1 + len(params['target_bandOrder'])))
-    bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,refBandColumn = readColumnPositions(params, prefix="target_")
+#    data = np.zeros((numObjects, 1 + len(params['target_bandOrder'])))
+#    bandIndices, bandNames, bandColumns, bandVarColumns, redshiftColumn,refBandColumn = readColumnPositions(params, prefix="target_")
 
-    for ib, pf, pfv in zip(bandIndices, bandColumns, bandVarColumns):
-        data[:, pf] = fluxes[:, ib]
-        data[:, pfv] = fluxesVar[:, ib]
-    data[:, redshiftColumn] = rs
-    data[:, -1] = 0  # NO TYPE
+#    for ib, pf, pfv in zip(bandIndices, bandColumns, bandVarColumns):
+#        data[:, pf] = fluxes[:, ib]
+#        data[:, pfv] = fluxesVar[:, ib]
+#    data[:, redshiftColumn] = rs
+#    data[:, -1] = 0  # NO TYPE
 
-    msg = "write file {}".format(os.path.basename(params['targetFile']))
-    logger.debug(msg)
+#    msg = "write file {}".format(os.path.basename(params['targetFile']))
+#    logger.debug(msg)
 
-    msg = "write target file {}".format(params['targetFile'])
-    logger.debug(msg)
+#    msg = "write target file {}".format(params['targetFile'])
+#    logger.debug(msg)
 
-    outputdir = os.path.dirname(params['targetFile'])
-    if not os.path.exists(outputdir):
-        msg = " outputdir not existing {} then create it ".format(outputdir)
-        logger.info(msg)
-        os.makedirs(outputdir)
+#    outputdir = os.path.dirname(params['targetFile'])
+#    if not os.path.exists(outputdir):
+#        msg = " outputdir not existing {} then create it ".format(outputdir)
+#        logger.info(msg)
+#        os.makedirs(outputdir)
 
-    np.savetxt(params['targetFile'], data)
+#    np.savetxt(params['targetFile'], data)
 
 ################################################################################
 # New version of RAIL with data structure directly provided: (SDC 2021/10/23)  #

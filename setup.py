@@ -1,8 +1,14 @@
-from distutils.core import setup
+#from distutils.core import setup 
+
+from setuptools import setup, find_packages
+
+
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import numpy
 from sphinx.setup_command import BuildDoc
+
+
 
 version = '1.0.1'
 
@@ -28,10 +34,13 @@ setup(
   version=version,
   cmdclass={"build_ext": build_ext,
             'build_sphinx': BuildDoc},
+ 
+  #packages=find_packages(exclude=['tests','scripts','data']),  
   #packages=['delight'],
-  packages=['delight','interfaces.rail'],
-  package_dir={'delight': './delight','interfaces.rail':'./interfaces/rail'},
+  packages=['delight','delight.interfaces','delight.interfaces.rail'],
+  package_dir={'delight': './delight','delight.interfaces':'./interfaces','delight.interfaces.rail':'./interfaces/rail'},
   #package_data={'delightdata': ['data/BROWN_SEDs/*.dat', 'data/CWW_SEDs/*.dat','data/FILTERS/*.res']},
+  #package_data={'': extra_files},
   command_options={
         'build_sphinx': {
             'project': (None, "delight"),
