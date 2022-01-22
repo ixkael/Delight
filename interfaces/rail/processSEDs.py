@@ -44,9 +44,9 @@ def processSEDs(configfilename):
 
     # decode the parameters
     params = parseParamFile(configfilename, verbose=False, catFilesNeeded=False)
-    print(f"configfilename: {configfilename}")
-    print("\n\n\n\n\n\nFULL LIST OF PARAMS:")
-    print(params)
+    #print(f"configfilename: {configfilename}")
+    #print("\n\n\n\n\n\nFULL LIST OF PARAMS:")
+    #print(params)
     bandNames = params['bandNames']
     dir_seds = params['templates_directory']
     dir_filters = params['bands_directory']
