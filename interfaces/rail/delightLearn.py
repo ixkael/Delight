@@ -7,7 +7,6 @@
 #  - find the normalisation of the flux and the best galaxy type
 ############################################################################################################################
 import sys
-#from mpi4py import MPI
 import numpy as np
 from delight.io import *
 from delight.utils import *
@@ -29,9 +28,7 @@ def delightLearn(configfilename):
     """
 
 
-    #comm = MPI.COMM_WORLD
-    #threadNum = comm.Get_rank()
-    #numThreads = comm.Get_size()
+    
     threadNum = 0
     numThreads = 1
 
@@ -60,7 +57,7 @@ def delightLearn(configfilename):
     lastLine = int(min(numObjectsTraining,(threadNum + 1) * numObjectsTraining / numThreads))
     numLines = lastLine - firstLine
 
-    #comm.Barrier()
+  
     msg ='Thread ' +  str(threadNum) + ' , analyzes lines ' + str(firstLine) + ' , to ' + str(lastLine)
     logger.info(msg)
 
@@ -123,8 +120,7 @@ def delightLearn(configfilename):
             chi2sLocal[firstLine + loc, ind] = - 0.5 * (model_mean[0, bandsCV] - fluxesCV)**2 /(model_covar[0, bandsCV] + fluxesVarCV)
 
 
-    # use MPI to get the totals
-    #comm.Barrier()
+   
     if threadNum == 0:
         reducedData = np.zeros((numObjectsTraining, numCol))
 
@@ -139,9 +135,8 @@ def delightLearn(configfilename):
     sendcounts = tuple([(lastLines[k] - firstLines[k]) * numCol for k in range(numThreads)])
     displacements = tuple([firstLines[k] * numCol for k in range(numThreads)])
 
-    #comm.Gatherv(localData, [reducedData, sendcounts, displacements, MPI.DOUBLE])
     reducedData = localData
-    #comm.Barrier()
+  
 
     # parameters for the GP process on traniing data are transfered to reduced data and saved in file
     #'training_paramFile'

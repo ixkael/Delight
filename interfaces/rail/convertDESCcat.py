@@ -13,7 +13,7 @@ import os
 import numpy as np
 from functools import reduce
 
-#from rail.estimation.algos.include_delightPZ.delight_io import *
+from delight.io import *
 from delight.utils import *
 from tables_io import io
 import coloredlogs

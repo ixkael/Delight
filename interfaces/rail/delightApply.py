@@ -3,7 +3,6 @@ import sys
 #from mpi4py import MPI
 import numpy as np
 from delight.io import *
-#from rail.estimation.algos.include_delightPZ.delight_io import *
 from delight.utils import *
 from delight.photoz_gp import PhotozGP
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
@@ -27,9 +26,6 @@ def delightApply(configfilename):
     """
 
 
-    #comm = MPI.COMM_WORLD
-    #threadNum = comm.Get_rank()
-    #numThreads = comm.Get_size()
     threadNum = 0
     numThreads = 1
 
@@ -80,7 +76,7 @@ def delightApply(configfilename):
         msg='Number of Target Objects ' + str(numObjectsTarget)
         logger.info(msg)
 
-    #comm.Barrier()
+   
 
     msg= 'Thread '+ str(threadNum) + ' , analyzes lines ' +  str(firstLine) + ' to ' + str( lastLine)
     logger.info(msg)
