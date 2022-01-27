@@ -176,7 +176,7 @@ crossValidationBandOrder: _ _ _ _ lsst_r lsst_r_var _ _ _ _ _ _
         paramfile_txt += "paramFile: data_lsst/galaxies-gpparams.txt\n"
     else:
         thepath = inputs_rail["tempdatadir"]
-        paramfile_txt += "paramFile: " + os.path.join(thepath, 'galaxies-gpparams.txt') + '\n'
+        paramfile_txt += "paramFile: " + os.path.join(thepath, inputs_rail['gp_params_file']) + '\n'
 
     if inputs_rail == None:
         paramfile_txt +=  \
@@ -186,7 +186,7 @@ CVfile: data_lsst/galaxies-gpCV.txt
 """
     else:
         thepath = inputs_rail["tempdatadir"]
-        paramfile_txt += "CVfile: " + os.path.join(thepath, 'galaxies-gpCV.txt')
+        paramfile_txt += "CVfile: " + os.path.join(thepath, inputs_rail['crossval_file'])
 
     paramfile_txt +=  \
 """
