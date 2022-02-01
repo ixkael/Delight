@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import numpy as onp
+import numpy as np
 from delight.priors import *
 from delight.utils import *
 from delight.posteriors import *
@@ -41,4 +41,4 @@ def test_multiobj_flux_likelihood_margell():
         z_grid, ell_grid,
         mu_ell, mu_lnz, var_ell, var_lnz, rho)
 
-    onp.testing.assert_allclose(vals1, vals2, rtol=1e-4)
+    np.testing.assert_allclose(vals1, vals2, rtol=1e-4)

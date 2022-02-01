@@ -1,6 +1,6 @@
 
 import sys
-from mpi4py import MPI
+#from mpi4py import MPI
 import numpy as np
 from scipy.interpolate import interp1d
 
@@ -9,12 +9,12 @@ from delight.utils import *
 from delight.photoz_gp import PhotozGP
 from delight.photoz_kernels import Photoz_mean_function, Photoz_kernel
 
-comm = MPI.COMM_WORLD
-threadNum = comm.Get_rank()
-numThreads = comm.Get_size()
-
+#comm = MPI.COMM_WORLD
+threadNum = 0
+numThreads = 1
 if threadNum == 0:
     print("--- TEMPLATE FITTING ---")
+
 # Parse parameters file
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
@@ -49,7 +49,7 @@ lastLine = int(min(numObjectsTarget,
 numLines = lastLine - firstLine
 if threadNum == 0:
     print('Number of Target Objects', numObjectsTarget)
-comm.Barrier()
+#comm.Barrier()
 print('Thread ', threadNum, ' analyzes lines ', firstLine, ' to ', lastLine)
 
 numMetrics = 7 + len(params['confidenceLevels'])
@@ -88,7 +88,7 @@ for z, normedRefFlux, bands, fluxes, fluxesVar,\
                                     localPDFs[loc, :],
                                     params['confidenceLevels'])
 
-comm.Barrier()
+#comm.Barrier()
 if threadNum == 0:
     globalPDFs = np.zeros((numObjectsTarget, numZ))
     globalMetrics = np.zeros((numObjectsTarget, numMetrics))
@@ -104,15 +104,25 @@ numLines = [lastLines[k] - firstLines[k] for k in range(numThreads)]
 
 sendcounts = tuple([numLines[k] * numZ for k in range(numThreads)])
 displacements = tuple([firstLines[k] * numZ for k in range(numThreads)])
-comm.Gatherv(localPDFs,
-             [globalPDFs, sendcounts, displacements, MPI.DOUBLE])
+
+
+print('localPDFs.shape = ', localPDFs.shape)
+print('globalPDFs.shape = ', globalPDFs.shape)
+print('localMetrics.shape = ', localMetrics.shape)
+print('globalMetrics.shape = ', globalMetrics.shape)
+
+
+#comm.Gatherv(localPDFs,[globalPDFs, sendcounts, displacements, MPI.DOUBLE])
+globalPDFs = localPDFs
 
 sendcounts = tuple([numLines[k] * numMetrics for k in range(numThreads)])
 displacements = tuple([firstLines[k] * numMetrics for k in range(numThreads)])
-comm.Gatherv(localMetrics,
-             [globalMetrics, sendcounts, displacements, MPI.DOUBLE])
 
-comm.Barrier()
+
+#comm.Gatherv(localMetrics,[globalMetrics, sendcounts, displacements, MPI.DOUBLE])
+globalMetrics = localMetrics
+
+#comm.Barrier()
 
 if threadNum == 0:
     fmt = '%.2e'
