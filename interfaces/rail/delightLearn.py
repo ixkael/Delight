@@ -34,7 +34,7 @@ def delightLearn(configfilename):
 
     #parse arguments
 
-    params = parseParamFile(configfilename, verbose=False)
+    params = parseParamFile(configfilename, verbose=False, catFilesNeeded=False)
 
     if threadNum == 0:
         logger.info("--- DELIGHT-LEARN ---")

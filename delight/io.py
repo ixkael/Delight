@@ -9,7 +9,7 @@ from delight.utils import approx_DL
 from scipy.interpolate import interp1d
 
 
-def parseParamFile(fileName, verbose=True, catFilesNeeded=True):
+def parseParamFile(fileName, verbose=True, catFilesNeeded=False):
     """
     Parser for configuration inputtype parameter files,
     see examples for details. A bunch of them ar parsed.

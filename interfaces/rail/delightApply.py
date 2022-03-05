@@ -31,7 +31,7 @@ def delightApply(configfilename):
 
 
 
-    params = parseParamFile(configfilename, verbose=False)
+    params = parseParamFile(configfilename, verbose=False, catFilesNeeded=True)
 
     if threadNum == 0:
         #print("--- DELIGHT-APPLY ---")
