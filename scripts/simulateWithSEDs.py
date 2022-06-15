@@ -7,7 +7,9 @@ from delight.utils import *
 
 if len(sys.argv) < 2:
     raise Exception('Please provide a parameter file')
+
 params = parseParamFile(sys.argv[1], verbose=False, catFilesNeeded=False)
+
 dir_seds = params['templates_directory']
 sed_names = params['templates_names']
 redshiftDistGrid, redshiftGrid, redshiftGridGP = createGrids(params)
